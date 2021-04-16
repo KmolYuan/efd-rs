@@ -1,14 +1,33 @@
-//! The implementation of Elliptical Fourier Descriptor curve fitting.
+//! This crate implements Elliptical Fourier Descriptor (EFD) curve fitting
+//! by using `ndarray` to handle the 2D arrays.
 //!
 //! Reference: Kuhl, FP and Giardina, CR (1982). Elliptic Fourier features of
 //! a closed contour. Computer graphics and image processing, 18(3), 236-258.
+//!
+//! The following is an example. The contours are always Nx2 array in the functions.
+//! ```
+//! use std::f64::consts::TAU;
+//! use ndarray::{Array1, Axis, stack};
+//! use efd::{efd_fitting, ElementWiseOpt};
+//!
+//! fn main() {
+//!     const N: usize = 10;
+//!     let circle = stack(Axis(1), &[
+//!         Array1::linspace(0., TAU, N).cos().view(),
+//!         Array1::linspace(0., TAU, N).sin().view(),
+//!     ]).unwrap();
+//!     assert_eq!(circle.shape(), &[10, 2]);
+//!     let new_curve = efd_fitting(&circle, 20, None);
+//!     assert_eq!(new_curve.shape(), &[20, 2]);
+//! }
+//! ```
 extern crate ndarray;
 
 use std::f64::consts::{PI, TAU};
 
 use ndarray::{array, Array1, Array2, Axis, concatenate, s};
 
-use crate::element_opt::ElementWiseOpt;
+pub use crate::element_opt::ElementWiseOpt;
 
 mod element_opt;
 #[cfg(test)]
@@ -16,12 +35,9 @@ mod tests;
 
 /// Curve fitting using Elliptical Fourier Descriptor.
 ///
-/// The contour is Nx2 array, and the number of output path (`n`).
-///
+/// Giving the contour and the number of output path (`n`).
 /// The `harmonic` is the number of harmonic terms.
 /// Use `Option::None` to auto detect the number of harmonics.
-///
-/// This function returns nx2 array.
 pub fn efd_fitting(contour: &Array2<f64>, mut n: usize,
                    harmonic: Option<usize>) -> Array2<f64> {
     if n < 3 {

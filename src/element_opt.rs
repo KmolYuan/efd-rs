@@ -1,6 +1,7 @@
 use ndarray::{Array, ArrayBase, Data, Dimension, RawData};
 
-pub(crate) trait ElementWiseOpt {
+/// Implement several element-wise operations for `ndarray`s.
+pub trait ElementWiseOpt {
     type Out;
     fn square(&self) -> Self::Out;
     fn sin(&self) -> Self::Out;
