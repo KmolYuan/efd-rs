@@ -1,3 +1,7 @@
+//! The implementation of Elliptical Fourier Descriptor curve fitting.
+//!
+//! Reference: Kuhl, FP and Giardina, CR (1982). Elliptic Fourier features of
+//! a closed contour. Computer graphics and image processing, 18(3), 236-258.
 extern crate ndarray;
 
 use std::f64::consts::{PI, TAU};
