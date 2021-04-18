@@ -45,5 +45,8 @@ thread_local! {
 #[test]
 fn efd() {
     let ans = PATH.with(|path| efd_fitting(path, 20, None));
-    TARGET.with(|target| assert!((ans - target).abs().sum() < 1e-12));
+    TARGET.with(|target| {
+        let err = (ans - target).abs().sum();
+        assert!(err < 1e-12, "{}", err)
+    });
 }
