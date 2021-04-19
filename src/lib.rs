@@ -26,9 +26,7 @@ extern crate ndarray;
 
 use std::f64::consts::{PI, TAU};
 
-use ndarray::{
-    array, concatenate, s, stack, Array1, Array2, ArrayBase, Axis, Data, Ix1, Ix2, RawData,
-};
+use ndarray::{array, concatenate, s, stack, Array1, Array2, AsArray, Axis, Ix2};
 
 pub use crate::element_opt::ElementWiseOpt;
 
@@ -41,10 +39,11 @@ mod tests;
 /// Giving the contour and the number of output path (`n`).
 /// The `harmonic` is the number of harmonic terms.
 /// Use `Option::None` to auto detect the number of harmonics.
-pub fn efd_fitting<S>(contour: &ArrayBase<S, Ix2>, n: usize, harmonic: Option<usize>) -> Array2<f64>
+pub fn efd_fitting<'a, A>(contour: A, n: usize, harmonic: Option<usize>) -> Array2<f64>
 where
-    S: RawData<Elem = f64> + Data,
+    A: AsArray<'a, f64, Ix2>,
 {
+    let contour = contour.into();
     let n = if n < 3 { contour.nrows() } else { n };
     let harmonic = harmonic.unwrap_or(fourier_power(
         &calculate_efd(contour, nyquist(contour)),
@@ -60,17 +59,18 @@ where
 
 /// Returns the maximum number of harmonics that can be computed for a given
 /// contour, the Nyquist Frequency.
-pub fn nyquist<S>(zx: &ArrayBase<S, Ix2>) -> usize
+pub fn nyquist<'a, A>(zx: A) -> usize
 where
-    S: RawData<Elem = f64> + Data,
+    A: AsArray<'a, f64, Ix2>,
 {
-    zx.nrows() / 2
+    zx.into().nrows() / 2
 }
 
-fn diff1<S>(a: &ArrayBase<S, Ix1>) -> Array1<f64>
+fn diff1<'a, A>(a: A) -> Array1<f64>
 where
-    S: RawData<Elem = f64> + Data,
+    A: AsArray<'a, f64>,
 {
+    let a = a.into();
     let len = a.len() - 1;
     let mut out = Array1::zeros(len);
     for i in 0..len {
@@ -79,10 +79,11 @@ where
     out
 }
 
-fn diff2<S>(a: &ArrayBase<S, Ix2>) -> Array2<f64>
+fn diff2<'a, A>(a: A) -> Array2<f64>
 where
-    S: RawData<Elem = f64> + Data,
+    A: AsArray<'a, f64, Ix2>,
 {
+    let a = a.into();
     let len = a.nrows() - 1;
     let mut out = Array2::zeros((len, 2));
     for i in 0..len {
@@ -93,10 +94,11 @@ where
     out
 }
 
-fn cumsum<S>(a: &ArrayBase<S, Ix1>) -> Array1<f64>
+fn cumsum<'a, A>(a: A) -> Array1<f64>
 where
-    S: RawData<Elem = f64> + Data,
+    A: AsArray<'a, f64>,
 {
+    let a = a.into();
     let mut out = Array1::zeros(a.len());
     for (i, &v) in a.iter().enumerate() {
         out[i] = v;
@@ -112,10 +114,11 @@ where
 ///
 /// This function needs to use the full of coefficients,
 /// and the threshold usually used as 1.
-pub fn fourier_power<S>(coeffs: &ArrayBase<S, Ix2>, nyq: usize, threshold: f64) -> usize
+pub fn fourier_power<'a, A>(coeffs: A, nyq: usize, threshold: f64) -> usize
 where
-    S: RawData<Elem = f64> + Data,
+    A: AsArray<'a, f64, Ix2>,
 {
+    let coeffs = coeffs.into();
     let mut total_power = 0.;
     let mut current_power = 0.;
     for i in 0..nyq as usize {
@@ -131,10 +134,11 @@ where
 }
 
 /// Compute the Elliptical Fourier Descriptors for a polygon.
-pub fn calculate_efd<S>(contour: &ArrayBase<S, Ix2>, harmonic: usize) -> Array2<f64>
+pub fn calculate_efd<'a, A>(contour: A, harmonic: usize) -> Array2<f64>
 where
-    S: RawData<Elem = f64> + Data,
+    A: AsArray<'a, f64, Ix2>,
 {
+    let contour = contour.into();
     let dxy = diff2(contour);
     let dt = dxy.square().sum_axis(Axis(1)).sqrt();
     let t = concatenate!(Axis(0), array![0.], cumsum(&dt));
@@ -157,10 +161,11 @@ where
 /// Normalize the Elliptical Fourier Descriptor coefficients for a polygon.
 ///
 /// If `norm` optional is true, normalize all coefficients by first one.
-pub fn normalize_efd<S>(coeffs: &ArrayBase<S, Ix2>, norm: bool) -> (Array2<f64>, f64)
+pub fn normalize_efd<'a, A>(coeffs: A, norm: bool) -> (Array2<f64>, f64)
 where
-    S: RawData<Elem = f64> + Data,
+    A: AsArray<'a, f64, Ix2>,
 {
+    let coeffs = coeffs.into();
     let theta1 = f64::atan2(
         2. * (coeffs[[0, 0]] * coeffs[[0, 1]] + coeffs[[0, 2]] * coeffs[[0, 3]]),
         coeffs[[0, 0]] * coeffs[[0, 0]] - coeffs[[0, 1]] * coeffs[[0, 1]]
@@ -200,10 +205,11 @@ where
 }
 
 /// Compute the dc coefficients, used as the locus when calling [inverse_transform](fn.inverse_transform.html).
-pub fn locus<S>(contour: &ArrayBase<S, Ix2>) -> (f64, f64)
+pub fn locus<'a, A>(contour: A) -> (f64, f64)
 where
-    S: RawData<Elem = f64> + Data,
+    A: AsArray<'a, f64, Ix2>,
 {
+    let contour = contour.into();
     let dxy = diff2(contour);
     let dt = dxy.square().sum_axis(Axis(1)).sqrt();
     let t = concatenate!(Axis(0), array![0.], cumsum(&dt));
@@ -218,15 +224,16 @@ where
 
 /// Perform an inverse fourier transform to convert the coefficients back into
 /// spatial coordinates.
-pub fn inverse_transform<S>(
-    coeffs: &ArrayBase<S, Ix2>,
+pub fn inverse_transform<'a, A>(
+    coeffs: A,
     locus: (f64, f64),
     n: usize,
     harmonic: usize,
 ) -> Array2<f64>
 where
-    S: RawData<Elem = f64> + Data,
+    A: AsArray<'a, f64, Ix2>,
 {
+    let coeffs = coeffs.into();
     let t = Array1::linspace(0., 1., n);
     let mut contour0 = Array1::ones(n);
     let mut contour1 = Array1::ones(n);
@@ -245,14 +252,11 @@ where
 }
 
 /// Rotates a contour about a point by a given amount expressed in degrees.
-pub fn rotate_contour<S>(
-    contour: &ArrayBase<S, Ix2>,
-    angle: f64,
-    (cpx, cpy): (f64, f64),
-) -> Array2<f64>
+pub fn rotate_contour<'a, A>(contour: A, angle: f64, (cpx, cpy): (f64, f64)) -> Array2<f64>
 where
-    S: RawData<Elem = f64> + Data,
+    A: AsArray<'a, f64, Ix2>,
 {
+    let contour = contour.into();
     let mut out = Array2::zeros(contour.dim());
     for i in 0..contour.nrows() {
         let dx = contour[[i, 0]] - cpx;
