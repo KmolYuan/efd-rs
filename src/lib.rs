@@ -175,7 +175,7 @@ where
         let angle = (n + 1) as f64 * theta1;
         let m = array![
             [coeffs[[n, 0]], coeffs[[n, 1]]],
-            [coeffs[[n, 2]], coeffs[[n, 3]]]
+            [coeffs[[n, 2]], coeffs[[n, 3]]],
         ]
         .dot(&array![
             [angle.cos(), -angle.sin()],
@@ -186,7 +186,7 @@ where
             .assign(&Array1::from_iter(m.iter().cloned()));
     }
     let psi1 = f64::atan2(coeffs[[0, 2]], coeffs[[0, 0]]);
-    let psi2 = array![[psi1.cos(), psi1.sin()], [-psi1.sin(), psi1.cos()],];
+    let psi2 = array![[psi1.cos(), psi1.sin()], [-psi1.sin(), psi1.cos()]];
     for n in 0..coeffs.nrows() {
         let m = psi2.dot(&array![
             [coeffs[[n, 0]], coeffs[[n, 1]]],
@@ -202,7 +202,7 @@ where
     (coeffs, psi1)
 }
 
-/// Compute the dc coefficients, used as the locus when calling [inverse_transform](fn.inverse_transform.html).
+/// Compute the dc coefficients, used as the locus when calling [`inverse_transform`].
 pub fn locus<'a, A>(contour: A) -> (f64, f64)
 where
     A: AsArray<'a, f64, Ix2>,
