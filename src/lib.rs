@@ -22,8 +22,6 @@
 //! ```
 //!
 //! Arrays have "owned" and "view" two data types, all functions are compatible.
-extern crate ndarray;
-
 use std::f64::consts::{PI, TAU};
 
 use ndarray::{array, concatenate, s, stack, Array1, Array2, AsArray, Axis, Ix2};
