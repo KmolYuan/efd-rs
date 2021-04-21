@@ -117,14 +117,11 @@ where
     A: AsArray<'a, f64, Ix2>,
 {
     let coeffs = coeffs.into();
-    let mut total_power = 0.;
-    let mut current_power = 0.;
+    let total_power = 0.5 * coeffs.square().sum();
+    let mut power = 0.;
     for i in 0..nyq as usize {
-        total_power += 0.5 * coeffs.slice(s![i, ..]).square().sum();
-    }
-    for i in 0..nyq as usize {
-        current_power += 0.5 * coeffs.slice(s![i, ..]).square().sum();
-        if current_power / total_power >= threshold {
+        power += 0.5 * coeffs.slice(s![i, ..]).square().sum();
+        if power / total_power >= threshold {
             return i + 1;
         }
     }
