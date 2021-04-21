@@ -41,8 +41,8 @@ pub fn efd_fitting<'a, A>(contour: A, n: usize, harmonic: Option<usize>) -> Arra
 where
     A: AsArray<'a, f64, Ix2>,
 {
+    assert!(n > 3, "n must larger than 3, current is {}", n);
     let contour = contour.into();
-    let n = if n < 3 { contour.nrows() } else { n };
     let harmonic = harmonic.unwrap_or(fourier_power(
         &calculate_efd(contour, nyquist(contour)),
         nyquist(contour),
