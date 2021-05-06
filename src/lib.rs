@@ -42,11 +42,10 @@ where
 {
     assert!(n > 3, "n must larger than 3, current is {}", n);
     let contour = contour.into();
-    let harmonic = harmonic.unwrap_or(fourier_power(
-        &calculate_efd(contour, nyquist(contour)),
-        nyquist(contour),
-        1.,
-    ));
+    let harmonic = {
+        let nyq = nyquist(contour);
+        harmonic.unwrap_or(fourier_power(&calculate_efd(contour, nyq), nyq, 1.))
+    };
     let coeffs = calculate_efd(contour, harmonic);
     let (coeffs, rot) = normalize_efd(&coeffs, false);
     let locus = locus(contour);
