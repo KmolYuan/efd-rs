@@ -22,11 +22,10 @@
 //! ```
 //!
 //! Arrays have "owned" and "view" two data types, all functions are compatible.
-use std::f64::consts::{PI, TAU};
-
+//!
+pub use crate::element_opt::*;
 use ndarray::{array, concatenate, s, stack, Array1, Array2, AsArray, Axis, Ix2};
-
-pub use crate::element_opt::ElementWiseOpt;
+use std::f64::consts::{PI, TAU};
 
 mod element_opt;
 #[cfg(test)]
@@ -62,34 +61,6 @@ where
     A: AsArray<'a, f64, Ix2>,
 {
     zx.into().nrows() / 2
-}
-
-fn diff1<'a, A>(a: A) -> Array1<f64>
-where
-    A: AsArray<'a, f64>,
-{
-    let a = a.into();
-    let len = a.len() - 1;
-    let mut out = Array1::zeros(len);
-    for i in 0..len {
-        out[i] = a[i + 1] - a[i];
-    }
-    out
-}
-
-fn diff2<'a, A>(a: A) -> Array2<f64>
-where
-    A: AsArray<'a, f64, Ix2>,
-{
-    let a = a.into();
-    let len = a.nrows() - 1;
-    let mut out = Array2::zeros((len, 2));
-    for i in 0..len {
-        for j in 0..2 {
-            out[[i, j]] = a[[i + 1, j]] - a[[i, j]];
-        }
-    }
-    out
 }
 
 fn cumsum<'a, A>(a: A) -> Array1<f64>
@@ -134,7 +105,7 @@ where
     A: AsArray<'a, f64, Ix2>,
 {
     let contour = contour.into();
-    let dxy = diff2(contour);
+    let dxy = diff(contour, Some(Axis(0)));
     let dt = dxy.square().sum_axis(Axis(1)).sqrt();
     let t = concatenate!(Axis(0), array![0.], cumsum(&dt));
     let zt = t[t.len() - 1];
@@ -205,12 +176,12 @@ where
     A: AsArray<'a, f64, Ix2>,
 {
     let contour = contour.into();
-    let dxy = diff2(contour);
+    let dxy = diff(contour, Some(Axis(0)));
     let dt = dxy.square().sum_axis(Axis(1)).sqrt();
     let t = concatenate!(Axis(0), array![0.], cumsum(&dt));
     let zt = t[t.len() - 1];
     let xi = cumsum(&dxy.slice(s![.., 0])) - &dxy.slice(s![.., 0]) / &dt * t.slice(s![1..]);
-    let c = diff1(&t.square()) / (&dt * 2.);
+    let c = diff(&t.square(), None) / (&dt * 2.);
     let a0 = (&dxy.slice(s![.., 0]) * &c + xi * &dt).sum() / (zt + 1e-20);
     let delta = cumsum(&dxy.slice(s![.., 1])) - &dxy.slice(s![.., 1]) / &dt * t.slice(s![1..]);
     let c0 = (&dxy.slice(s![.., 1]) * &c + delta * &dt).sum() / (zt + 1e-20);

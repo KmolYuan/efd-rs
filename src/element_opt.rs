@@ -1,6 +1,7 @@
-use ndarray::{Array, ArrayBase, Data, Dimension, RawData};
+use ndarray::{Array, ArrayBase, AsArray, Axis, Data, Dimension, RawData, ScalarOperand, Slice};
+use num_traits::{Float, NumOps};
 
-/// Implement several element-wise operations for `ndarray`s.
+/// Implement several element-wise operations for [`ndarray::ArrayBase`]s.
 pub trait ElementWiseOpt {
     type Out;
     fn square(&self) -> Self::Out;
@@ -10,25 +11,43 @@ pub trait ElementWiseOpt {
     fn abs(&self) -> Self::Out;
 }
 
-impl<S, D> ElementWiseOpt for ArrayBase<S, D>
+impl<A, S, D> ElementWiseOpt for ArrayBase<S, D>
 where
-    S: RawData<Elem = f64> + Data,
+    A: Float,
+    S: RawData<Elem = A> + Data,
     D: Dimension,
 {
-    type Out = Array<f64, D>;
+    type Out = Array<A, D>;
     fn square(&self) -> Self::Out {
         self.mapv(|v| v * v)
     }
     fn sqrt(&self) -> Self::Out {
-        self.mapv(f64::sqrt)
+        self.mapv(A::sqrt)
     }
     fn sin(&self) -> Self::Out {
-        self.mapv(f64::sin)
+        self.mapv(A::sin)
     }
     fn cos(&self) -> Self::Out {
-        self.mapv(f64::cos)
+        self.mapv(A::cos)
     }
     fn abs(&self) -> Self::Out {
-        self.mapv(f64::abs)
+        self.mapv(A::abs)
     }
+}
+
+/// Calculate the n-th discrete difference along the given axis.
+/// Same as NumPy version.
+///
+/// Reference from <https://github.com/rust-ndarray/ndarray/issues/787>.
+pub fn diff<'a, A: 'a, D, V>(arr: V, axis: Option<Axis>) -> Array<A, D>
+where
+    A: NumOps + ScalarOperand,
+    D: Dimension,
+    V: AsArray<'a, A, D>,
+{
+    let view = arr.into();
+    let axis = axis.unwrap_or(Axis(view.ndim() - 1));
+    let head = view.slice_axis(axis, Slice::from(..-1));
+    let tail = view.slice_axis(axis, Slice::from(1..));
+    &tail - &head
 }
