@@ -1,6 +1,5 @@
+use super::*;
 use ndarray::{arr2, Array2};
-
-use crate::{efd_fitting, ElementWiseOpt};
 
 thread_local! {
     static PATH: Array2<f64> = arr2(&[
