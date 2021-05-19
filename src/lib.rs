@@ -33,9 +33,9 @@ mod tests;
 
 /// Curve fitting using Elliptical Fourier Descriptor.
 ///
-/// Giving the contour and the number of output path (`n`).
-/// The `harmonic` is the number of harmonic terms.
-/// Use `Option::None` to auto detect the number of harmonics.
+/// Giving the `contour` and the number of output path (`n`),
+/// and the `harmonic` is the number of harmonic terms,
+/// defaults to the Nyquist Frequency of `contour`.
 pub fn efd_fitting<'a, A>(contour: A, n: usize, harmonic: Option<usize>) -> Array2<f64>
 where
     A: AsArray<'a, f64, Ix2>,
@@ -49,7 +49,7 @@ where
     let coeffs = calculate_efd(contour, harmonic);
     let (coeffs, rot) = normalize_efd(&coeffs, false);
     let locus = locus(contour);
-    let contour = inverse_transform(&coeffs, locus, n, harmonic);
+    let contour = inverse_transform(&coeffs, locus, n, None);
     rotate_contour(&contour, -rot, locus)
 }
 
@@ -189,11 +189,13 @@ where
 
 /// Perform an inverse fourier transform to convert the coefficients back into
 /// spatial coordinates.
+///
+/// The argument `harmonic` is optional, defaults to the row number of `coeffs`.
 pub fn inverse_transform<'a, A>(
     coeffs: A,
     locus: (f64, f64),
     n: usize,
-    harmonic: usize,
+    harmonic: Option<usize>,
 ) -> Array2<f64>
 where
     A: AsArray<'a, f64, Ix2>,
@@ -204,7 +206,7 @@ where
     let mut contour1 = Array1::ones(n);
     contour0 *= locus.0;
     contour1 *= locus.1;
-    for n in 0..harmonic {
+    for n in 0..harmonic.unwrap_or(coeffs.nrows()) {
         let angle = &t * (n + 1) as f64 * TAU;
         let cos = angle.cos();
         let sin = angle.sin();
