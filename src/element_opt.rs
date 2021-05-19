@@ -39,15 +39,15 @@ where
 /// Same as NumPy version.
 ///
 /// Reference from <https://github.com/rust-ndarray/ndarray/issues/787>.
-pub fn diff<'a, A: 'a, D, V>(arr: V, axis: Option<Axis>) -> Array<A, D>
+pub fn diff<'a, A, D, V>(arr: V, axis: Option<Axis>) -> Array<A, D>
 where
     A: NumOps + ScalarOperand,
     D: Dimension,
     V: AsArray<'a, A, D>,
 {
-    let view = arr.into();
-    let axis = axis.unwrap_or(Axis(view.ndim() - 1));
-    let head = view.slice_axis(axis, Slice::from(..-1));
-    let tail = view.slice_axis(axis, Slice::from(1..));
+    let arr = arr.into();
+    let axis = axis.unwrap_or(Axis(arr.ndim() - 1));
+    let head = arr.slice_axis(axis, Slice::from(..-1));
+    let tail = arr.slice_axis(axis, Slice::from(1..));
     &tail - &head
 }

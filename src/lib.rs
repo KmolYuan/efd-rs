@@ -125,7 +125,7 @@ where
 
 /// Normalize the Elliptical Fourier Descriptor coefficients for a polygon.
 ///
-/// If `norm` optional is true, normalize all coefficients by first one.
+/// If `norm` optional is true, this function will normalize all coefficients by first one.
 pub fn normalize_efd<'a, A>(coeffs: A, norm: bool) -> (Array2<f64>, f64)
 where
     A: AsArray<'a, f64, Ix2>,
