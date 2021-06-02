@@ -137,7 +137,7 @@ where
             + coeffs[[0, 2]] * coeffs[[0, 2]]
             - coeffs[[0, 3]] * coeffs[[0, 3]],
     ) * 0.5;
-    let mut coeffs = coeffs.to_owned().clone();
+    let mut coeffs = coeffs.to_owned();
     for n in 0..coeffs.nrows() {
         let angle = (n + 1) as f64 * theta1;
         let m = array![
@@ -179,10 +179,10 @@ where
     let dt = dxy.square().sum_axis(Axis(1)).sqrt();
     let t = concatenate!(Axis(0), array![0.], cumsum(&dt));
     let zt = t[t.len() - 1];
-    let xi = cumsum(&dxy.slice(s![.., 0])) - &dxy.slice(s![.., 0]) / &dt * t.slice(s![1..]);
+    let xi = cumsum(dxy.slice(s![.., 0])) - &dxy.slice(s![.., 0]) / &dt * t.slice(s![1..]);
     let c = diff(&t.square(), None) / (&dt * 2.);
     let a0 = (&dxy.slice(s![.., 0]) * &c + xi * &dt).sum() / (zt + 1e-20);
-    let delta = cumsum(&dxy.slice(s![.., 1])) - &dxy.slice(s![.., 1]) / &dt * t.slice(s![1..]);
+    let delta = cumsum(dxy.slice(s![.., 1])) - &dxy.slice(s![.., 1]) / &dt * t.slice(s![1..]);
     let c0 = (&dxy.slice(s![.., 1]) * &c + delta * &dt).sum() / (zt + 1e-20);
     (contour[[0, 0]] + a0, contour[[0, 1]] + c0)
 }
