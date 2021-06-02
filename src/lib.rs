@@ -202,20 +202,16 @@ where
 {
     let coeffs = coeffs.into();
     let t = Array1::linspace(0., 1., n);
-    let mut contour0 = Array1::ones(n);
-    let mut contour1 = Array1::ones(n);
-    contour0 *= locus.0;
-    contour1 *= locus.1;
+    let mut x = Array1::zeros(n);
+    let mut y = Array1::zeros(n);
     for n in 0..harmonic.unwrap_or(coeffs.nrows()) {
         let angle = &t * (n + 1) as f64 * TAU;
         let cos = angle.cos();
         let sin = angle.sin();
-        contour0 += &(&cos * coeffs[[n, 2]]);
-        contour0 += &(&sin * coeffs[[n, 3]]);
-        contour1 += &(&cos * coeffs[[n, 0]]);
-        contour1 += &(&sin * coeffs[[n, 1]]);
+        x += &(&cos * coeffs[[n, 2]] + &sin * coeffs[[n, 3]]);
+        y += &(&cos * coeffs[[n, 0]] + &sin * coeffs[[n, 1]]);
     }
-    stack!(Axis(1), contour0, contour1)
+    stack!(Axis(1), x + locus.0, y + locus.1)
 }
 
 /// Rotates a contour about a point by a given amount expressed in degrees.
