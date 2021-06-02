@@ -99,6 +99,8 @@ where
 }
 
 /// Compute the Elliptical Fourier Descriptors for a polygon.
+///
+/// Returns the coefficients.
 pub fn calculate_efd<'a, A>(contour: A, harmonic: usize) -> Array2<f64>
 where
     A: AsArray<'a, f64, Ix2>,
@@ -125,7 +127,16 @@ where
 
 /// Normalize the Elliptical Fourier Descriptor coefficients for a polygon.
 ///
+/// Implements Kuhl and Giardina method of normalizing the coefficients
+/// An, Bn, Cn, Dn. Performs 3 separate normalizations. First, it makes the
+/// data location invariant by re-scaling the data to a common origin.
+/// Secondly, the data is rotated with respect to the major axis. Thirdly,
+/// the coefficients are normalized with regard to the absolute value of A_1.
+/// This code is adapted from the pyefd module.
+///
 /// If `norm` optional is true, this function will normalize all coefficients by first one.
+///
+/// Returns coefficients and the rotation in radians applied to the normalized contour.
 pub fn normalize_efd<'a, A>(coeffs: A, norm: bool) -> (Array2<f64>, f64)
 where
     A: AsArray<'a, f64, Ix2>,
@@ -169,7 +180,9 @@ where
     (coeffs, psi1)
 }
 
-/// Compute the dc coefficients, used as the locus when calling [`inverse_transform`].
+/// Compute the c, d coefficients, used as the locus when calling [`inverse_transform`].
+///
+/// Returns the c and d coefficients.
 pub fn locus<'a, A>(contour: A) -> (f64, f64)
 where
     A: AsArray<'a, f64, Ix2>,
