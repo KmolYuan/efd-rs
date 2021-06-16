@@ -110,17 +110,18 @@ where
     let dt = dxy.square().sum_axis(Axis(1)).sqrt();
     let t = concatenate!(Axis(0), array![0.], cumsum(&dt));
     let zt = t[t.len() - 1];
-    let phi = &t * TAU / (zt + 1e-20);
+    let phi = t * TAU / (zt + 1e-20);
     let mut coeffs = Array2::zeros((harmonic, 4));
-    for n in 1..(harmonic + 1) {
-        let c = zt / (2. * (n * n) as f64 * PI * PI);
-        let phi_n = &phi * n as f64;
+    for n in 0..harmonic {
+        let n1 = n as f64 + 1.;
+        let c = 0.5 * zt / (n1 * n1 * PI * PI);
+        let phi_n = &phi * n1;
         let cos_phi_n = (phi_n.slice(s![1..]).cos() - phi_n.slice(s![..-1]).cos()) / &dt;
         let sin_phi_n = (phi_n.slice(s![1..]).sin() - phi_n.slice(s![..-1]).sin()) / &dt;
-        coeffs[[n - 1, 0]] = c * (&dxy.slice(s![.., 1]) * &cos_phi_n).sum();
-        coeffs[[n - 1, 1]] = c * (&dxy.slice(s![.., 1]) * &sin_phi_n).sum();
-        coeffs[[n - 1, 2]] = c * (&dxy.slice(s![.., 0]) * &cos_phi_n).sum();
-        coeffs[[n - 1, 3]] = c * (&dxy.slice(s![.., 0]) * &sin_phi_n).sum();
+        coeffs[[n, 0]] = c * (&dxy.slice(s![.., 1]) * &cos_phi_n).sum();
+        coeffs[[n, 1]] = c * (&dxy.slice(s![.., 1]) * &sin_phi_n).sum();
+        coeffs[[n, 2]] = c * (&dxy.slice(s![.., 0]) * &cos_phi_n).sum();
+        coeffs[[n, 3]] = c * (&dxy.slice(s![.., 0]) * &sin_phi_n).sum();
     }
     coeffs
 }
