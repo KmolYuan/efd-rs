@@ -164,10 +164,10 @@ where
             .slice_mut(s![n, ..])
             .assign(&Array1::from_iter(m.iter().cloned()));
     }
-    let psi1 = f64::atan2(coeffs[[0, 2]], coeffs[[0, 0]]);
-    let psi2 = array![[psi1.cos(), psi1.sin()], [-psi1.sin(), psi1.cos()]];
+    let psi = f64::atan2(coeffs[[0, 2]], coeffs[[0, 0]]);
+    let rot = array![[psi.cos(), psi.sin()], [-psi.sin(), psi.cos()]];
     for n in 0..coeffs.nrows() {
-        let m = psi2.dot(&array![
+        let m = rot.dot(&array![
             [coeffs[[n, 0]], coeffs[[n, 1]]],
             [coeffs[[n, 2]], coeffs[[n, 3]]],
         ]);
@@ -178,7 +178,7 @@ where
     if norm {
         coeffs /= coeffs[[0, 0]].abs();
     }
-    (coeffs, psi1)
+    (coeffs, psi)
 }
 
 /// Compute the c, d coefficients, used as the locus when calling [`inverse_transform`].
