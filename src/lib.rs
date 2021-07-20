@@ -136,12 +136,14 @@ where
 ///
 /// If `norm` optional is true, this function will normalize all coefficients by first one.
 ///
-/// Returns coefficients and the rotation in radians applied to the normalized contour.
-pub fn normalize_efd<'a, A>(coeffs: A, norm: bool) -> (Array2<f64>, f64)
+/// Return the coefficients, axis rotation, shift angle and scale factor applied to the normalized contour.
+/// (the angles are in radians)
+pub fn normalize_efd<'a, A>(coeffs: A, norm: bool) -> (Array2<f64>, f64, f64, f64)
 where
     A: AsArray<'a, f64, Ix2>,
 {
     let coeffs = coeffs.into();
+    // Shift angle
     let theta1 = f64::atan2(
         2. * (coeffs[[0, 0]] * coeffs[[0, 1]] + coeffs[[0, 2]] * coeffs[[0, 3]]),
         coeffs[[0, 0]] * coeffs[[0, 0]] - coeffs[[0, 1]] * coeffs[[0, 1]]
@@ -177,10 +179,11 @@ where
             .slice_mut(s![n, ..])
             .assign(&Array1::from_iter(m.iter().cloned()));
     }
+    let scale = coeffs[[0, 0]].abs();
     if norm {
-        coeffs /= coeffs[[0, 0]].abs();
+        coeffs /= scale;
     }
-    (coeffs, psi)
+    (coeffs, psi, theta1, scale)
 }
 
 /// Compute the c, d coefficients, used as the locus when calling [`inverse_transform`].
