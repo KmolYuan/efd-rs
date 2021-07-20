@@ -105,8 +105,7 @@ pub fn calculate_efd<'a, A>(contour: A, harmonic: usize) -> Array2<f64>
 where
     A: AsArray<'a, f64, Ix2>,
 {
-    let contour = contour.into();
-    let dxy = diff(contour, Some(Axis(0)));
+    let dxy = diff(contour.into(), Some(Axis(0)));
     let dt = dxy.square().sum_axis(Axis(1)).sqrt();
     let t = concatenate!(Axis(0), array![0.], cumsum(&dt));
     let zt = t[t.len() - 1];
@@ -193,11 +192,12 @@ where
     let dt = dxy.square().sum_axis(Axis(1)).sqrt();
     let t = concatenate!(Axis(0), array![0.], cumsum(&dt));
     let zt = t[t.len() - 1];
-    let xi = cumsum(dxy.slice(s![.., 0])) - &dxy.slice(s![.., 0]) / &dt * t.slice(s![1..]);
-    let c = diff(&t.square(), None) / (&dt * 2.);
+    let tdt = &t.slice(s![1..]) / &dt;
+    let xi = cumsum(dxy.slice(s![.., 0])) - &dxy.slice(s![.., 0]) * &tdt;
+    let c = diff(&t.square(), None) * 0.5 / &dt;
     let a0 = (&dxy.slice(s![.., 0]) * &c + xi * &dt).sum() / (zt + 1e-20);
-    let delta = cumsum(dxy.slice(s![.., 1])) - &dxy.slice(s![.., 1]) / &dt * t.slice(s![1..]);
-    let c0 = (&dxy.slice(s![.., 1]) * &c + delta * &dt).sum() / (zt + 1e-20);
+    let delta = cumsum(dxy.slice(s![.., 1])) - &dxy.slice(s![.., 1]) * &tdt;
+    let c0 = (&dxy.slice(s![.., 1]) * c + delta * dt).sum() / (zt + 1e-20);
     (contour[[0, 0]] + a0, contour[[0, 1]] + c0)
 }
 
@@ -207,7 +207,7 @@ where
 /// The argument `harmonic` is optional, defaults to the row number of `coeffs`.
 pub fn inverse_transform<'a, A>(
     coeffs: A,
-    locus: (f64, f64),
+    (lx, ly): (f64, f64),
     n: usize,
     harmonic: Option<usize>,
 ) -> Array2<f64>
@@ -225,7 +225,7 @@ where
         x += &(&cos * coeffs[[n, 2]] + &sin * coeffs[[n, 3]]);
         y += &(&cos * coeffs[[n, 0]] + &sin * coeffs[[n, 1]]);
     }
-    stack!(Axis(1), x + locus.0, y + locus.1)
+    stack!(Axis(1), x + lx, y + ly)
 }
 
 /// Rotates a contour about a point by a given amount expressed in degrees.
