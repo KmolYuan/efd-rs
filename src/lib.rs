@@ -151,19 +151,22 @@ where
     let mut coeffs = coeffs.to_owned();
     for n in 0..coeffs.nrows() {
         let angle = (n + 1) as f64 * theta1;
+        let rot = array![[angle.cos(), -angle.sin()], [angle.sin(), angle.cos()],];
         let m = array![
             [coeffs[[n, 0]], coeffs[[n, 1]]],
             [coeffs[[n, 2]], coeffs[[n, 3]]],
         ]
-        .dot(&array![
-            [angle.cos(), -angle.sin()],
-            [angle.sin(), angle.cos()],
-        ]);
+        .dot(&rot);
         coeffs
             .slice_mut(s![n, ..])
             .assign(&Array1::from_iter(m.iter().cloned()));
     }
-    let psi = f64::atan2(coeffs[[0, 2]], coeffs[[0, 0]]);
+    // The angle of semi-major axis
+    let psi = if norm {
+        (coeffs[[0, 2]] / coeffs[[0, 0]]).atan()
+    } else {
+        coeffs[[0, 2]].atan2(coeffs[[0, 0]])
+    };
     let rot = array![[psi.cos(), psi.sin()], [-psi.sin(), psi.cos()]];
     for n in 0..coeffs.nrows() {
         let m = rot.dot(&array![
