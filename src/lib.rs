@@ -47,7 +47,7 @@ where
         fourier_power(&calculate_efd(contour, nyq), nyq, 1.)
     });
     let coeffs = calculate_efd(contour, harmonic);
-    let (coeffs, rot) = normalize_efd(&coeffs, false);
+    let (coeffs, rot, _, _) = normalize_efd(&coeffs, false);
     let locus = locus(contour);
     let contour = inverse_transform(&coeffs, locus, n, None);
     rotate_contour(&contour, -rot, locus)
