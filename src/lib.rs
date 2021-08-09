@@ -42,13 +42,13 @@ where
 {
     assert!(n > 3, "n must larger than 3, current is {}", n);
     let contour = contour.into();
-    let harmonic = harmonic.unwrap_or({
-        let nyq = nyquist(contour);
+    let harmonic = harmonic.unwrap_or_else(|| {
+        let nyq = nyquist(&contour);
         fourier_power(&calculate_efd(&contour, nyq), nyq, 1.)
     });
     let coeffs = calculate_efd(&contour, harmonic);
     let (coeffs, rot, _, _) = normalize_efd(&coeffs, false);
-    let locus = locus(&contour);
+    let locus = locus(contour);
     let contour = inverse_transform(&coeffs, locus, n, None);
     rotate_contour(&contour, -rot, locus)
 }
