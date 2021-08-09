@@ -153,7 +153,7 @@ where
     let mut coeffs = coeffs.to_owned();
     for n in 0..coeffs.nrows() {
         let angle = (n + 1) as f64 * theta1;
-        let rot = array![[angle.cos(), -angle.sin()], [angle.sin(), angle.cos()],];
+        let rot = array![[angle.cos(), -angle.sin()], [angle.sin(), angle.cos()]];
         let m = array![
             [coeffs[[n, 0]], coeffs[[n, 1]]],
             [coeffs[[n, 2]], coeffs[[n, 3]]],
