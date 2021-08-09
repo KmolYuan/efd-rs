@@ -46,7 +46,7 @@ where
     V: AsArray<'a, A, D>,
 {
     let arr = arr.into();
-    let axis = axis.unwrap_or(Axis(arr.ndim() - 1));
+    let axis = axis.unwrap_or_else(|| Axis(arr.ndim() - 1));
     let head = arr.slice_axis(axis, Slice::from(..-1));
     let tail = arr.slice_axis(axis, Slice::from(1..));
     &tail - &head

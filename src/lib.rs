@@ -10,15 +10,15 @@
 //! use ndarray::{Array1, Axis, stack};
 //! use efd::{efd_fitting, ElementWiseOpt};
 //!
-//! fn main() {
-//!     const N: usize = 10;
-//!     let circle = stack!(Axis(1),
-//!                         Array1::linspace(0., TAU, N).cos(),
-//!                         Array1::linspace(0., TAU, N).sin());
-//!     assert_eq!(circle.shape(), &[10, 2]);
-//!     let new_curve = efd_fitting(&circle, 20, None);
-//!     assert_eq!(new_curve.shape(), &[20, 2]);
-//! }
+//! const N: usize = 10;
+//! let circle = stack!(
+//!     Axis(1),
+//!     Array1::linspace(0., TAU, N).cos(),
+//!     Array1::linspace(0., TAU, N).sin()
+//! );
+//! assert_eq!(circle.shape(), &[10, 2]);
+//! let new_curve = efd_fitting(&circle, 20, None);
+//! assert_eq!(new_curve.shape(), &[20, 2]);
 //! ```
 //!
 //! Arrays have "owned" and "view" two data types, all functions are compatible.
@@ -44,11 +44,11 @@ where
     let contour = contour.into();
     let harmonic = harmonic.unwrap_or({
         let nyq = nyquist(contour);
-        fourier_power(&calculate_efd(contour, nyq), nyq, 1.)
+        fourier_power(&calculate_efd(&contour, nyq), nyq, 1.)
     });
-    let coeffs = calculate_efd(contour, harmonic);
+    let coeffs = calculate_efd(&contour, harmonic);
     let (coeffs, rot, _, _) = normalize_efd(&coeffs, false);
-    let locus = locus(contour);
+    let locus = locus(&contour);
     let contour = inverse_transform(&coeffs, locus, n, None);
     rotate_contour(&contour, -rot, locus)
 }
@@ -194,7 +194,7 @@ where
     A: AsArray<'a, f64, Ix2>,
 {
     let contour = contour.into();
-    let dxy = diff(contour, Some(Axis(0)));
+    let dxy = diff(&contour, Some(Axis(0)));
     let dt = dxy.square().sum_axis(Axis(1)).sqrt();
     let t = concatenate!(Axis(0), array![0.], cumsum(&dt));
     let zt = t[t.len() - 1];
@@ -224,7 +224,7 @@ where
     let t = Array1::linspace(0., 1., n);
     let mut x = Array1::zeros(n);
     let mut y = Array1::zeros(n);
-    for n in 0..harmonic.unwrap_or(coeffs.nrows()) {
+    for n in 0..harmonic.unwrap_or_else(|| coeffs.nrows()) {
         let angle = &t * (n + 1) as f64 * TAU;
         let cos = angle.cos();
         let sin = angle.sin();
