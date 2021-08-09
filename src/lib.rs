@@ -186,9 +186,9 @@ where
     (coeffs, psi, theta1, scale)
 }
 
-/// Compute the c, d coefficients, used as the locus when calling [`inverse_transform`].
+/// Compute the first a, c coefficients, used as the locus when calling [`inverse_transform`].
 ///
-/// Returns the c and d coefficients.
+/// Returns the a and c coefficients.
 pub fn locus<'a, A>(contour: A) -> (f64, f64)
 where
     A: AsArray<'a, f64, Ix2>,
