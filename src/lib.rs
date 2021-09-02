@@ -33,7 +33,7 @@ mod tests;
 
 /// Curve fitting using Elliptical Fourier Descriptor.
 ///
-/// Giving the `contour` and the number of output path (`n`),
+/// Giving the `contour` and the number of output path (with length `n > 3`),
 /// and the `harmonic` is the number of harmonic terms,
 /// defaults to the Nyquist Frequency of `contour`.
 pub fn efd_fitting<'a, A>(contour: A, n: usize, harmonic: Option<usize>) -> Array2<f64>
