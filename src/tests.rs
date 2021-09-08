@@ -13,12 +13,12 @@ fn efd() {
     assert_eq!(harmonic, 6);
     let coeffs = calculate_efd(&path, harmonic);
     // Test normalize
-    let (coeffs_norm, _, _, _) = normalize_efd(&coeffs, true);
+    let (coeffs_norm, ..) = normalize_efd(&coeffs, true);
     let contour = inverse_transform(&coeffs_norm, (0., 0.), target.nrows(), None);
     let err = (contour - norm).abs().sum();
     assert!(err < 1e-20, "{}", err);
     // Test reconstruct
-    let (coeffs, rot, _, _) = normalize_efd(&coeffs, false);
+    let (coeffs, rot, ..) = normalize_efd(&coeffs, false);
     assert!((rot - 0.871056726153095).abs() < 1e-20);
     let locus = locus(&path);
     assert!((locus.0 - -2.41571330022796).abs() < 1e-20);
