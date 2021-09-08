@@ -3,11 +3,17 @@ use num_traits::{Float, NumOps};
 
 /// Implement several element-wise operations for [`ndarray::ArrayBase`]s.
 pub trait ElementWiseOpt {
+    /// Output type.
     type Out;
+    /// Square function.
     fn square(&self) -> Self::Out;
+    /// Square root function.
     fn sqrt(&self) -> Self::Out;
+    /// Sine function.
     fn sin(&self) -> Self::Out;
+    /// Cosine function.
     fn cos(&self) -> Self::Out;
+    /// Absolute function.
     fn abs(&self) -> Self::Out;
 }
 

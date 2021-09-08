@@ -22,7 +22,7 @@
 //! ```
 //!
 //! Arrays have "owned" and "view" two data types, all functions are compatible.
-//!
+#![warn(missing_docs)]
 pub use crate::element_opt::*;
 use ndarray::{array, concatenate, s, stack, Array1, Array2, AsArray, Axis, Ix2};
 use std::f64::consts::{PI, TAU};
