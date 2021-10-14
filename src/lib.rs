@@ -6,9 +6,9 @@
 //!
 //! The following is an example. The contours are always Nx2 array in the functions.
 //! ```
-//! use std::f64::consts::TAU;
-//! use ndarray::{Array1, Axis, stack};
 //! use efd::{efd_fitting, ElementWiseOpt};
+//! use ndarray::{stack, Array1, Axis};
+//! use std::f64::consts::TAU;
 //!
 //! const N: usize = 10;
 //! let circle = stack!(
@@ -164,11 +164,7 @@ where
             .assign(&Array1::from_iter(m.iter().cloned()));
     }
     // The angle of semi-major axis
-    let psi = if norm {
-        (coeffs[[0, 2]] / coeffs[[0, 0]]).atan()
-    } else {
-        coeffs[[0, 2]].atan2(coeffs[[0, 0]])
-    };
+    let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
     let rot = array![[psi.cos(), psi.sin()], [-psi.sin(), psi.cos()]];
     for n in 0..coeffs.nrows() {
         let m = rot.dot(&array![
