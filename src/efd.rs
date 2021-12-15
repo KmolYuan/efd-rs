@@ -1,4 +1,3 @@
-use crate::element_opt::ElementWiseOpt as _;
 use ndarray::{
     arr2, array, concatenate, s, Array, Array1, Array2, AsArray, Axis, Dimension, ScalarOperand,
     Slice, Zip,
@@ -50,10 +49,10 @@ where
 /// # assert_eq!(harmonic, 6);
 /// ```
 pub fn fourier_power(efd: Efd, nyq: usize, threshold: f64) -> usize {
-    let total_power = 0.5 * efd.c.square().sum();
+    let total_power = 0.5 * efd.c.mapv(|v| v * v).sum();
     let mut power = 0.;
     for i in 0..nyq {
-        power += 0.5 * efd.c.slice(s![i, ..]).square().sum();
+        power += 0.5 * efd.c.slice(s![i, ..]).mapv(|v| v * v).sum();
         if power / total_power >= threshold {
             return i + 1;
         }
@@ -94,7 +93,7 @@ impl Efd {
             }
         };
         let dxy = diff(&arr2(curve), Some(Axis(0)));
-        let dt = dxy.square().sum_axis(Axis(1)).sqrt();
+        let dt = dxy.mapv(|v| v * v).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = concatenate!(Axis(0), array![0.], cumsum(&dt));
         let zt = t[t.len() - 1];
         let phi = &t * TAU / (zt + 1e-20);
@@ -103,8 +102,10 @@ impl Efd {
             let n1 = n as f64 + 1.;
             let c = 0.5 * zt / (n1 * n1 * PI * PI);
             let phi_n = &phi * n1;
-            let cos_phi_n = (phi_n.slice(s![1..]).cos() - phi_n.slice(s![..-1]).cos()) / &dt;
-            let sin_phi_n = (phi_n.slice(s![1..]).sin() - phi_n.slice(s![..-1]).sin()) / &dt;
+            let phi_n_front = phi_n.slice(s![..-1]);
+            let phi_n_back = phi_n.slice(s![1..]);
+            let cos_phi_n = (phi_n_back.mapv(f64::cos) - phi_n_front.mapv(f64::cos)) / &dt;
+            let sin_phi_n = (phi_n_back.mapv(f64::sin) - phi_n_front.mapv(f64::sin)) / &dt;
             coeffs[[n, 0]] = c * (&dxy.slice(s![.., 1]) * &cos_phi_n).sum();
             coeffs[[n, 1]] = c * (&dxy.slice(s![.., 1]) * &sin_phi_n).sum();
             coeffs[[n, 2]] = c * (&dxy.slice(s![.., 0]) * &cos_phi_n).sum();
@@ -112,7 +113,7 @@ impl Efd {
         }
         let tdt = &t.slice(s![1..]) / &dt;
         let xi = cumsum(dxy.slice(s![.., 0])) - &dxy.slice(s![.., 0]) * &tdt;
-        let c = diff(&t.square(), None) * 0.5 / &dt;
+        let c = diff(&t.mapv(|v| v * v), None) * 0.5 / &dt;
         let a0 = (&dxy.slice(s![.., 0]) * &c + xi * &dt).sum() / (zt + 1e-20);
         let delta = cumsum(dxy.slice(s![.., 1])) - &dxy.slice(s![.., 1]) * &tdt;
         let c0 = (&dxy.slice(s![.., 1]) * c + delta * dt).sum() / (zt + 1e-20);
@@ -183,8 +184,8 @@ impl Efd {
         let mut curve = vec![[0., 0.]; n];
         for n in 0..self.c.nrows() {
             let angle = &t * (n + 1) as f64 * TAU;
-            let cos = angle.cos();
-            let sin = angle.sin();
+            let cos = angle.mapv(f64::cos);
+            let sin = angle.mapv(f64::sin);
             let x = &cos * self.c[[n, 2]] + &sin * self.c[[n, 3]];
             let y = &cos * self.c[[n, 0]] + &sin * self.c[[n, 1]];
             Zip::from(&mut curve).and(&x).and(&y).for_each(|c, x, y| {

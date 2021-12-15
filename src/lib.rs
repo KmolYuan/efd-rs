@@ -28,5 +28,4 @@
 pub use crate::efd::*;
 
 mod efd;
-mod element_opt;
 pub mod tests;
