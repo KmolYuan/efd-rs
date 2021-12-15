@@ -1,13 +1,14 @@
 use ndarray::{
-    arr2, array, concatenate, s, Array, Array1, Array2, AsArray, Axis, Dimension, ScalarOperand,
-    Slice, Zip,
+    arr2, array, concatenate, s, Array, Array1, Array2, AsArray, Axis, Dimension, Slice, Zip,
 };
-use num_traits::NumOps;
-use std::f64::consts::{PI, TAU};
+use std::{
+    f64::consts::{PI, TAU},
+    ops::Sub,
+};
 
 fn diff<'a, A, D, V>(arr: V, axis: Option<Axis>) -> Array<A, D>
 where
-    A: NumOps + ScalarOperand,
+    A: Sub<Output = A> + Clone + 'static,
     D: Dimension,
     V: AsArray<'a, A, D>,
 {

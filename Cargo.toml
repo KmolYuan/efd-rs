@@ -11,4 +11,3 @@ keywords = ["efd", "elliptical", "fourier-descriptor", "algorithm"]
 
 [dependencies]
 ndarray = "0.15"
-num-traits = "0.2"
