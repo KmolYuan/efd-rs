@@ -1,35 +1,33 @@
-use super::*;
-use ndarray::arr2;
+#![doc(hidden)]
 
 #[test]
 fn efd() {
-    let path = arr2(PATH);
-    let norm = arr2(NORM);
-    let target = arr2(TARGET);
-    let harmonic = {
-        let nyq = nyquist(&path);
-        fourier_power(&calculate_efd(&path, nyq), nyq, 1.)
-    };
-    assert_eq!(harmonic, 6);
-    let coeffs = calculate_efd(&path, harmonic);
-    // Test normalize
-    let (coeffs_norm, ..) = normalize_efd(&coeffs, true);
-    let contour = inverse_transform(&coeffs_norm, (0., 0.), target.nrows(), None);
-    let err = (contour - norm).abs().sum();
+    use super::*;
+    use ndarray::Zip;
+
+    let mut efd = Efd::from_curve(PATH, Some(6));
+    let efd_backup = efd.clone();
+    // Test normalization
+    let geo = efd.normalize();
+    let norm = efd.generate(NORM.len());
+    let err = Zip::from(&norm)
+        .and(NORM)
+        .map_collect(|a, b| (a[0] - b[0]) + (a[1] - b[1]))
+        .sum();
     assert!(err < 1e-20, "{}", err);
-    // Test reconstruct
-    let (coeffs, rot, ..) = normalize_efd(&coeffs, false);
-    assert!((rot - 0.871056726153095).abs() < 1e-20);
-    let locus = locus(&path);
-    assert!((locus.0 - -2.41571330022796).abs() < 1e-20);
-    assert!((locus.1 - 53.43791856115811).abs() < 1e-20);
-    let contour = inverse_transform(&coeffs, locus, target.nrows(), None);
-    let ans = rotate_contour(&contour, -rot, locus);
-    let err = (ans - target).abs().sum();
+    // Test reconstruction
+    assert!((geo.semi_major_axis_angle - 0.871056726153095).abs() < 1e-20);
+    assert!((geo.locus.0 - -2.41571330022796).abs() < 1e-20);
+    assert!((geo.locus.1 - 53.43791856115811).abs() < 1e-20);
+    let target = efd_backup.generate(TARGET.len());
+    let err = Zip::from(&target)
+        .and(TARGET)
+        .map_collect(|a, b| (a[0] - b[0]) + (a[1] - b[1]))
+        .sum();
     assert!(err < 1e-12, "{}", err);
 }
 
-const PATH: &[[f64; 2]] = &[
+pub const PATH: &[[f64; 2]] = &[
     [14.928108089437242, 90.01002059789568],
     [-3.25371009238094, 85.46456605244113],
     [-16.763462931659024, 76.52439024390245],
@@ -44,7 +42,7 @@ const PATH: &[[f64; 2]] = &[
     [38.41295657428572, 90.38880847668355],
     [27.80689596822512, 91.1463842342593],
 ];
-const TARGET: &[[f64; 2]] = &[
+pub const TARGET: &[[f64; 2]] = &[
     [39.35863965131904, 83.29742588206082],
     [28.06426978660421, 90.17530230145958],
     [14.322369428735222, 89.31456476623697],
@@ -66,7 +64,7 @@ const TARGET: &[[f64; 2]] = &[
     [40.133214266242625, 71.61536010397093],
     [39.35863965131904, 83.29742588206082],
 ];
-const NORM: &[[f64; 2]] = &[
+pub const NORM: &[[f64; 2]] = &[
     [0.08891215505140294, 1.1208152251011967],
     [-0.1855649309215952, 1.0286145311944075],
     [-0.36492834737357743, 0.7862898221269873],
