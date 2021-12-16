@@ -2,8 +2,8 @@ use ndarray::{
     arr2, array, concatenate, s, Array, Array1, Array2, AsArray, Axis, Dimension, Slice, Zip,
 };
 use std::{
-    f64::consts::{PI, TAU},
-    ops::Sub,
+    f64::consts::{FRAC_2_PI, PI, TAU},
+    ops::{Add, Sub},
 };
 
 fn diff<'a, A, D, V>(arr: V, axis: Option<Axis>) -> Array<A, D>
@@ -62,12 +62,63 @@ pub fn fourier_power(efd: Efd, nyq: usize, threshold: f64) -> usize {
 }
 
 /// Geometric information.
+///
+/// This type support add operator on two information (`a` + `b`),
+/// it can be used on a not normalized contour `a` transforming to another geometry `b`.
 #[allow(missing_docs)]
+#[derive(Clone, Default)]
 pub struct GeoInfo {
     pub semi_major_axis_angle: f64,
     pub shift_angle: f64,
     pub scale: f64,
     pub locus: (f64, f64),
+}
+
+impl Add for &GeoInfo {
+    type Output = GeoInfo;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut a = self.semi_major_axis_angle - rhs.semi_major_axis_angle;
+        if a.sin() < 0. {
+            a += FRAC_2_PI.copysign(a.cos());
+        }
+        let scale = rhs.scale / self.scale;
+        let locus_a = self.locus.1.atan2(self.locus.0) + a;
+        let d = self.locus.1.hypot(self.locus.0) * scale;
+        GeoInfo {
+            semi_major_axis_angle: a,
+            shift_angle: self.shift_angle, // Keep original
+            scale,
+            locus: (
+                rhs.locus.0 - d * locus_a.cos(),
+                rhs.locus.1 - d * locus_a.sin(),
+            ),
+        }
+    }
+}
+
+impl Add<GeoInfo> for &GeoInfo {
+    type Output = GeoInfo;
+
+    fn add(self, rhs: GeoInfo) -> Self::Output {
+        self + &rhs
+    }
+}
+
+impl Add<&GeoInfo> for GeoInfo {
+    type Output = Self;
+
+    fn add(self, rhs: &GeoInfo) -> Self::Output {
+        &self + rhs
+    }
+}
+
+impl Add for GeoInfo {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        &self + &rhs
+    }
 }
 
 /// Elliptical Fourier Descriptor coefficients.
@@ -136,12 +187,12 @@ impl Efd {
     /// This code is adapted from the pyefd module.
     pub fn normalize(&mut self) -> GeoInfo {
         // Shift angle
-        let theta1 = f64::atan2(
-            2. * (self.c[[0, 0]] * self.c[[0, 1]] + self.c[[0, 2]] * self.c[[0, 3]]),
-            self.c[[0, 0]] * self.c[[0, 0]] - self.c[[0, 1]] * self.c[[0, 1]]
-                + self.c[[0, 2]] * self.c[[0, 2]]
-                - self.c[[0, 3]] * self.c[[0, 3]],
-        ) * 0.5;
+        let theta1 =
+            (2. * (self.c[[0, 0]] * self.c[[0, 1]] + self.c[[0, 2]] * self.c[[0, 3]])).atan2(
+                self.c[[0, 0]] * self.c[[0, 0]] - self.c[[0, 1]] * self.c[[0, 1]]
+                    + self.c[[0, 2]] * self.c[[0, 2]]
+                    - self.c[[0, 3]] * self.c[[0, 3]],
+            ) * 0.5;
         for n in 0..self.c.nrows() {
             let angle = (n + 1) as f64 * theta1;
             let rot = array![[angle.cos(), -angle.sin()], [angle.sin(), angle.cos()]];
