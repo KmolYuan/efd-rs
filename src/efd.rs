@@ -3,7 +3,7 @@ use ndarray::{
 };
 use std::{
     f64::consts::{FRAC_2_PI, PI, TAU},
-    ops::{Add, Sub},
+    ops::Sub,
 };
 
 fn diff<'a, A, D, V>(arr: V, axis: Option<Axis>) -> Array<A, D>
@@ -63,10 +63,9 @@ pub fn fourier_power(efd: Efd, nyq: usize, threshold: f64) -> usize {
 
 /// Geometric information.
 ///
-/// This type support add operator on two information (`a` + `b`),
-/// it can be used on a not normalized contour `a` transforming to another geometry `b`.
+/// This type record the information of raw coefficients.
 #[allow(missing_docs)]
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct GeoInfo {
     pub semi_major_axis_angle: f64,
     pub shift_angle: f64,
@@ -74,10 +73,33 @@ pub struct GeoInfo {
     pub locus: (f64, f64),
 }
 
-impl Add for &GeoInfo {
-    type Output = GeoInfo;
+impl Default for GeoInfo {
+    fn default() -> Self {
+        Self {
+            semi_major_axis_angle: 0.0,
+            shift_angle: 0.0,
+            scale: 1.,
+            locus: (0.0, 0.0),
+        }
+    }
+}
 
-    fn add(self, rhs: Self) -> Self::Output {
+impl GeoInfo {
+    /// An chain operator on two information.
+    ///
+    /// It can be used on a not normalized contour `a` transforming to another geometry `b`.
+    ///
+    /// ```
+    /// use efd::Efd;
+    /// # use efd::tests::PATH;
+    /// # let path1 = PATH;
+    /// # let path2 = PATH;
+    ///
+    /// let a = Efd::from_curve(path1, None).normalize();
+    /// let b = Efd::from_curve(path2, None).normalize();
+    /// let c = a.to(&b);
+    /// ```
+    pub fn to(&self, rhs: &Self) -> Self {
         let mut a = self.semi_major_axis_angle - rhs.semi_major_axis_angle;
         if a.sin() < 0. {
             a += FRAC_2_PI.copysign(a.cos());
@@ -94,30 +116,6 @@ impl Add for &GeoInfo {
                 rhs.locus.1 - d * locus_a.sin(),
             ),
         }
-    }
-}
-
-impl Add<GeoInfo> for &GeoInfo {
-    type Output = GeoInfo;
-
-    fn add(self, rhs: GeoInfo) -> Self::Output {
-        self + &rhs
-    }
-}
-
-impl Add<&GeoInfo> for GeoInfo {
-    type Output = Self;
-
-    fn add(self, rhs: &GeoInfo) -> Self::Output {
-        &self + rhs
-    }
-}
-
-impl Add for GeoInfo {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        &self + &rhs
     }
 }
 
