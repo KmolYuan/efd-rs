@@ -23,6 +23,8 @@
 //! ```
 #![warn(missing_docs)]
 pub use crate::efd::*;
+pub use crate::geo_info::*;
 
 mod efd;
+mod geo_info;
 pub mod tests;
