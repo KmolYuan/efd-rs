@@ -3,12 +3,16 @@ use std::f64::consts::FRAC_2_PI;
 /// Geometric information.
 ///
 /// This type record the information of raw coefficients.
-#[allow(missing_docs)]
 #[derive(Clone)]
 pub struct GeoInfo {
+    /// Angle of the semi-major axis,
+    /// the rotation angle of the first ellipse
     pub semi_major_axis_angle: f64,
+    /// Shift angle between each ellipse
     pub shift_angle: f64,
+    /// Scaling factor
     pub scale: f64,
+    /// Center of the first ellipse
     pub locus: (f64, f64),
 }
 
