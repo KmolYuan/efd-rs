@@ -6,14 +6,15 @@ use std::f64::consts::FRAC_2_PI;
 #[derive(Clone)]
 pub struct GeoInfo {
     /// Angle of the semi-major axis,
-    /// the rotation angle of the first ellipse
+    /// the rotation angle of the first ellipse.
     pub semi_major_axis_angle: f64,
-    /// Shift angle between each ellipse
+    /// Shift angle between each ellipse.
     pub shift_angle: f64,
-    /// Scaling factor
+    /// Scaling factor.
     pub scale: f64,
-    /// Center of the first ellipse
-    pub locus: (f64, f64),
+    /// Center of the first ellipse.
+    /// The "DC" component / bias terms of the Fourier series.
+    pub center: (f64, f64),
 }
 
 impl Default for GeoInfo {
@@ -22,7 +23,7 @@ impl Default for GeoInfo {
             semi_major_axis_angle: 0.0,
             shift_angle: 0.0,
             scale: 1.,
-            locus: (0.0, 0.0),
+            center: (0.0, 0.0),
         }
     }
 }
@@ -48,15 +49,15 @@ impl GeoInfo {
             a += FRAC_2_PI.copysign(a.cos());
         }
         let scale = rhs.scale / self.scale;
-        let locus_a = self.locus.1.atan2(self.locus.0) + a;
-        let d = self.locus.1.hypot(self.locus.0) * scale;
+        let center_a = self.center.1.atan2(self.center.0) + a;
+        let d = self.center.1.hypot(self.center.0) * scale;
         GeoInfo {
             semi_major_axis_angle: a,
             shift_angle: self.shift_angle, // Keep original
             scale,
-            locus: (
-                rhs.locus.0 - d * locus_a.cos(),
-                rhs.locus.1 - d * locus_a.sin(),
+            center: (
+                rhs.center.0 - d * center_a.cos(),
+                rhs.center.1 - d * center_a.sin(),
             ),
         }
     }

@@ -66,10 +66,11 @@ pub fn fourier_power(efd: Efd, nyq: usize, threshold: f64) -> usize {
 /// Provide transformation between discrete points and coefficients.
 #[derive(Clone)]
 pub struct Efd {
-    /// Coefficients
+    /// Coefficients.
     pub c: Array2<f64>,
-    /// Center of the first ellipse
-    pub locus: (f64, f64),
+    /// Center of the first ellipse.
+    /// The "DC" component / bias terms of the Fourier series.
+    pub center: (f64, f64),
 }
 
 impl Efd {
@@ -112,13 +113,13 @@ impl Efd {
         let c0 = (&dxy.slice(s![.., 1]) * c + delta * dt).sum() / (zt + 1e-20);
         Self {
             c: coeffs,
-            locus: (curve[0][0] + a0, curve[0][1] + c0),
+            center: (curve[0][0] + a0, curve[0][1] + c0),
         }
     }
 
     /// Normalize the coefficients and get the geometry information.
     ///
-    /// **Locus will loss with this operation.**
+    /// **Center will loss with this operation.**
     ///
     /// Implements Kuhl and Giardina method of normalizing the coefficients
     /// An, Bn, Cn, Dn. Performs 3 separate normalizations. First, it makes the
@@ -160,13 +161,13 @@ impl Efd {
         }
         let scale = self.c[[0, 0]].abs();
         self.c /= scale;
-        let locus = self.locus;
-        self.locus = (0., 0.);
+        let center = self.center;
+        self.center = (0., 0.);
         GeoInfo {
             semi_major_axis_angle: psi,
             shift_angle: theta1,
             scale,
-            locus,
+            center,
         }
     }
 
@@ -182,8 +183,8 @@ impl Efd {
             let x = &cos * self.c[[n, 2]] + &sin * self.c[[n, 3]];
             let y = &cos * self.c[[n, 0]] + &sin * self.c[[n, 1]];
             Zip::from(&mut curve).and(&x).and(&y).for_each(|c, x, y| {
-                c[0] = x + self.locus.0;
-                c[1] = y + self.locus.1;
+                c[0] = x + self.center.0;
+                c[1] = y + self.center.1;
             });
         }
         curve

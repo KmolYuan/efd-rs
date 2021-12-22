@@ -17,8 +17,8 @@ fn efd() {
     assert!(err < 1e-20, "{}", err);
     // Test reconstruction
     assert!((geo.semi_major_axis_angle - 0.871056726153095).abs() < 1e-20);
-    assert!((geo.locus.0 - -2.41571330022796).abs() < 1e-20);
-    assert!((geo.locus.1 - 53.43791856115811).abs() < 1e-20);
+    assert!((geo.center.0 - -2.41571330022796).abs() < 1e-20);
+    assert!((geo.center.1 - 53.43791856115811).abs() < 1e-20);
     let target = efd_backup.generate(TARGET.len());
     let err = Zip::from(&target)
         .and(TARGET)
