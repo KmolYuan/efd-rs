@@ -165,7 +165,7 @@ impl Efd {
         self.center = (0., 0.);
         GeoInfo {
             semi_major_axis_angle: psi,
-            shift_angle: theta1,
+            starting_angle: theta1,
             scale,
             center,
         }
