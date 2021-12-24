@@ -22,8 +22,7 @@
 //! # assert_eq!(new_curve.len(), 20);
 //! ```
 #![warn(missing_docs)]
-pub use crate::efd::*;
-pub use crate::geo_info::*;
+pub use crate::{efd::*, geo_info::*};
 
 mod efd;
 mod geo_info;
