@@ -22,8 +22,17 @@
 //! # assert_eq!(new_curve.len(), 20);
 //! ```
 #![warn(missing_docs)]
+#![cfg_attr(not(feature = "std"), no_std)]
+extern crate alloc;
+#[cfg(not(feature = "std"))]
+extern crate core as std;
+
+#[cfg(not(any(feature = "std", feature = "libm")))]
+compile_error!("please enable math function from either \"std\" or \"libm\"");
+
 pub use crate::{efd::*, geo_info::*};
 
 mod efd;
 mod geo_info;
+mod math;
 pub mod tests;

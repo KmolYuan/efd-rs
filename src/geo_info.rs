@@ -1,3 +1,4 @@
+use crate::math::{atan2, copysign, cos, hypot, sin};
 use std::f64::consts::FRAC_2_PI;
 
 /// Geometric information.
@@ -48,19 +49,19 @@ impl GeoInfo {
     /// ```
     pub fn to(&self, rhs: &Self) -> Self {
         let mut a = self.semi_major_axis_angle - rhs.semi_major_axis_angle;
-        if a.sin() < 0. {
-            a += FRAC_2_PI.copysign(a.cos());
+        if sin(a) < 0. {
+            a += copysign(FRAC_2_PI, cos(a));
         }
         let scale = rhs.scale / self.scale;
-        let center_a = self.center.1.atan2(self.center.0) + a;
-        let d = self.center.1.hypot(self.center.0) * scale;
+        let center_a = atan2(self.center.1, self.center.0) + a;
+        let d = hypot(self.center.1, self.center.0) * scale;
         GeoInfo {
             semi_major_axis_angle: a,
             starting_angle: self.starting_angle, // Keep original
             scale,
             center: (
-                rhs.center.0 - d * center_a.cos(),
-                rhs.center.1 - d * center_a.sin(),
+                rhs.center.0 - d * cos(center_a),
+                rhs.center.1 - d * sin(center_a),
             ),
         }
     }
