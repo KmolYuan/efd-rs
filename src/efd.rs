@@ -64,7 +64,7 @@ pub fn fourier_power(efd: Efd, nyq: usize, threshold: f64) -> usize {
 
 /// Elliptical Fourier Descriptor coefficients.
 /// Provide transformation between discrete points and coefficients.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Efd {
     /// Coefficients.
     pub c: Array2<f64>,
