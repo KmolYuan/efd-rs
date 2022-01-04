@@ -21,6 +21,11 @@
 //! let new_curve = Efd::from_curve(&curve, None).generate(20);
 //! # assert_eq!(new_curve.len(), 20);
 //! ```
+//!
+//! # Features
+//!
+//! This crate support no-std solution via using "libm",
+//! a crate provide pure-rust math functions, please enable it if disabled the "std" feature.
 #![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
