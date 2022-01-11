@@ -186,7 +186,7 @@ impl Efd {
 
     /// Return the discrepancy between the coefficients.
     pub fn discrepancy(&self, rhs: &Self) -> f64 {
-        (&self.c - &rhs.c).sum()
+        (&self.c - &rhs.c).mapv(abs).sum()
     }
 
     /// Generate the described curve from the coefficients with specific point number.
