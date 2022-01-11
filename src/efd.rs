@@ -48,6 +48,7 @@ where
 /// ```
 /// use efd::{fourier_power, Efd};
 /// # use efd::tests::PATH;
+///
 /// # let curve = PATH;
 /// // Nyquist Frequency
 /// let nyq = curve.len() / 2;
@@ -66,6 +67,21 @@ pub fn fourier_power(efd: Efd, nyq: usize, threshold: f64) -> usize {
     nyq
 }
 
+/// A convenient function to apply Nyquist Frequency on [`fourier_power`] function.
+///
+/// ```
+/// use efd::fourier_power_nyq;
+/// # use efd::tests::PATH;
+///
+/// # let curve = PATH;
+/// let harmonic = fourier_power_nyq(curve);
+/// # assert_eq!(harmonic, 6);
+/// ```
+pub fn fourier_power_nyq(curve: &[[f64; 2]]) -> usize {
+    let nyq = curve.len() / 2;
+    fourier_power(Efd::from_curve(curve, Some(nyq)), nyq, 1.)
+}
+
 /// Elliptical Fourier Descriptor coefficients.
 /// Provide transformation between discrete points and coefficients.
 #[derive(Clone, Default, Debug)]
@@ -82,14 +98,7 @@ impl Efd {
     ///
     /// If the harmonic number is not given, it will be calculated with [`fourier_power`] function.
     pub fn from_curve(curve: &[[f64; 2]], harmonic: Option<usize>) -> Self {
-        let harmonic = match harmonic {
-            Some(h) => h,
-            None => {
-                // Nyquist Frequency
-                let nyq = curve.len() / 2;
-                fourier_power(Self::from_curve(curve, Some(nyq)), nyq, 1.)
-            }
-        };
+        let harmonic = harmonic.unwrap_or_else(|| fourier_power_nyq(curve));
         let dxy = diff(&arr2(curve), Some(Axis(0)));
         let dt = dxy.mapv(|v| v * v).sum_axis(Axis(1)).mapv(sqrt);
         let t = concatenate!(Axis(0), array![0.], cumsum(&dt));
