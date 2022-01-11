@@ -8,7 +8,15 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/KmolYuan/efd-rs"
 keywords = ["efd", "elliptical", "fourier-descriptor", "algorithm"]
-categories = ["algorithm"]
+categories = ["algorithm", "no-std"]
+
+[features]
+default = ["std"]
+std = ["ndarray/std"]
 
 [dependencies]
+ndarray = { version = "0.15", default-features = false }
+libm = { version = "0.2", optional = true }
+
+[dev-dependencies]
 ndarray = "0.15"

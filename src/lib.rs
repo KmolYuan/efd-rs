@@ -21,9 +21,23 @@
 //! let new_curve = Efd::from_curve(&curve, None).generate(20);
 //! # assert_eq!(new_curve.len(), 20);
 //! ```
+//!
+//! # Features
+//!
+//! This crate support no-std solution via using "libm",
+//! a crate provide pure-rust math functions, please enable it if disabled the "std" feature.
 #![warn(missing_docs)]
+#![cfg_attr(not(feature = "std"), no_std)]
+extern crate alloc;
+#[cfg(not(feature = "std"))]
+extern crate core as std;
+
+#[cfg(not(any(feature = "std", feature = "libm")))]
+compile_error!("please enable math function from either \"std\" or \"libm\"");
+
 pub use crate::{efd::*, geo_info::*};
 
 mod efd;
 mod geo_info;
+mod math;
 pub mod tests;

@@ -1,4 +1,8 @@
-use crate::GeoInfo;
+use crate::{
+    math::{abs, atan2, cos, sin, sqrt},
+    GeoInfo,
+};
+use alloc::{vec, vec::Vec};
 use ndarray::{
     arr2, array, concatenate, s, Array, Array1, Array2, AsArray, Axis, Dimension, Slice, Zip,
 };
@@ -64,7 +68,7 @@ pub fn fourier_power(efd: Efd, nyq: usize, threshold: f64) -> usize {
 
 /// Elliptical Fourier Descriptor coefficients.
 /// Provide transformation between discrete points and coefficients.
-#[derive(Clone, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct Efd {
     /// Coefficients.
     pub c: Array2<f64>,
@@ -87,7 +91,7 @@ impl Efd {
             }
         };
         let dxy = diff(&arr2(curve), Some(Axis(0)));
-        let dt = dxy.mapv(|v| v * v).sum_axis(Axis(1)).mapv(f64::sqrt);
+        let dt = dxy.mapv(|v| v * v).sum_axis(Axis(1)).mapv(sqrt);
         let t = concatenate!(Axis(0), array![0.], cumsum(&dt));
         let zt = t[t.len() - 1];
         let phi = &t * TAU / (zt + 1e-20);
@@ -98,8 +102,8 @@ impl Efd {
             let phi_n = &phi * n1;
             let phi_n_front = phi_n.slice(s![..-1]);
             let phi_n_back = phi_n.slice(s![1..]);
-            let cos_phi_n = (phi_n_back.mapv(f64::cos) - phi_n_front.mapv(f64::cos)) / &dt;
-            let sin_phi_n = (phi_n_back.mapv(f64::sin) - phi_n_front.mapv(f64::sin)) / &dt;
+            let cos_phi_n = (phi_n_back.mapv(cos) - phi_n_front.mapv(cos)) / &dt;
+            let sin_phi_n = (phi_n_back.mapv(sin) - phi_n_front.mapv(sin)) / &dt;
             coeffs[[n, 0]] = c * (&dxy.slice(s![.., 1]) * &cos_phi_n).sum();
             coeffs[[n, 1]] = c * (&dxy.slice(s![.., 1]) * &sin_phi_n).sum();
             coeffs[[n, 2]] = c * (&dxy.slice(s![.., 0]) * &cos_phi_n).sum();
@@ -129,15 +133,15 @@ impl Efd {
     /// This code is adapted from the pyefd module.
     pub fn normalize(&mut self) -> GeoInfo {
         // Shift angle
-        let theta1 =
-            (2. * (self.c[[0, 0]] * self.c[[0, 1]] + self.c[[0, 2]] * self.c[[0, 3]])).atan2(
-                self.c[[0, 0]] * self.c[[0, 0]] - self.c[[0, 1]] * self.c[[0, 1]]
-                    + self.c[[0, 2]] * self.c[[0, 2]]
-                    - self.c[[0, 3]] * self.c[[0, 3]],
-            ) * 0.5;
+        let theta1 = atan2(
+            2. * (self.c[[0, 0]] * self.c[[0, 1]] + self.c[[0, 2]] * self.c[[0, 3]]),
+            self.c[[0, 0]] * self.c[[0, 0]] - self.c[[0, 1]] * self.c[[0, 1]]
+                + self.c[[0, 2]] * self.c[[0, 2]]
+                - self.c[[0, 3]] * self.c[[0, 3]],
+        ) * 0.5;
         for n in 0..self.c.nrows() {
             let angle = (n + 1) as f64 * theta1;
-            let rot = array![[angle.cos(), -angle.sin()], [angle.sin(), angle.cos()]];
+            let rot = array![[cos(angle), -sin(angle)], [sin(angle), cos(angle)]];
             let m = array![
                 [self.c[[n, 0]], self.c[[n, 1]]],
                 [self.c[[n, 2]], self.c[[n, 3]]],
@@ -148,8 +152,8 @@ impl Efd {
                 .assign(&Array1::from_iter(m.iter().cloned()));
         }
         // The angle of semi-major axis
-        let psi = self.c[[0, 2]].atan2(self.c[[0, 0]]);
-        let rot = array![[psi.cos(), psi.sin()], [-psi.sin(), psi.cos()]];
+        let psi = atan2(self.c[[0, 2]], self.c[[0, 0]]);
+        let rot = array![[cos(psi), sin(psi)], [-sin(psi), cos(psi)]];
         for n in 0..self.c.nrows() {
             let m = rot.dot(&array![
                 [self.c[[n, 0]], self.c[[n, 1]]],
@@ -159,7 +163,7 @@ impl Efd {
                 .slice_mut(s![n, ..])
                 .assign(&Array1::from_iter(m.iter().cloned()));
         }
-        let scale = self.c[[0, 0]].abs();
+        let scale = abs(self.c[[0, 0]]);
         self.c /= scale;
         let center = self.center;
         self.center = (0., 0.);
@@ -179,12 +183,14 @@ impl Efd {
     /// Generate the described curve from the coefficients with specific point number.
     pub fn generate(&self, n: usize) -> Vec<[f64; 2]> {
         assert!(n > 3, "n must larger than 3, current is {}", n);
-        let t = Array1::linspace(0., 1., n);
+        let mut t = vec![1. / (n - 1) as f64; n];
+        t[0] = 0.;
+        let t = cumsum(&Array1::from(t));
         let mut curve = vec![[0., 0.]; n];
         for n in 0..self.c.nrows() {
             let angle = &t * (n + 1) as f64 * TAU;
-            let cos = angle.mapv(f64::cos);
-            let sin = angle.mapv(f64::sin);
+            let cos = angle.mapv(cos);
+            let sin = angle.mapv(sin);
             let x = &cos * self.c[[n, 2]] + &sin * self.c[[n, 3]];
             let y = &cos * self.c[[n, 0]] + &sin * self.c[[n, 1]];
             Zip::from(&mut curve).and(&x).and(&y).for_each(|c, x, y| {
