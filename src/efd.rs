@@ -64,7 +64,7 @@ pub fn fourier_power(efd: Efd, nyq: usize, threshold: f64) -> usize {
 
 /// Elliptical Fourier Descriptor coefficients.
 /// Provide transformation between discrete points and coefficients.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Efd {
     /// Coefficients.
     pub c: Array2<f64>,
@@ -169,6 +169,11 @@ impl Efd {
             scale,
             center,
         }
+    }
+
+    /// Return the discrepancy between the coefficients.
+    pub fn discrepancy(&self, rhs: &Self) -> f64 {
+        (&self.c - &rhs.c).sum()
     }
 
     /// Generate the described curve from the coefficients with specific point number.
