@@ -43,8 +43,8 @@ impl GeoInfo {
     /// # let path1 = PATH;
     /// # let path2 = PATH;
     ///
-    /// let a = Efd::from_curve(path1, None).normalize();
-    /// let b = Efd::from_curve(path2, None).normalize();
+    /// let a = Efd::from_curve(path1, None).geo;
+    /// let b = Efd::from_curve(path2, None).geo;
     /// let c = a.to(&b);
     /// ```
     pub fn to(&self, rhs: &Self) -> Self {

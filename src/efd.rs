@@ -56,10 +56,10 @@ where
 /// # assert_eq!(harmonic, 6);
 /// ```
 pub fn fourier_power(efd: Efd, nyq: usize, threshold: f64) -> usize {
-    let total_power = 0.5 * efd.c.mapv(|v| v * v).sum();
+    let total_power = 0.5 * efd.coeffs.mapv(|v| v * v).sum();
     let mut power = 0.;
     for i in 0..nyq {
-        power += 0.5 * efd.c.slice(s![i, ..]).mapv(|v| v * v).sum();
+        power += 0.5 * efd.coeffs.slice(s![i, ..]).mapv(|v| v * v).sum();
         if power / total_power >= threshold {
             return i + 1;
         }
@@ -87,10 +87,16 @@ pub fn fourier_power_nyq(curve: &[[f64; 2]]) -> usize {
 #[derive(Clone, Default, Debug)]
 pub struct Efd {
     /// Coefficients.
-    pub c: Array2<f64>,
-    /// Center of the first ellipse.
-    /// The "DC" component / bias terms of the Fourier series.
-    pub center: (f64, f64),
+    pub coeffs: Array2<f64>,
+    /// The geometry information of normalized coefficients.
+    ///
+    /// Implements Kuhl and Giardina method of normalizing the coefficients
+    /// An, Bn, Cn, Dn. Performs 3 separate normalizations. First, it makes the
+    /// data location invariant by re-scaling the data to a common origin.
+    /// Secondly, the data is rotated with respect to the major axis. Thirdly,
+    /// the coefficients are normalized with regard to the absolute value of A₁.
+    /// This code is adapted from the pyefd module.
+    pub geo: GeoInfo,
 }
 
 impl Efd {
@@ -101,7 +107,7 @@ impl Efd {
         let harmonic = harmonic.unwrap_or_else(|| fourier_power_nyq(curve));
         let dxy = diff(&arr2(curve), Some(Axis(0)));
         let dt = dxy.mapv(|v| v * v).sum_axis(Axis(1)).mapv(sqrt);
-        let t = concatenate!(Axis(0), array![0.], cumsum(&dt));
+        let t = concatenate![Axis(0), array![0.], cumsum(&dt)];
         let zt = t[t.len() - 1];
         let phi = &t * TAU / (zt + 1e-20);
         let mut coeffs = Array2::zeros((harmonic, 4));
@@ -124,69 +130,57 @@ impl Efd {
         let a0 = (&dxy.slice(s![.., 0]) * &c + xi * &dt).sum() / (zt + 1e-20);
         let delta = cumsum(dxy.slice(s![.., 1])) - &dxy.slice(s![.., 1]) * &tdt;
         let c0 = (&dxy.slice(s![.., 1]) * c + delta * dt).sum() / (zt + 1e-20);
-        Self {
-            c: coeffs,
-            center: (curve[0][0] + a0, curve[0][1] + c0),
-        }
-    }
-
-    /// Normalize the coefficients and get the geometry information.
-    ///
-    /// **Center will loss with this operation.**
-    ///
-    /// Implements Kuhl and Giardina method of normalizing the coefficients
-    /// An, Bn, Cn, Dn. Performs 3 separate normalizations. First, it makes the
-    /// data location invariant by re-scaling the data to a common origin.
-    /// Secondly, the data is rotated with respect to the major axis. Thirdly,
-    /// the coefficients are normalized with regard to the absolute value of A₁.
-    /// This code is adapted from the pyefd module.
-    pub fn normalize(&mut self) -> GeoInfo {
+        let center = (curve[0][0] + a0, curve[0][1] + c0);
         // Shift angle
         let theta1 = atan2(
-            2. * (self.c[[0, 0]] * self.c[[0, 1]] + self.c[[0, 2]] * self.c[[0, 3]]),
-            self.c[[0, 0]] * self.c[[0, 0]] - self.c[[0, 1]] * self.c[[0, 1]]
-                + self.c[[0, 2]] * self.c[[0, 2]]
-                - self.c[[0, 3]] * self.c[[0, 3]],
+            2. * (coeffs[[0, 0]] * coeffs[[0, 1]] + coeffs[[0, 2]] * coeffs[[0, 3]]),
+            coeffs[[0, 0]] * coeffs[[0, 0]] - coeffs[[0, 1]] * coeffs[[0, 1]]
+                + coeffs[[0, 2]] * coeffs[[0, 2]]
+                - coeffs[[0, 3]] * coeffs[[0, 3]],
         ) * 0.5;
-        for n in 0..self.c.nrows() {
+        for n in 0..harmonic {
             let angle = (n + 1) as f64 * theta1;
             let rot = array![[cos(angle), -sin(angle)], [sin(angle), cos(angle)]];
             let m = array![
-                [self.c[[n, 0]], self.c[[n, 1]]],
-                [self.c[[n, 2]], self.c[[n, 3]]],
+                [coeffs[[n, 0]], coeffs[[n, 1]]],
+                [coeffs[[n, 2]], coeffs[[n, 3]]],
             ]
             .dot(&rot);
-            self.c
+            coeffs
                 .slice_mut(s![n, ..])
                 .assign(&Array1::from_iter(m.iter().cloned()));
         }
         // The angle of semi-major axis
-        let psi = atan2(self.c[[0, 2]], self.c[[0, 0]]);
+        let psi = atan2(coeffs[[0, 2]], coeffs[[0, 0]]);
         let rot = array![[cos(psi), sin(psi)], [-sin(psi), cos(psi)]];
-        for n in 0..self.c.nrows() {
+        for n in 0..harmonic {
             let m = rot.dot(&array![
-                [self.c[[n, 0]], self.c[[n, 1]]],
-                [self.c[[n, 2]], self.c[[n, 3]]],
+                [coeffs[[n, 0]], coeffs[[n, 1]]],
+                [coeffs[[n, 2]], coeffs[[n, 3]]],
             ]);
-            self.c
+            coeffs
                 .slice_mut(s![n, ..])
                 .assign(&Array1::from_iter(m.iter().cloned()));
         }
-        let scale = abs(self.c[[0, 0]]);
-        self.c /= scale;
-        let center = self.center;
-        self.center = (0., 0.);
-        GeoInfo {
+        let scale = abs(coeffs[[0, 0]]);
+        coeffs /= scale;
+        let geo = GeoInfo {
             semi_major_axis_angle: psi,
             starting_angle: theta1,
             scale,
             center,
-        }
+        };
+        Self { coeffs, geo }
+    }
+
+    /// Get the harmonic of the coefficients.
+    pub fn harmonic(&self) -> usize {
+        self.coeffs.nrows()
     }
 
     /// Return the discrepancy between the coefficients.
     pub fn discrepancy(&self, rhs: &Self) -> f64 {
-        (&self.c - &rhs.c).mapv(abs).sum()
+        (&self.coeffs - &rhs.coeffs).mapv(abs).sum()
     }
 
     /// Generate the described curve from the coefficients with specific point number.
@@ -196,15 +190,15 @@ impl Efd {
         t[0] = 0.;
         let t = cumsum(&Array1::from(t));
         let mut curve = vec![[0., 0.]; n];
-        for n in 0..self.c.nrows() {
+        for n in 0..self.harmonic() {
             let angle = &t * (n + 1) as f64 * TAU;
             let cos = angle.mapv(cos);
             let sin = angle.mapv(sin);
-            let x = &cos * self.c[[n, 2]] + &sin * self.c[[n, 3]];
-            let y = &cos * self.c[[n, 0]] + &sin * self.c[[n, 1]];
+            let x = &cos * self.coeffs[[n, 2]] + &sin * self.coeffs[[n, 3]];
+            let y = &cos * self.coeffs[[n, 0]] + &sin * self.coeffs[[n, 1]];
             Zip::from(&mut curve).and(&x).and(&y).for_each(|c, x, y| {
-                c[0] = x + self.center.0;
-                c[1] = y + self.center.1;
+                c[0] = *x;
+                c[1] = *y;
             });
         }
         curve

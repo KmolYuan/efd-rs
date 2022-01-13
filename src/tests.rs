@@ -2,28 +2,29 @@
 
 #[test]
 fn efd() {
-    use super::*;
-    use ndarray::Zip;
+    use crate::{math::*, *};
+    use ndarray::{arr2, array, Axis};
 
-    let mut efd = Efd::from_curve(PATH, Some(6));
-    let efd_backup = efd.clone();
-    // Test normalization
-    let geo = efd.normalize();
-    let norm = efd.generate(NORM.len());
-    let err = Zip::from(&norm)
-        .and(NORM)
-        .map_collect(|a, b| (a[0] - b[0]) + (a[1] - b[1]))
-        .sum();
+    let efd = Efd::from_curve(PATH, None);
+    // Test geometry information
+    let x = efd.geo.center.0;
+    let y = efd.geo.center.1;
+    let angle = efd.geo.semi_major_axis_angle;
+    let scale = efd.geo.scale;
+    assert!((x - -2.41571330022796).abs() < 1e-20);
+    assert!((y - 53.43791856115811).abs() < 1e-20);
+    assert!((angle - 0.871056726153095).abs() < 1e-20);
+    assert_eq!(efd.harmonic(), 6);
+    let norm = arr2(&efd.generate(NORM.len()));
+    let err = (&norm - arr2(NORM)).sum();
     assert!(err < 1e-20, "{}", err);
     // Test reconstruction
-    assert!((geo.semi_major_axis_angle - 0.871056726153095).abs() < 1e-20);
-    assert!((geo.center.0 - -2.41571330022796).abs() < 1e-20);
-    assert!((geo.center.1 - 53.43791856115811).abs() < 1e-20);
-    let target = efd_backup.generate(TARGET.len());
-    let err = Zip::from(&target)
-        .and(TARGET)
-        .map_collect(|a, b| (a[0] - b[0]) + (a[1] - b[1]))
-        .sum();
+    let mut norm = norm.clone();
+    let rot = array![[cos(angle), -sin(angle)], [sin(angle), cos(angle)]];
+    norm.axis_iter_mut(Axis(0))
+        .for_each(|mut c| c.assign(&rot.dot(&c)));
+    let target = norm * scale + arr2(&[[x, y]]);
+    let err = (&target - arr2(TARGET)).sum();
     assert!(err < 1e-12, "{}", err);
 }
 
