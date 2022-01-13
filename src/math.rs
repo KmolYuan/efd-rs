@@ -21,3 +21,8 @@ std_math! {
     fn sin(v)
     fn sqrt(v)
 }
+
+#[inline(always)]
+pub(crate) fn pow2(v: f64) -> f64 {
+    v * v
+}

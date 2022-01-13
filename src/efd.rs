@@ -1,5 +1,5 @@
 use crate::{
-    math::{abs, atan2, cos, sin, sqrt},
+    math::{abs, atan2, cos, pow2, sin, sqrt},
     GeoInfo,
 };
 use alloc::{vec, vec::Vec};
@@ -56,10 +56,10 @@ where
 /// # assert_eq!(harmonic, 6);
 /// ```
 pub fn fourier_power(efd: Efd, nyq: usize, threshold: f64) -> usize {
-    let total_power = 0.5 * efd.coeffs.mapv(|v| v * v).sum();
+    let total_power = 0.5 * efd.coeffs.mapv(pow2).sum();
     let mut power = 0.;
     for i in 0..nyq {
-        power += 0.5 * efd.coeffs.slice(s![i, ..]).mapv(|v| v * v).sum();
+        power += 0.5 * efd.coeffs.slice(s![i, ..]).mapv(pow2).sum();
         if power / total_power >= threshold {
             return i + 1;
         }
@@ -106,7 +106,7 @@ impl Efd {
     pub fn from_curve(curve: &[[f64; 2]], harmonic: Option<usize>) -> Self {
         let harmonic = harmonic.unwrap_or_else(|| fourier_power_nyq(curve));
         let dxy = diff(&arr2(curve), Some(Axis(0)));
-        let dt = dxy.mapv(|v| v * v).sum_axis(Axis(1)).mapv(sqrt);
+        let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(sqrt);
         let t = concatenate![Axis(0), array![0.], cumsum(&dt)];
         let zt = t[t.len() - 1];
         let phi = &t * TAU / (zt + 1e-20);
@@ -126,7 +126,7 @@ impl Efd {
         }
         let tdt = &t.slice(s![1..]) / &dt;
         let xi = cumsum(dxy.slice(s![.., 0])) - &dxy.slice(s![.., 0]) * &tdt;
-        let c = diff(&t.mapv(|v| v * v), None) * 0.5 / &dt;
+        let c = diff(&t.mapv(pow2), None) * 0.5 / &dt;
         let a0 = (&dxy.slice(s![.., 0]) * &c + xi * &dt).sum() / (zt + 1e-20);
         let delta = cumsum(dxy.slice(s![.., 1])) - &dxy.slice(s![.., 1]) * &tdt;
         let c0 = (&dxy.slice(s![.., 1]) * c + delta * dt).sum() / (zt + 1e-20);
