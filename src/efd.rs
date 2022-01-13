@@ -144,11 +144,10 @@ impl Efd {
             let m = array![
                 [coeffs[[n, 0]], coeffs[[n, 1]]],
                 [coeffs[[n, 2]], coeffs[[n, 3]]],
-            ]
-            .dot(&rot);
+            ];
             coeffs
                 .slice_mut(s![n, ..])
-                .assign(&Array1::from_iter(m.iter().cloned()));
+                .assign(&Array1::from_iter(m.dot(&rot).iter().cloned()));
         }
         // The angle of semi-major axis
         let psi = atan2(coeffs[[0, 2]], coeffs[[0, 0]]);
@@ -165,8 +164,7 @@ impl Efd {
         let scale = abs(coeffs[[0, 0]]);
         coeffs /= scale;
         let geo = GeoInfo {
-            semi_major_axis_angle: psi,
-            starting_angle: theta1,
+            rotation: -psi,
             scale,
             center,
         };
