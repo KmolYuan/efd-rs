@@ -8,7 +8,7 @@ fn efd() {
     // Test geometry information
     assert_eq!(efd.geo.center.0, -2.41571330022796);
     assert_eq!(efd.geo.center.1, 53.43791856115811);
-    assert_eq!(efd.geo.rotation, -0.871056726153095);
+    assert_eq!(efd.geo.rot, -0.871056726153095);
     assert_eq!(efd.geo.scale, 45.67021236733221);
     assert_eq!(efd.harmonic(), 6);
     // Test normalized

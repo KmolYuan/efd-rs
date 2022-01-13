@@ -3,41 +3,13 @@ use crate::{
     GeoInfo,
 };
 use alloc::{vec, vec::Vec};
-use ndarray::{
-    arr2, array, concatenate, s, Array, Array1, Array2, AsArray, Axis, Dimension, Slice, Zip,
-};
-use std::{
+use core::{
     f64::consts::{PI, TAU},
     ops::Sub,
 };
-
-fn diff<'a, A, D, V>(arr: V, axis: Option<Axis>) -> Array<A, D>
-where
-    A: Sub<Output = A> + Clone + 'static,
-    D: Dimension,
-    V: AsArray<'a, A, D>,
-{
-    let arr = arr.into();
-    let axis = axis.unwrap_or_else(|| Axis(arr.ndim() - 1));
-    let head = arr.slice_axis(axis, Slice::from(..-1));
-    let tail = arr.slice_axis(axis, Slice::from(1..));
-    &tail - &head
-}
-
-fn cumsum<'a, A>(a: A) -> Array1<f64>
-where
-    A: AsArray<'a, f64>,
-{
-    let a = a.into();
-    let mut out = Array1::zeros(a.len());
-    for (i, &v) in a.iter().enumerate() {
-        out[i] = v;
-        if i > 0 {
-            out[i] += out[i - 1];
-        }
-    }
-    out
-}
+use ndarray::{
+    arr2, array, concatenate, s, Array, Array1, Array2, AsArray, Axis, Dimension, Slice, Zip,
+};
 
 /// Compute the total Fourier power and find the minimum number of harmonics
 /// required to exceed the threshold fraction of the total power.
@@ -80,6 +52,42 @@ pub fn fourier_power(efd: Efd, nyq: usize, threshold: f64) -> usize {
 pub fn fourier_power_nyq(curve: &[[f64; 2]]) -> usize {
     let nyq = curve.len() / 2;
     fourier_power(Efd::from_curve(curve, Some(nyq)), nyq, 1.)
+}
+
+/// Check the difference between two curves.
+pub fn curve_diff(a: &[[f64; 2]], b: &[[f64; 2]]) -> f64 {
+    a.iter()
+        .zip(b.iter())
+        .map(|(a, b)| abs(a[0] - b[0]) + abs(a[1] - b[1]))
+        .sum()
+}
+
+fn diff<'a, A, D, V>(arr: V, axis: Option<Axis>) -> Array<A, D>
+where
+    A: Sub<Output = A> + Clone + 'static,
+    D: Dimension,
+    V: AsArray<'a, A, D>,
+{
+    let arr = arr.into();
+    let axis = axis.unwrap_or_else(|| Axis(arr.ndim() - 1));
+    let head = arr.slice_axis(axis, Slice::from(..-1));
+    let tail = arr.slice_axis(axis, Slice::from(1..));
+    &tail - &head
+}
+
+fn cumsum<'a, A>(a: A) -> Array1<f64>
+where
+    A: AsArray<'a, f64>,
+{
+    let a = a.into();
+    let mut out = Array1::zeros(a.len());
+    for (i, &v) in a.iter().enumerate() {
+        out[i] = v;
+        if i > 0 {
+            out[i] += out[i - 1];
+        }
+    }
+    out
 }
 
 /// Elliptical Fourier Descriptor coefficients.
@@ -164,7 +172,7 @@ impl Efd {
         let scale = abs(coeffs[[0, 0]]);
         coeffs /= scale;
         let geo = GeoInfo {
-            rotation: -psi,
+            rot: -psi,
             scale,
             center,
         };
@@ -174,6 +182,20 @@ impl Efd {
     /// Get the harmonic of the coefficients.
     pub fn harmonic(&self) -> usize {
         self.coeffs.nrows()
+    }
+
+    /// Overlap the geometry information to another.
+    ///
+    /// Please see [`GeoInfo::to`] for more information.
+    pub fn to(&self, rhs: &Self) -> GeoInfo {
+        self.geo.to(&rhs.geo)
+    }
+
+    /// Transform a contour with original geometry information.
+    ///
+    /// Please see [`GeoInfo::transform`] for more information.
+    pub fn transform(&self, curve: &[[f64; 2]]) -> Vec<[f64; 2]> {
+        self.geo.transform(curve)
     }
 
     /// Return the discrepancy between the coefficients.
