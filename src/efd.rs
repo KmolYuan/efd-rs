@@ -185,7 +185,7 @@ impl Efd {
 
     /// Generate the described curve from the coefficients with specific point number.
     pub fn generate(&self, n: usize) -> Vec<[f64; 2]> {
-        assert!(n > 3, "n must larger than 3, current is {}", n);
+        assert!(n > 3, "n ({}) must larger than 3", n);
         let mut t = vec![1. / (n - 1) as f64; n];
         t[0] = 0.;
         let t = cumsum(&Array1::from(t));
@@ -197,8 +197,8 @@ impl Efd {
             let x = &cos * self.coeffs[[n, 2]] + &sin * self.coeffs[[n, 3]];
             let y = &cos * self.coeffs[[n, 0]] + &sin * self.coeffs[[n, 1]];
             Zip::from(&mut curve).and(&x).and(&y).for_each(|c, x, y| {
-                c[0] = *x;
-                c[1] = *y;
+                c[0] += *x;
+                c[1] += *y;
             });
         }
         curve
