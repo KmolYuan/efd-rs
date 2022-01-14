@@ -138,7 +138,7 @@ impl Efd {
         let a0 = (&dxy.slice(s![.., 0]) * &c + xi * &dt).sum() / (zt + 1e-20);
         let delta = cumsum(dxy.slice(s![.., 1])) - &dxy.slice(s![.., 1]) * &tdt;
         let c0 = (&dxy.slice(s![.., 1]) * c + delta * dt).sum() / (zt + 1e-20);
-        let center = (curve[0][0] + a0, curve[0][1] + c0);
+        let center = [curve[0][0] + a0, curve[0][1] + c0];
         // Shift angle
         let theta1 = atan2(
             2. * (coeffs[[0, 0]] * coeffs[[0, 1]] + coeffs[[0, 2]] * coeffs[[0, 3]]),

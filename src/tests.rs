@@ -6,17 +6,17 @@ fn efd() {
 
     let efd = Efd::from_curve(PATH, None);
     // Test geometry information
-    assert_eq!(efd.geo.center.0, -2.41571330022796);
-    assert_eq!(efd.geo.center.1, 53.43791856115811);
+    assert_eq!(efd.geo.center[0], -2.41571330022796);
+    assert_eq!(efd.geo.center[1], 53.43791856115811);
     assert_eq!(efd.geo.rot, -0.871056726153095);
     assert_eq!(efd.geo.scale, 45.67021236733221);
     assert_eq!(efd.harmonic(), 6);
     // Test normalized
     let norm = efd.generate(NORM.len());
-    assert_eq!(norm, NORM);
+    assert!(curve_diff(&norm, NORM) < 1e-12);
     // Test reconstruction
     let target = efd.geo.transform(&norm);
-    assert_eq!(target, TARGET);
+    assert!(curve_diff(&target, TARGET) < 1e-12);
 }
 
 pub const PATH: &[[f64; 2]] = &[

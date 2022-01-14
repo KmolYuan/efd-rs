@@ -13,7 +13,7 @@ pub struct GeoInfo {
     pub scale: f64,
     /// Center of the first ellipse.
     /// The "DC" component / bias terms of the Fourier series.
-    pub center: (f64, f64),
+    pub center: [f64; 2],
 }
 
 impl Default for GeoInfo {
@@ -21,7 +21,7 @@ impl Default for GeoInfo {
         Self {
             rot: 0.0,
             scale: 1.,
-            center: (0.0, 0.0),
+            center: [0., 0.],
         }
     }
 }
@@ -49,15 +49,15 @@ impl GeoInfo {
             rot += copysign(FRAC_2_PI, cos(rot));
         }
         let scale = rhs.scale / self.scale;
-        let center_a = atan2(self.center.1, self.center.0) + rot;
-        let d = hypot(self.center.1, self.center.0) * scale;
+        let center_a = atan2(self.center[1], self.center[0]) + rot;
+        let d = hypot(self.center[1], self.center[0]) * scale;
         GeoInfo {
             rot,
             scale,
-            center: (
-                rhs.center.0 - d * cos(center_a),
-                rhs.center.1 - d * sin(center_a),
-            ),
+            center: [
+                rhs.center[0] - d * cos(center_a),
+                rhs.center[1] - d * sin(center_a),
+            ],
         }
     }
 
@@ -82,8 +82,10 @@ impl GeoInfo {
             let angle = self.rot;
             let dx = c[0] * self.scale;
             let dy = c[1] * self.scale;
-            let x = self.center.0 + dx * cos(angle) - dy * sin(angle);
-            let y = self.center.1 + dx * sin(angle) + dy * cos(angle);
+            let c = cos(angle);
+            let s = sin(angle);
+            let x = self.center[0] + dx * c - dy * s;
+            let y = self.center[1] + dx * s + dy * c;
             out.push([x, y]);
         }
         out
