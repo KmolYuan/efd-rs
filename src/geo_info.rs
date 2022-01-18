@@ -27,6 +27,17 @@ impl Default for GeoInfo {
 }
 
 impl GeoInfo {
+    /// Create information from a vector.
+    pub fn from_vector(start: [f64; 2], end: [f64; 2]) -> Self {
+        let dx = end[0] - start[0];
+        let dy = end[1] - start[1];
+        Self {
+            rot: atan2(dy, dx),
+            scale: hypot(dx, dy),
+            center: start,
+        }
+    }
+
     /// An chain operator on two information.
     ///
     /// It can be used on a not normalized contour `a` transforming to another geometry `b`.
