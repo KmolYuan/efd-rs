@@ -1,5 +1,4 @@
-use crate::math::{atan2, copysign, cos, hypot, sin};
-use std::f64::consts::FRAC_2_PI;
+use crate::math::{atan2, cos, hypot, sin};
 
 /// Geometric information.
 ///
@@ -55,10 +54,7 @@ impl GeoInfo {
     ///
     /// The `Efd` type can called with [`Efd::to`](crate::Efd::to).
     pub fn to(&self, rhs: &Self) -> Self {
-        let mut rot = rhs.rot - self.rot;
-        if sin(rot) < 0. {
-            rot += copysign(FRAC_2_PI, cos(rot));
-        }
+        let rot = rhs.rot - self.rot;
         let scale = rhs.scale / self.scale;
         let center_a = atan2(self.center[1], self.center[0]) + rot;
         let d = hypot(self.center[1], self.center[0]) * scale;
