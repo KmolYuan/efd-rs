@@ -1,4 +1,5 @@
 use crate::math::{atan2, cos, hypot, sin};
+use alloc::vec::Vec;
 
 /// Geometric information.
 ///
@@ -73,15 +74,14 @@ impl GeoInfo {
     /// This function rotates first, then translates.
     ///
     /// ```
-    /// # use efd::Efd;
-    /// # use efd::tests::{PATH, TARGET};
+    /// # use efd::{curve_diff, tests::{PATH, TARGET}, Efd};
     /// # let path = PATH;
     /// # let target = TARGET;
     /// # let efd = Efd::from_curve(path, None);
     /// # let path = efd.generate(target.len());
     /// # let geo = efd.geo;
     /// let path_new = geo.transform(&path);
-    /// # assert_eq!(path_new, TARGET);
+    /// # assert!(curve_diff(&path_new, TARGET) < 1e-12);
     /// ```
     ///
     /// The `Efd` type can called with [`Efd::transform`](crate::Efd::transform).
