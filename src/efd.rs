@@ -108,6 +108,15 @@ pub struct Efd {
 }
 
 impl Efd {
+    /// Create object from a nx4 array.
+    pub fn from_coeffs(coeffs: Array2<f64>) -> Self {
+        assert_eq!(coeffs.ncols(), 4);
+        Self {
+            coeffs,
+            geo: Default::default(),
+        }
+    }
+
     /// Calculate EFD coefficients from an existing discrete points.
     ///
     /// If the harmonic number is not given, it will be calculated with [`fourier_power`] function.
