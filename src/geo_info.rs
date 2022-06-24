@@ -18,11 +18,7 @@ pub struct GeoInfo {
 
 impl Default for GeoInfo {
     fn default() -> Self {
-        Self {
-            rot: 0.0,
-            scale: 1.,
-            center: [0., 0.],
-        }
+        Self { rot: 0.0, scale: 1., center: [0., 0.] }
     }
 }
 

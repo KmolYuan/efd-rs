@@ -111,10 +111,7 @@ impl Efd {
     /// Create object from a nx4 array.
     pub fn from_coeffs(coeffs: Array2<f64>) -> Self {
         assert_eq!(coeffs.ncols(), 4);
-        Self {
-            coeffs,
-            geo: Default::default(),
-        }
+        Self { coeffs, geo: Default::default() }
     }
 
     /// Calculate EFD coefficients from an existing discrete points.
@@ -180,11 +177,7 @@ impl Efd {
         }
         let scale = abs(coeffs[[0, 0]]);
         coeffs /= scale;
-        let geo = GeoInfo {
-            rot: -psi,
-            scale,
-            center,
-        };
+        let geo = GeoInfo { rot: -psi, scale, center };
         Self { coeffs, geo }
     }
 
