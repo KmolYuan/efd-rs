@@ -4,13 +4,6 @@ use ndarray::{
     arr2, array, concatenate, s, Array, Array1, Array2, AsArray, Axis, Dimension, Slice, Zip,
 };
 
-fn pow2<F>(x: F) -> F
-where
-    F: Float,
-{
-    x * x
-}
-
 /// Compute the total Fourier power and find the minimum number of harmonics
 /// required to exceed the threshold fraction of the total power.
 ///
@@ -31,10 +24,10 @@ pub fn fourier_power<F>(efd: Efd<F>, nyq: usize, threshold: F) -> usize
 where
     F: Float,
 {
-    let total_power = efd.coeffs.mapv(pow2).sum() * F::half();
+    let total_power = efd.coeffs.mapv(F::pow2).sum() * F::half();
     let mut power = F::zero();
     for i in 0..nyq {
-        power += F::half() * efd.coeffs.slice(s![i, ..]).mapv(pow2).sum();
+        power += F::half() * efd.coeffs.slice(s![i, ..]).mapv(F::pow2).sum();
         if power / total_power >= threshold {
             return i + 1;
         }
@@ -131,7 +124,7 @@ impl<F: Float> Efd<F> {
     {
         let harmonic = harmonic.into().unwrap_or_else(|| fourier_power_nyq(curve));
         let dxy = diff(&arr2(curve), Some(Axis(0)));
-        let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(F::sqrt);
+        let dt = dxy.mapv(F::pow2).sum_axis(Axis(1)).mapv(F::sqrt);
         let t = concatenate![Axis(0), array![F::zero()], cumsum(&dt)];
         let zt = t[t.len() - 1];
         let phi = &t * F::TAU() / (zt + F::epsilon());
@@ -151,7 +144,7 @@ impl<F: Float> Efd<F> {
         }
         let tdt = &t.slice(s![1..]) / &dt;
         let xi = cumsum(dxy.slice(s![.., 0])) - &dxy.slice(s![.., 0]) * &tdt;
-        let c = diff(&t.mapv(pow2), None) * F::half() / &dt;
+        let c = diff(&t.mapv(F::pow2), None) * F::half() / &dt;
         let a0 = (&dxy.slice(s![.., 0]) * &c + xi * &dt).sum() / (zt + F::epsilon());
         let delta = cumsum(dxy.slice(s![.., 1])) - &dxy.slice(s![.., 1]) * &tdt;
         let c0 = (&dxy.slice(s![.., 1]) * c + delta * dt).sum() / (zt + F::epsilon());
