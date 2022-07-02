@@ -24,7 +24,7 @@ where
 /// # let curve = PATH;
 /// // Nyquist Frequency
 /// let nyq = curve.len() / 2;
-/// let harmonic = fourier_power(Efd::from_curve(curve, Some(nyq)), nyq, 1.);
+/// let harmonic = fourier_power(Efd::from_curve(curve, nyq), nyq, 1.);
 /// # assert_eq!(harmonic, 6);
 /// ```
 pub fn fourier_power<F>(efd: Efd<F>, nyq: usize, threshold: F) -> usize
@@ -57,7 +57,7 @@ where
     F: Float,
 {
     let nyq = curve.len() / 2;
-    fourier_power(Efd::from_curve(curve, Some(nyq)), nyq, F::one())
+    fourier_power(Efd::from_curve(curve, nyq), nyq, F::one())
 }
 
 /// Check the difference between two curves.
