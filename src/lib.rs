@@ -30,12 +30,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
 #[cfg(not(feature = "std"))]
-extern crate core as std;
+extern crate core as std; // for ndarray::s! macro
 
 #[cfg(not(any(feature = "std", feature = "libm")))]
 compile_error!("please enable math function from either \"std\" or \"libm\"");
 
-pub use crate::{efd::*, geo_info::*};
+pub use crate::{efd::*, geo_info::*, math::*};
 
 mod efd;
 mod geo_info;

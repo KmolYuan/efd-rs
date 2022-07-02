@@ -1,34 +1,23 @@
-macro_rules! std_math {
-    (@fn $name:ident($($v:ident),+) as $old_name:ident) => {
-        #[cfg(feature = "libm")]
-        { use libm::$old_name as $name; $name($($v),+) }
-        #[cfg(not(feature = "libm"))]
-        { f64::$name($($v),+) }
-    };
-    (@fn $name:ident($($v:ident),+)) => {
-        #[cfg(feature = "libm")]
-        { use libm::$name; $name($($v),+) }
-        #[cfg(not(feature = "libm"))]
-        { f64::$name($($v),+) }
-    };
-    ($(fn $name:ident($($v:ident),+) $(as $old_name:ident)?)+) => {$(
-        #[inline(always)]
-        pub(crate) fn $name($($v: f64),+) -> f64 {
-            std_math!{@fn $name($($v),+) $(as $old_name)?}
-        }
-    )+};
+use ndarray::ScalarOperand;
+use num_traits::{Float as NumFloat, FloatConst, NumAssignOps};
+
+/// A float number type used in EFD.
+pub trait Float: NumFloat + FloatConst + NumAssignOps + ScalarOperand + 'static {
+    #[doc(hidden)]
+    #[inline]
+    fn two() -> Self {
+        Self::from(2.).unwrap()
+    }
+    #[doc(hidden)]
+    #[inline]
+    fn half() -> Self {
+        Self::from(0.5).unwrap()
+    }
+    #[doc(hidden)]
+    #[inline]
+    fn pow2(self) -> Self {
+        self * self
+    }
 }
 
-std_math! {
-    fn atan2(a, b)
-    fn cos(v)
-    fn abs(v) as fabs
-    fn hypot(a, b)
-    fn sin(v)
-    fn sqrt(v)
-}
-
-#[inline(always)]
-pub(crate) fn pow2(v: f64) -> f64 {
-    v * v
-}
+impl<T> Float for T where T: NumFloat + FloatConst + NumAssignOps + ScalarOperand + 'static {}

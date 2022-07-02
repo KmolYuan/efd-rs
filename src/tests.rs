@@ -2,14 +2,13 @@
 
 #[test]
 fn efd() {
-    use crate::{math::*, *};
-
+    use crate::*;
     let efd = Efd::from_curve(PATH, None);
     // Test geometry information
-    assert!(abs(efd.geo.center[0] - -2.41571330022796) < 1e-20);
-    assert!(abs(efd.geo.center[1] - 53.43791856115811) < 1e-20);
-    assert!(abs(efd.geo.rot - -0.871056726153095) < 1e-20);
-    assert!(abs(efd.geo.scale - 45.67021236733221) < 1e-20);
+    assert!((efd.geo.center[0] - -2.41571330022796).abs() < f64::EPSILON);
+    assert!((efd.geo.center[1] - 53.43791856115811).abs() < f64::EPSILON);
+    assert!((efd.geo.rot - -0.871056726153095).abs() < f64::EPSILON);
+    assert!((efd.geo.scale - 45.67021236733221).abs() < f64::EPSILON);
     assert_eq!(efd.harmonic(), 6);
     // Test normalized
     let norm = efd.generate(NORM.len());
