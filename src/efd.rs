@@ -1,8 +1,19 @@
-use crate::{math::Float, GeoInfo};
+use crate::{math::Float, EfdError, GeoInfo};
 use alloc::{vec, vec::Vec};
 use ndarray::{
     arr2, array, concatenate, s, Array, Array1, Array2, AsArray, Axis, Dimension, Slice, Zip,
 };
+
+macro_rules! impl_unchecked {
+    ($($ty:ty),+) => {$(
+        impl Efd<$ty> {
+            /// Create object from a nx4 array without boundary check.
+            pub const unsafe fn from_coeffs_unchecked(coeffs: Array2<$ty>) -> Self {
+                Self { coeffs, geo: GeoInfo { rot: 0., scale: 1., center: [0.; 2] } }
+            }
+        }
+    )+};
+}
 
 /// Compute the total Fourier power and find the minimum number of harmonics
 /// required to exceed the threshold fraction of the total power.
@@ -93,7 +104,7 @@ where
 
 /// Elliptical Fourier Descriptor coefficients.
 /// Provide transformation between discrete points and coefficients.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Debug)]
 pub struct Efd<F: Float> {
     /// Coefficients.
     pub coeffs: Array2<F>,
@@ -108,11 +119,16 @@ pub struct Efd<F: Float> {
     pub geo: GeoInfo<F>,
 }
 
+impl_unchecked!(f32, f64);
+
 impl<F: Float> Efd<F> {
     /// Create object from a nx4 array with boundary check.
-    pub fn from_coeffs(coeffs: Array2<F>) -> Self {
-        assert_eq!(coeffs.ncols(), 4);
-        Self { coeffs, geo: GeoInfo::default() }
+    pub fn try_from_coeffs(coeffs: Array2<F>) -> Result<Self, EfdError> {
+        if coeffs.ncols() == 4 {
+            Ok(Self { coeffs, geo: GeoInfo::default() })
+        } else {
+            Err(EfdError)
+        }
     }
 
     /// Calculate EFD coefficients from an existing discrete points.
@@ -191,20 +207,6 @@ impl<F: Float> Efd<F> {
         self.coeffs.nrows()
     }
 
-    /// Overlap the geometry information to another.
-    ///
-    /// Please see [`GeoInfo::to`] for more information.
-    pub fn to(&self, rhs: &Self) -> GeoInfo<F> {
-        self.geo.to(&rhs.geo)
-    }
-
-    /// Transform a contour with original geometry information.
-    ///
-    /// Please see [`GeoInfo::transform`] for more information.
-    pub fn transform(&self, curve: &[[F; 2]]) -> Vec<[F; 2]> {
-        self.geo.transform(curve)
-    }
-
     /// Manhattan distance.
     pub fn manhattan(&self, rhs: &Self) -> F {
         (&self.coeffs - &rhs.coeffs).mapv(F::abs).sum()
@@ -215,8 +217,10 @@ impl<F: Float> Efd<F> {
         (&self.coeffs - &rhs.coeffs).mapv(F::pow2).sum().sqrt()
     }
 
-    /// Generate the described curve from the coefficients with specific point number.
-    pub fn generate(&self, n: usize) -> Vec<[F; 2]> {
+    /// Generate the normalized curve **without** geometry information.
+    ///
+    /// The number of the points `n` must given.
+    pub fn generate_norm(&self, n: usize) -> Vec<[F; 2]> {
         assert!(n > 3, "n ({}) must larger than 3", n);
         let mut t = vec![F::one() / F::from(n - 1).unwrap(); n];
         t[0] = F::zero();
@@ -234,5 +238,20 @@ impl<F: Float> Efd<F> {
             });
         }
         curve
+    }
+
+    /// Generate the described curve from the coefficients.
+    ///
+    /// The number of the points `n` must given.
+    pub fn generate(&self, n: usize) -> Vec<[F; 2]> {
+        self.geo.transform(&self.generate_norm(n))
+    }
+}
+
+impl<F: Float> std::ops::Deref for Efd<F> {
+    type Target = GeoInfo<F>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.geo
     }
 }

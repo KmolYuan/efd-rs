@@ -4,6 +4,9 @@ use alloc::vec::Vec;
 /// Geometric information.
 ///
 /// This type record the information of raw coefficients.
+///
+/// Since [`Efd`](crate::Efd) implemented `Deref` for this type,
+/// the methods are totally shared.
 #[derive(Clone, Debug)]
 pub struct GeoInfo<F: Float> {
     /// Angle of the semi-major axis,
@@ -26,22 +29,8 @@ impl<F: Float> Default for GeoInfo<F> {
     }
 }
 
-impl GeoInfo<f32> {
-    /// A const-version default value.
-    pub const fn new() -> Self {
-        Self { rot: 0.0, scale: 1., center: [0., 0.] }
-    }
-}
-
-impl GeoInfo<f64> {
-    /// A const-version default value.
-    pub const fn new() -> Self {
-        Self { rot: 0.0, scale: 1., center: [0., 0.] }
-    }
-}
-
 impl<F: Float> GeoInfo<F> {
-    /// Create information from a vector.
+    /// Create information from two vectors.
     pub fn from_vector(start: [F; 2], end: [F; 2]) -> Self {
         let dx = end[0] - start[0];
         let dy = end[1] - start[1];
@@ -66,8 +55,6 @@ impl<F: Float> GeoInfo<F> {
     /// let b = Efd::from_curve(path2, None);
     /// assert!(curve_diff(&a.to(&b).transform(path1), path2) < 1e-12);
     /// ```
-    ///
-    /// The `Efd` type can called with [`Efd::to`](crate::Efd::to).
     pub fn to(&self, rhs: &Self) -> Self {
         let rot = rhs.rot - self.rot;
         let scale = rhs.scale / self.scale;
@@ -92,23 +79,31 @@ impl<F: Float> GeoInfo<F> {
     /// # let path = PATH;
     /// # let target = TARGET;
     /// # let efd = Efd::from_curve(path, None);
-    /// # let path = efd.generate(target.len());
+    /// # let path = efd.generate_norm(target.len());
+    /// let path1 = efd.transform(&path);
     /// # let geo = efd.geo;
-    /// let path_new = geo.transform(&path);
-    /// # assert!(curve_diff(&path_new, TARGET) < 1e-12);
+    /// let path2 = geo.transform(&path);
+    /// # assert!(curve_diff(&path1, TARGET) < 1e-12);
+    /// # assert!(curve_diff(&path2, TARGET) < 1e-12);
     /// ```
-    ///
-    /// The `Efd` type can called with [`Efd::transform`](crate::Efd::transform).
     pub fn transform(&self, curve: &[[F; 2]]) -> Vec<[F; 2]> {
-        let mut out = curve.to_vec();
-        for c in out.iter_mut() {
-            let dx = c[0] * self.scale;
-            let dy = c[1] * self.scale;
+        self.transform_iter(curve.iter().copied()).collect()
+    }
+
+    /// Transform an object that can turn into iterator.
+    pub fn transform_iter<'a, I>(&'a self, iter: I) -> impl Iterator<Item = [F; 2]> + 'a
+    where
+        F: 'a,
+        I: IntoIterator<Item = [F; 2]> + 'a,
+    {
+        iter.into_iter().map(move |[x, y]| {
+            let dx = x * self.scale;
+            let dy = y * self.scale;
             let ca = self.rot.cos();
             let sa = self.rot.sin();
-            c[0] = self.center[0] + dx * ca - dy * sa;
-            c[1] = self.center[1] + dx * sa + dy * ca;
-        }
-        out
+            let x = self.center[0] + dx * ca - dy * sa;
+            let y = self.center[1] + dx * sa + dy * ca;
+            [x, y]
+        })
     }
 }

@@ -11,7 +11,7 @@ fn efd() {
     assert!((efd.geo.scale - 45.67021236733221).abs() < f64::EPSILON);
     assert_eq!(efd.harmonic(), 6);
     // Test normalized
-    let norm = efd.generate(NORM.len());
+    let norm = efd.generate_norm(NORM.len());
     assert!(curve_diff(&norm, NORM) < 1e-12);
     // Test reconstruction
     let target = efd.geo.transform(&norm);
