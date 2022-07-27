@@ -13,11 +13,10 @@ categories = ["algorithm", "no-std"]
 [features]
 default = ["std"]
 std = ["ndarray/std", "num-traits/std"]
-libm = ["num-traits/libm"]
 
 [dependencies]
+num-traits = { version = "0.2", default-features = false, features = ["libm"] }
 ndarray = { version = "0.15", default-features = false }
-num-traits = { version = "0.2", default-features = false }
 
 [dev-dependencies]
 ndarray = "0.15"

@@ -24,16 +24,13 @@
 //!
 //! # Features
 //!
-//! This crate support no-std solution via using "libm",
-//! a crate provide pure-rust math functions, please enable it if disabled the "std" feature.
+//! This crate support no-std solution via using "libm", a crate provide pure-rust math functions.
+//! Disable the "std" feature will automatic enable it.
 #![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
 #[cfg(not(feature = "std"))]
 extern crate core as std; // for `ndarray::s!` macro
-
-#[cfg(not(any(feature = "std", feature = "libm")))]
-compile_error!("please enable math function from either \"std\" or \"libm\"");
 
 pub use crate::{efd::*, error::*, geo_info::*};
 

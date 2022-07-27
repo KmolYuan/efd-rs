@@ -4,7 +4,7 @@ use core::f64::consts::{PI, TAU};
 use ndarray::{
     arr2, array, concatenate, s, Array, Array1, Array2, AsArray, Axis, Dimension, Slice, Zip,
 };
-#[cfg(all(feature = "libm", not(feature = "std")))]
+#[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
 #[inline(always)]

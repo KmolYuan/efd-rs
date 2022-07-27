@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-#[cfg(all(feature = "libm", not(feature = "std")))]
+#[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
 /// Geometric information.
