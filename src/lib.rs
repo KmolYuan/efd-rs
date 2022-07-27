@@ -35,10 +35,9 @@ extern crate core as std; // for `ndarray::s!` macro
 #[cfg(not(any(feature = "std", feature = "libm")))]
 compile_error!("please enable math function from either \"std\" or \"libm\"");
 
-pub use crate::{efd::*, error::*, geo_info::*, math::*};
+pub use crate::{efd::*, error::*, geo_info::*};
 
 mod efd;
 mod error;
 mod geo_info;
-mod math;
 pub mod tests;

@@ -1,5 +1,6 @@
-use crate::math::Float;
 use alloc::vec::Vec;
+#[cfg(all(feature = "libm", not(feature = "std")))]
+use num_traits::Float as _;
 
 /// Geometric information.
 ///
@@ -8,30 +9,31 @@ use alloc::vec::Vec;
 /// Since [`Efd`](crate::Efd) implemented `Deref` for this type,
 /// the methods are totally shared.
 #[derive(Clone, Debug)]
-pub struct GeoInfo<F: Float> {
+pub struct GeoInfo {
     /// Angle of the semi-major axis,
     /// the rotation angle of the first ellipse.
-    pub rot: F,
+    pub rot: f64,
     /// Scaling factor.
-    pub scale: F,
+    pub scale: f64,
     /// Center of the first ellipse.
     /// The "DC" component / bias terms of the Fourier series.
-    pub center: [F; 2],
+    pub center: [f64; 2],
 }
 
-impl<F: Float> Default for GeoInfo<F> {
+impl Default for GeoInfo {
     fn default() -> Self {
-        Self {
-            rot: F::zero(),
-            scale: F::one(),
-            center: [F::zero(); 2],
-        }
+        Self::new()
     }
 }
 
-impl<F: Float> GeoInfo<F> {
+impl GeoInfo {
+    /// Create a non-offset info.
+    pub const fn new() -> Self {
+        Self { rot: 0., scale: 1., center: [0.; 2] }
+    }
+
     /// Create information from two vectors.
-    pub fn from_vector(start: [F; 2], end: [F; 2]) -> Self {
+    pub fn from_vector(start: [f64; 2], end: [f64; 2]) -> Self {
         let dx = end[0] - start[0];
         let dy = end[1] - start[1];
         Self {
@@ -86,15 +88,14 @@ impl<F: Float> GeoInfo<F> {
     /// # assert!(curve_diff(&path1, TARGET) < 1e-12);
     /// # assert!(curve_diff(&path2, TARGET) < 1e-12);
     /// ```
-    pub fn transform(&self, curve: &[[F; 2]]) -> Vec<[F; 2]> {
+    pub fn transform(&self, curve: &[[f64; 2]]) -> Vec<[f64; 2]> {
         self.transform_iter(curve.iter().copied()).collect()
     }
 
     /// Transform an object that can turn into iterator.
-    pub fn transform_iter<'a, I>(&'a self, iter: I) -> impl Iterator<Item = [F; 2]> + 'a
+    pub fn transform_iter<'a, I>(&'a self, iter: I) -> impl Iterator<Item = [f64; 2]> + 'a
     where
-        F: 'a,
-        I: IntoIterator<Item = [F; 2]> + 'a,
+        I: IntoIterator<Item = [f64; 2]> + 'a,
     {
         iter.into_iter().map(move |[x, y]| {
             let dx = x * self.scale;
