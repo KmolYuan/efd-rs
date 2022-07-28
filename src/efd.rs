@@ -19,16 +19,16 @@ fn pow2(x: f64) -> f64 {
 /// and the threshold usually used as 1.
 ///
 /// ```
-/// use efd::{fourier_power, Efd};
+/// use efd::{fourier_power, Efd2};
 /// # use efd::tests::PATH;
 ///
 /// # let curve = PATH;
 /// // Nyquist Frequency
 /// let nyq = curve.len() / 2;
-/// let harmonic = fourier_power(Efd::from_curve(curve, nyq), nyq, 1.);
+/// let harmonic = fourier_power(Efd2::from_curve(curve, nyq), nyq, 1.);
 /// # assert_eq!(harmonic, 6);
 /// ```
-pub fn fourier_power(efd: Efd, nyq: usize, threshold: f64) -> usize {
+pub fn fourier_power(efd: Efd2, nyq: usize, threshold: f64) -> usize {
     let total_power = efd.coeffs.mapv(pow2).sum() * 0.5;
     let mut power = 0.;
     for i in 0..nyq {
@@ -52,7 +52,7 @@ pub fn fourier_power(efd: Efd, nyq: usize, threshold: f64) -> usize {
 /// ```
 pub fn fourier_power_nyq(curve: &[[f64; 2]]) -> usize {
     let nyq = curve.len() / 2;
-    fourier_power(Efd::from_curve(curve, nyq), nyq, 1.)
+    fourier_power(Efd2::from_curve(curve, nyq), nyq, 1.)
 }
 
 /// Check the difference between two curves.
@@ -91,10 +91,10 @@ where
     out
 }
 
-/// Elliptical Fourier Descriptor coefficients.
+/// 2D Elliptical Fourier Descriptor coefficients.
 /// Provide transformation between discrete points and coefficients.
 #[derive(Clone, Debug)]
-pub struct Efd {
+pub struct Efd2 {
     /// Coefficients.
     pub coeffs: Array2<f64>,
     /// The geometry information of normalized coefficients.
@@ -108,7 +108,7 @@ pub struct Efd {
     pub geo: GeoInfo,
 }
 
-impl Efd {
+impl Efd2 {
     /// Create object from a nx4 array without boundary check.
     ///
     /// # Safety
@@ -244,7 +244,7 @@ impl Efd {
     }
 }
 
-impl std::ops::Deref for Efd {
+impl std::ops::Deref for Efd2 {
     type Target = GeoInfo;
 
     fn deref(&self) -> &Self::Target {

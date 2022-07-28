@@ -3,7 +3,7 @@
 //! Simple usage of resampling circle:
 //!
 //! ```
-//! use efd::Efd;
+//! use efd::Efd2;
 //! use ndarray::{stack, Array1, Axis};
 //! use std::f64::consts::TAU;
 //!
@@ -18,7 +18,7 @@
 //!     .axis_iter(Axis(0))
 //!     .map(|c| [c[0], c[1]])
 //!     .collect::<Vec<_>>();
-//! let new_curve = Efd::from_curve(&curve, None).generate(20);
+//! let new_curve = Efd2::from_curve(&curve, None).generate(20);
 //! # assert_eq!(new_curve.len(), 20);
 //! ```
 //!
