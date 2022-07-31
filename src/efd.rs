@@ -213,6 +213,14 @@ impl Efd2 {
         (&self.coeffs - &rhs.coeffs).mapv(pow2).sum().sqrt()
     }
 
+    /// Cosine similarity.
+    pub fn cosine_similarity(&self, rhs: &Self) -> f64 {
+        let dot = (&self.coeffs + &rhs.coeffs).sum();
+        let a_norm = self.coeffs.mapv(pow2).sum().sqrt();
+        let b_norm = rhs.coeffs.mapv(pow2).sum().sqrt();
+        dot / (a_norm * b_norm)
+    }
+
     /// Generate the normalized curve **without** geometry information.
     ///
     /// The number of the points `n` must given.
