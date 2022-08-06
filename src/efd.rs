@@ -1,4 +1,4 @@
-use crate::{EfdError, GeoInfo};
+use crate::{Efd2Error, GeoInfo};
 use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
 use ndarray::{array, concatenate, s, Array1, Array2, AsArray, Axis, Slice};
@@ -94,7 +94,7 @@ where
 #[derive(Clone, Debug)]
 pub struct Efd2 {
     /// Coefficients.
-    pub coeffs: Array2<f64>,
+    coeffs: Array2<f64>,
     /// The geometry information of normalized coefficients.
     ///
     /// Implements Kuhl and Giardina method of normalizing the coefficients
@@ -117,11 +117,11 @@ impl Efd2 {
     }
 
     /// Create object from a nx4 array with boundary check.
-    pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, EfdError> {
+    pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, Efd2Error> {
         if coeffs.ncols() == 4 {
             Ok(Self { coeffs, geo: GeoInfo::new() })
         } else {
-            Err(EfdError)
+            Err(Efd2Error)
         }
     }
 
@@ -194,6 +194,11 @@ impl Efd2 {
         coeffs /= scale;
         let geo = GeoInfo { rot: -psi, scale, center };
         Self { coeffs, geo }
+    }
+
+    /// Get the array view of the coefficients.
+    pub fn coeffs(&self) -> ndarray::ArrayView2<f64> {
+        self.coeffs.view()
     }
 
     /// Get the harmonic of the coefficients.
