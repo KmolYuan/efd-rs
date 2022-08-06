@@ -92,7 +92,7 @@ impl Geo2Info {
         self.transform_iter(curve.iter().copied()).collect()
     }
 
-    /// Transform an object that can turn into iterator.
+    /// Transform an object that can turn into an iterator.
     pub fn transform_iter<'a, I>(&'a self, iter: I) -> impl Iterator<Item = [f64; 2]> + 'a
     where
         I: IntoIterator<Item = [f64; 2]> + 'a,
