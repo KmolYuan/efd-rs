@@ -5,16 +5,16 @@ fn efd() {
     use crate::*;
     let efd = Efd2::from_curve(PATH, None);
     // Test geometry information
-    assert!((efd.geo.center[0] - -2.41571330022796).abs() < f64::EPSILON);
-    assert!((efd.geo.center[1] - 53.43791856115811).abs() < f64::EPSILON);
-    assert!((efd.geo.rot - -0.871056726153095).abs() < f64::EPSILON);
-    assert!((efd.geo.scale - 45.67021236733221).abs() < f64::EPSILON);
+    assert!((efd.center[0] - -2.41571330022796).abs() < f64::EPSILON);
+    assert!((efd.center[1] - 53.43791856115811).abs() < f64::EPSILON);
+    assert!((efd.rot - -0.871056726153095).abs() < f64::EPSILON);
+    assert!((efd.scale - 45.67021236733221).abs() < f64::EPSILON);
     assert_eq!(efd.harmonic(), 6);
     // Test normalized
     let norm = efd.generate_norm(NORM.len());
     assert!(curve_diff(&norm, NORM) < 1e-12);
     // Test reconstruction
-    let target = efd.geo.transform(&norm);
+    let target = efd.transform(&norm);
     assert!(curve_diff(&target, TARGET) < 1e-12);
 }
 

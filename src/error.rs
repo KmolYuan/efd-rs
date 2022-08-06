@@ -1,4 +1,5 @@
-/// An error type is raised when the input array width is not 4.
+/// An error type for 2D EFD coefficients.
+/// Raised when the input array width is not 4.
 #[derive(Debug)]
 pub struct Efd2Error;
 

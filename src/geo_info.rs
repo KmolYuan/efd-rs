@@ -2,14 +2,14 @@ use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
-/// Geometric information.
+/// 2D geometric information.
 ///
 /// This type record the information of raw coefficients.
 ///
-/// Since [`Efd`](crate::Efd) implemented `Deref` for this type,
+/// Since [`Efd2`](crate::Efd2) implemented `Deref` for this type,
 /// the methods are totally shared.
 #[derive(Clone, Debug)]
-pub struct GeoInfo {
+pub struct Geo2Info {
     /// Angle of the semi-major axis,
     /// the rotation angle of the first ellipse.
     pub rot: f64,
@@ -20,13 +20,13 @@ pub struct GeoInfo {
     pub center: [f64; 2],
 }
 
-impl Default for GeoInfo {
+impl Default for Geo2Info {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl GeoInfo {
+impl Geo2Info {
     /// Create a non-offset info.
     pub const fn new() -> Self {
         Self { rot: 0., scale: 1., center: [0.; 2] }
@@ -62,7 +62,7 @@ impl GeoInfo {
         let scale = rhs.scale / self.scale;
         let center_a = self.center[1].atan2(self.center[0]) + rot;
         let d = self.center[1].hypot(self.center[0]) * scale;
-        GeoInfo {
+        Geo2Info {
             rot,
             scale,
             center: [
@@ -83,7 +83,7 @@ impl GeoInfo {
     /// # let efd = Efd2::from_curve(path, None);
     /// # let path = efd.generate_norm(target.len());
     /// let path1 = efd.transform(&path);
-    /// # let geo = efd.geo;
+    /// # let geo = &efd;
     /// let path2 = geo.transform(&path);
     /// # assert!(curve_diff(&path1, TARGET) < 1e-12);
     /// # assert!(curve_diff(&path2, TARGET) < 1e-12);

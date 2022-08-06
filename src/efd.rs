@@ -1,4 +1,4 @@
-use crate::{Efd2Error, GeoInfo};
+use crate::{Efd2Error, Geo2Info};
 use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
 use ndarray::{array, concatenate, s, Array1, Array2, AsArray, Axis, Slice};
@@ -91,19 +91,22 @@ where
 
 /// 2D Elliptical Fourier Descriptor coefficients.
 /// Provide transformation between discrete points and coefficients.
+///
+/// # Geometry Information
+///
+/// The geometry information of normalized coefficients.
+///
+/// Implements Kuhl and Giardina method of normalizing the coefficients
+/// An, Bn, Cn, Dn. Performs 3 separate normalizations. First, it makes the
+/// data location invariant by re-scaling the data to a common origin.
+/// Secondly, the data is rotated with respect to the major axis. Thirdly,
+/// the coefficients are normalized with regard to the absolute value of A₁.
+///
+/// Please see [`Geo2Info`] for more information.
 #[derive(Clone, Debug)]
 pub struct Efd2 {
-    /// Coefficients.
     coeffs: Array2<f64>,
-    /// The geometry information of normalized coefficients.
-    ///
-    /// Implements Kuhl and Giardina method of normalizing the coefficients
-    /// An, Bn, Cn, Dn. Performs 3 separate normalizations. First, it makes the
-    /// data location invariant by re-scaling the data to a common origin.
-    /// Secondly, the data is rotated with respect to the major axis. Thirdly,
-    /// the coefficients are normalized with regard to the absolute value of A₁.
-    /// This code is adapted from the pyefd module.
-    pub geo: GeoInfo,
+    geo: Geo2Info,
 }
 
 impl Efd2 {
@@ -113,16 +116,21 @@ impl Efd2 {
     ///
     /// An invalid width may cause failure operation.
     pub const unsafe fn from_coeffs_unchecked(coeffs: Array2<f64>) -> Self {
-        Self { coeffs, geo: GeoInfo::new() }
+        Self { coeffs, geo: Geo2Info::new() }
     }
 
     /// Create object from a nx4 array with boundary check.
     pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, Efd2Error> {
         if coeffs.ncols() == 4 {
-            Ok(Self { coeffs, geo: GeoInfo::new() })
+            Ok(Self { coeffs, geo: Geo2Info::new() })
         } else {
             Err(Efd2Error)
         }
+    }
+
+    /// Builder method for adding geometric information.
+    pub fn with_geo(self, geo: Geo2Info) -> Self {
+        Self { geo, ..self }
     }
 
     /// Calculate EFD coefficients from an existing discrete points.
@@ -192,7 +200,7 @@ impl Efd2 {
         }
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
-        let geo = GeoInfo { rot: -psi, scale, center };
+        let geo = Geo2Info { rot: -psi, scale, center };
         Self { coeffs, geo }
     }
 
@@ -247,7 +255,7 @@ impl Efd2 {
 }
 
 impl std::ops::Deref for Efd2 {
-    type Target = GeoInfo;
+    type Target = Geo2Info;
 
     fn deref(&self) -> &Self::Target {
         &self.geo
