@@ -1,9 +1,7 @@
 use crate::{EfdError, GeoInfo};
 use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
-use ndarray::{
-    arr2, array, concatenate, s, Array, Array1, Array2, AsArray, Axis, Dimension, Slice, Zip,
-};
+use ndarray::{array, concatenate, s, Array1, Array2, AsArray, Axis, Slice};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
@@ -63,9 +61,9 @@ pub fn curve_diff(a: &[[f64; 2]], b: &[[f64; 2]]) -> f64 {
         .sum()
 }
 
-fn diff<'a, D, A>(arr: A, axis: Option<Axis>) -> Array<f64, D>
+fn diff<'a, D, A>(arr: A, axis: Option<Axis>) -> ndarray::Array<f64, D>
 where
-    D: Dimension,
+    D: ndarray::Dimension,
     A: AsArray<'a, f64, D>,
 {
     let arr = arr.into();
@@ -135,7 +133,7 @@ impl Efd2 {
         H: Into<Option<usize>>,
     {
         let harmonic = harmonic.into().unwrap_or_else(|| fourier_power_nyq(curve));
-        let dxy = diff(&arr2(curve), Some(Axis(0)));
+        let dxy = diff(&ndarray::arr2(curve), Some(Axis(0)));
         let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = concatenate![Axis(0), array![0.], cumsum(&dt)];
         let zt = t[t.len() - 1];
@@ -221,19 +219,18 @@ impl Efd2 {
         let mut t = vec![1. / (n - 1) as f64; n];
         t[0] = 0.;
         let t = cumsum(&Array1::from(t));
-        let mut curve = vec![[0.; 2]; n];
-        for n in 0..self.harmonic() {
-            let angle = &t * (n + 1) as f64 * TAU;
-            let cos = angle.mapv(f64::cos);
-            let sin = angle.mapv(f64::sin);
-            let x = &cos * self.coeffs[[n, 2]] + &sin * self.coeffs[[n, 3]];
-            let y = &cos * self.coeffs[[n, 0]] + &sin * self.coeffs[[n, 1]];
-            Zip::from(&mut curve).and(&x).and(&y).for_each(|c, x, y| {
-                c[0] += *x;
-                c[1] += *y;
-            });
-        }
-        curve
+        (0..self.harmonic())
+            .fold(Array2::<f64>::zeros([n, 2]), |curve, n| {
+                let angle = &t * (n + 1) as f64 * TAU;
+                let cos = angle.mapv(f64::cos);
+                let sin = angle.mapv(f64::sin);
+                let x = &cos * self.coeffs[[n, 2]] + &sin * self.coeffs[[n, 3]];
+                let y = &cos * self.coeffs[[n, 0]] + &sin * self.coeffs[[n, 1]];
+                curve + ndarray::stack![Axis(1), x, y]
+            })
+            .axis_iter(Axis(0))
+            .map(|c| [c[0], c[1]])
+            .collect()
     }
 
     /// Generate the described curve from the coefficients.
