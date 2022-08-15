@@ -26,18 +26,7 @@ Simple usage of resampling circle:
 
 ```rust
 use efd::Efd;
-use ndarray::{stack, Array1, Axis};
-use std::f64::consts::TAU;
 
-const N: usize = 10;
-let circle = stack![
-    Axis(1),
-    Array1::linspace(0., TAU, N).mapv(f64::cos),
-    Array1::linspace(0., TAU, N).mapv(f64::sin)
-];
-let curve = circle
-    .axis_iter(Axis(0))
-    .map(|c| [c[0], c[1]])
-    .collect::<Vec<_>>();
+let curve = vec![[0.; 2], [1.; 2], [2.; 2], [3.; 2]];
 let new_curve = Efd::from_curve(&curve, None).generate(20);
 ```

@@ -1,7 +1,7 @@
 [package]
 name = "efd"
 description = "Elliptical Fourier Descriptor (EFD) implementation in Rust."
-version = "0.15.0"
+version = "0.15.1"
 authors = ["KmolYuan <pyslvs@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -17,6 +17,3 @@ std = ["ndarray/std", "num-traits/std"]
 [dependencies]
 num-traits = { version = "0.2", default-features = false, features = ["libm"] }
 ndarray = { version = "0.15", default-features = false }
-
-[dev-dependencies]
-ndarray = "0.15"

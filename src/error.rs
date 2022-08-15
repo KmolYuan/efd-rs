@@ -8,3 +8,6 @@ impl core::fmt::Display for Efd2Error {
         write!(f, "input array width must be 4")
     }
 }
+
+#[cfg(feature = "std")]
+impl std::error::Error for Efd2Error {}

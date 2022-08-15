@@ -110,7 +110,7 @@ pub struct Efd2 {
 }
 
 impl Efd2 {
-    /// Create object from a nx4 array without boundary check.
+    /// Create constant object from a nx4 array without boundary check.
     ///
     /// # Safety
     ///
@@ -121,11 +121,9 @@ impl Efd2 {
 
     /// Create object from a nx4 array with boundary check.
     pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, Efd2Error> {
-        if coeffs.ncols() == 4 {
-            Ok(Self { coeffs, geo: Geo2Info::new() })
-        } else {
-            Err(Efd2Error)
-        }
+        (coeffs.ncols() == 4)
+            .then(|| Self { coeffs, geo: Geo2Info::new() })
+            .ok_or(Efd2Error)
     }
 
     /// Builder method for adding geometric information.
