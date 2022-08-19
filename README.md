@@ -22,11 +22,11 @@ This is an unofficial implementation.
 }
 ```
 
-Simple usage of resampling circle:
+Example code:
 
 ```rust
-use efd::Efd;
+use efd::Efd2;
 
 let curve = vec![[0.; 2], [1.; 2], [2.; 2], [3.; 2]];
-let new_curve = Efd::from_curve(&curve, None).generate(20);
+let new_curve = Efd2::from_curve(&curve, None).generate(20);
 ```

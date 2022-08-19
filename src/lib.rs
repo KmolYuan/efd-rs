@@ -1,7 +1,5 @@
 //! This crate implements Elliptical Fourier Descriptor (EFD) and its related functions.
 //!
-//! Simple usage of resampling circle:
-//!
 //! ```
 //! use efd::Efd2;
 //!
