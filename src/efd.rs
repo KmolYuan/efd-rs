@@ -202,6 +202,11 @@ impl Efd2 {
         Self { coeffs, geo }
     }
 
+    /// Consume self and return raw array.
+    pub fn unwrap(self) -> Array2<f64> {
+        self.coeffs
+    }
+
     /// Get the array view of the coefficients.
     pub fn coeffs(&self) -> ndarray::ArrayView2<f64> {
         self.coeffs.view()
