@@ -179,10 +179,12 @@ impl Efd2 {
             let m = array![
                 [coeffs[[n, 0]], coeffs[[n, 1]]],
                 [coeffs[[n, 2]], coeffs[[n, 3]]],
-            ];
-            coeffs
-                .slice_mut(s![n, ..])
-                .assign(&Array1::from_iter(m.dot(&rot).iter().cloned()));
+            ]
+            .dot(&rot);
+            coeffs[[n, 0]] = m[[0, 0]];
+            coeffs[[n, 1]] = m[[0, 1]];
+            coeffs[[n, 2]] = m[[1, 0]];
+            coeffs[[n, 3]] = m[[1, 1]];
         }
         // The angle of semi-major axis
         let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
@@ -192,9 +194,10 @@ impl Efd2 {
                 [coeffs[[n, 0]], coeffs[[n, 1]]],
                 [coeffs[[n, 2]], coeffs[[n, 3]]],
             ]);
-            coeffs
-                .slice_mut(s![n, ..])
-                .assign(&Array1::from_iter(m.iter().cloned()));
+            coeffs[[n, 0]] = m[[0, 0]];
+            coeffs[[n, 1]] = m[[0, 1]];
+            coeffs[[n, 2]] = m[[1, 0]];
+            coeffs[[n, 3]] = m[[1, 1]];
         }
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
