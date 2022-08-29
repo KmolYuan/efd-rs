@@ -3,7 +3,7 @@
 [![dependency status](https://deps.rs/repo/github/KmolYuan/efd-rs/status.svg)](https://deps.rs/crate/efd/)
 [![documentation](https://docs.rs/efd/badge.svg)](https://docs.rs/efd)
 
-A light, highly generic library for Elliptical Fourier Descriptor (EFD). This crate implements EFD and its related functions.
+Elliptical Fourier Descriptor (EFD) implementation in Rust. This crate implements EFD and its related functions.
 
 Reference: Kuhl, FP and Giardina, CR (1982). Elliptic Fourier features of a closed contour. Computer graphics and image processing, 18(3), 236-258.
 
