@@ -215,6 +215,11 @@ impl Efd2 {
         self.coeffs.view()
     }
 
+    /// Get the geometry information.
+    pub fn geo(&self) -> &Geo2Info {
+        self
+    }
+
     /// Get the harmonic of the coefficients.
     pub fn harmonic(&self) -> usize {
         self.coeffs.nrows()
