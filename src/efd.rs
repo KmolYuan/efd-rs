@@ -38,7 +38,8 @@ pub fn fourier_power(efd: Efd2, nyq: usize, threshold: f64) -> usize {
     nyq
 }
 
-/// A convenient function to apply Nyquist Frequency on [`fourier_power`] function.
+/// A convenient function to apply Nyquist Frequency on [`fourier_power`]
+/// function.
 ///
 /// ```
 /// use efd::fourier_power_nyq;
@@ -133,7 +134,8 @@ impl Efd2 {
 
     /// Calculate EFD coefficients from an existing discrete points.
     ///
-    /// If the harmonic number is not given, it will be calculated with [`fourier_power`] function.
+    /// If the harmonic number is not given, it will be calculated with
+    /// [`fourier_power`] function.
     pub fn from_curve<H>(curve: &[[f64; 2]], harmonic: H) -> Self
     where
         H: Into<Option<usize>>,

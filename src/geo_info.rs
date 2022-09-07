@@ -43,9 +43,10 @@ impl Geo2Info {
         }
     }
 
-    /// An chain operator on two information.
+    /// An operator on two [`Geo2Info`]. Same as the transformation matrix.
     ///
-    /// It can be used on a not normalized contour `a` transforming to another geometry `b`.
+    /// It can be used on a not normalized contour `a` transforming to another
+    /// geometry `b`.
     ///
     /// ```
     /// use efd::{curve_diff, Efd2};

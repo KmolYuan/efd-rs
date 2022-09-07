@@ -1,4 +1,5 @@
-//! This crate implements Elliptical Fourier Descriptor (EFD) and its related functions.
+//! This crate implements Elliptical Fourier Descriptor (EFD) and its related
+//! functions.
 //!
 //! ```
 //! use efd::Efd2;
@@ -10,8 +11,9 @@
 //!
 //! # Features
 //!
-//! This crate support no-std solution via using "libm", a crate provide pure-rust math functions.
-//! Disable the "std" feature will automatic enable it.
+//! This crate support no-std solution via using "libm", a crate provide
+//! pure-rust math functions. Disable the "std" feature will automatic enable
+//! it.
 #![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
