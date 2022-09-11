@@ -1,4 +1,4 @@
-use crate::{Efd2Error, Geo2Info};
+use crate::{CowCurve, Efd2Error, Geo2Info};
 use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
 use ndarray::{array, concatenate, s, Array1, Array2, AsArray, Axis, Slice};
@@ -49,15 +49,24 @@ pub fn fourier_power(efd: Efd2, nyq: usize, threshold: f64) -> usize {
 /// let harmonic = fourier_power_nyq(curve);
 /// # assert_eq!(harmonic, 6);
 /// ```
-pub fn fourier_power_nyq(curve: &[[f64; 2]]) -> usize {
+pub fn fourier_power_nyq<'a, C>(curve: C) -> usize
+where
+    C: Into<CowCurve<'a>>,
+{
+    let curve = curve.into();
     let nyq = curve.len() / 2;
     fourier_power(Efd2::from_curve(curve, nyq), nyq, 1.)
 }
 
 /// Check the difference between two curves.
-pub fn curve_diff(a: &[[f64; 2]], b: &[[f64; 2]]) -> f64 {
-    a.iter()
-        .zip(b.iter())
+pub fn curve_diff<'a, 'b, C1, C2>(a: C1, b: C2) -> f64
+where
+    C1: Into<CowCurve<'a>>,
+    C2: Into<CowCurve<'a>>,
+{
+    a.into()
+        .iter()
+        .zip(b.into().iter())
         .map(|(a, b)| (a[0] - b[0]).abs() + (a[1] - b[1]).abs())
         .sum()
 }
@@ -136,12 +145,16 @@ impl Efd2 {
     ///
     /// If the harmonic number is not given, it will be calculated with
     /// [`fourier_power`] function.
-    pub fn from_curve<H>(curve: &[[f64; 2]], harmonic: H) -> Self
+    pub fn from_curve<'a, C, H>(curve: C, harmonic: H) -> Self
     where
+        C: Into<CowCurve<'a>>,
         H: Into<Option<usize>>,
     {
-        let harmonic = harmonic.into().unwrap_or_else(|| fourier_power_nyq(curve));
-        let dxy = diff(&ndarray::arr2(curve), Some(Axis(0)));
+        let curve = curve.into();
+        let harmonic = harmonic
+            .into()
+            .unwrap_or_else(|| fourier_power_nyq(curve.as_ref()));
+        let dxy = diff(&ndarray::arr2(&curve), Some(Axis(0)));
         let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = concatenate![Axis(0), array![0.], cumsum(&dt)];
         let zt = t[t.len() - 1];

@@ -1,3 +1,4 @@
+use crate::CowCurve;
 use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
@@ -89,23 +90,22 @@ impl Geo2Info {
     /// # assert!(curve_diff(&path1, TARGET) < 1e-12);
     /// # assert!(curve_diff(&path2, TARGET) < 1e-12);
     /// ```
-    pub fn transform(&self, curve: &[[f64; 2]]) -> Vec<[f64; 2]> {
-        self.transform_iter(curve.iter().copied()).collect()
-    }
-
-    /// Transform an object that can turn into an iterator.
-    pub fn transform_iter<'a, I>(&'a self, iter: I) -> impl Iterator<Item = [f64; 2]> + 'a
+    pub fn transform<'a, C>(&self, curve: C) -> Vec<[f64; 2]>
     where
-        I: IntoIterator<Item = [f64; 2]> + 'a,
+        C: Into<CowCurve<'a>>,
     {
-        iter.into_iter().map(move |[x, y]| {
-            let dx = x * self.scale;
-            let dy = y * self.scale;
-            let ca = self.rot.cos();
-            let sa = self.rot.sin();
-            let x = self.center[0] + dx * ca - dy * sa;
-            let y = self.center[1] + dx * sa + dy * ca;
-            [x, y]
-        })
+        curve
+            .into()
+            .iter()
+            .map(|[x, y]| {
+                let dx = x * self.scale;
+                let dy = y * self.scale;
+                let ca = self.rot.cos();
+                let sa = self.rot.sin();
+                let x = self.center[0] + dx * ca - dy * sa;
+                let y = self.center[1] + dx * sa + dy * ca;
+                [x, y]
+            })
+            .collect()
     }
 }

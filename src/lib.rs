@@ -5,7 +5,7 @@
 //! use efd::Efd2;
 //!
 //! let curve = vec![[0.; 2], [1.; 2], [2.; 2], [3.; 2]];
-//! let new_curve = Efd2::from_curve(&curve, None).generate(20);
+//! let new_curve = Efd2::from_curve(curve, None).generate(20);
 //! # assert_eq!(new_curve.len(), 20);
 //! ```
 //!
@@ -21,6 +21,11 @@ extern crate alloc;
 extern crate core as std; // for `ndarray::s!` macro
 
 pub use crate::{efd::*, error::*, geo_info::*};
+
+/// Copy-on-write curve type.
+///
+/// This crate support both `Vec<[f64; 2]>` and `&[[f64; 2]]` as input type.
+pub type CowCurve<'a> = alloc::borrow::Cow<'a, [[f64; 2]]>;
 
 mod efd;
 mod error;
