@@ -1,7 +1,7 @@
 use crate::{CowCurve, Efd2Error, Geo2Info};
 use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
-use ndarray::{array, concatenate, s, Array1, Array2, AsArray, Axis, Slice};
+use ndarray::{array, concatenate, s, Array, Array1, Array2, AsArray, Axis, Slice};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
@@ -27,15 +27,13 @@ fn pow2(x: f64) -> f64 {
 /// # assert_eq!(harmonic, 6);
 /// ```
 pub fn fourier_power(efd: Efd2, nyq: usize, threshold: f64) -> usize {
-    let total_power = efd.coeffs.mapv(pow2).sum() * 0.5;
-    let mut power = 0.;
-    for i in 0..nyq {
-        power += 0.5 * efd.coeffs.slice(s![i, ..]).mapv(pow2).sum();
-        if power / total_power >= threshold {
-            return i + 1;
-        }
-    }
-    nyq
+    let lut = cumsum(efd.coeffs.mapv(pow2), None);
+    let total_power = lut.axis_iter(Axis(0)).last().unwrap().sum();
+    lut.axis_iter(Axis(0))
+        .enumerate()
+        .find(|(_, power)| power.sum() / total_power >= threshold)
+        .map(|(i, _)| i + 1)
+        .unwrap_or(nyq)
 }
 
 /// A convenient function to apply Nyquist Frequency on [`fourier_power`]
@@ -71,7 +69,7 @@ where
         .sum()
 }
 
-fn diff<'a, D, A>(arr: A, axis: Option<Axis>) -> ndarray::Array<f64, D>
+fn diff<'a, D, A>(arr: A, axis: Option<Axis>) -> Array<f64, D>
 where
     D: ndarray::Dimension,
     A: AsArray<'a, f64, D>,
@@ -83,20 +81,17 @@ where
     &tail - &head
 }
 
-fn cumsum<'a, A>(a: A) -> Array1<f64>
+fn cumsum<D>(mut a: Array<f64, D>, axis: Option<Axis>) -> Array<f64, D>
 where
-    A: AsArray<'a, f64>,
+    D: ndarray::Dimension + ndarray::RemoveAxis,
 {
-    let a = a.into();
-    let mut out = Array1::zeros(a.len());
-    for (i, &v) in a.iter().enumerate() {
-        out[i] = v;
-        if i > 0 {
-            let v = out[i - 1];
-            out[i] += v;
-        }
-    }
-    out
+    let axis = axis.unwrap_or(Axis(0));
+    let init = Array::zeros(a.raw_dim().remove_axis(axis));
+    a.axis_iter_mut(axis).fold(init, |prev, mut next| {
+        next.assign(&(prev + &next));
+        next.to_owned()
+    });
+    a
 }
 
 /// 2D Elliptical Fourier Descriptor coefficients.
@@ -156,7 +151,7 @@ impl Efd2 {
             .unwrap_or_else(|| fourier_power_nyq(curve.as_ref()));
         let dxy = diff(&ndarray::arr2(&curve), Some(Axis(0)));
         let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
-        let t = concatenate![Axis(0), array![0.], cumsum(&dt)];
+        let t = concatenate![Axis(0), array![0.], cumsum(dt.clone(), None)];
         let zt = t[t.len() - 1];
         let phi = &t * TAU / (zt + f64::EPSILON);
         let mut coeffs = Array2::zeros((harmonic, 4));
@@ -174,10 +169,10 @@ impl Efd2 {
             coeffs[[n, 3]] = c * (&dxy.slice(s![.., 0]) * &sin_phi_n).sum();
         }
         let tdt = &t.slice(s![1..]) / &dt;
-        let xi = cumsum(dxy.slice(s![.., 0])) - &dxy.slice(s![.., 0]) * &tdt;
+        let xi = cumsum(dxy.slice(s![.., 0]).to_owned(), None) - &dxy.slice(s![.., 0]) * &tdt;
         let c = diff(&t.mapv(pow2), None) * 0.5 / &dt;
         let a0 = (&dxy.slice(s![.., 0]) * &c + xi * &dt).sum() / (zt + f64::EPSILON);
-        let delta = cumsum(dxy.slice(s![.., 1])) - &dxy.slice(s![.., 1]) * &tdt;
+        let delta = cumsum(dxy.slice(s![.., 1]).to_owned(), None) - &dxy.slice(s![.., 1]) * &tdt;
         let c0 = (&dxy.slice(s![.., 1]) * c + delta * dt).sum() / (zt + f64::EPSILON);
         let center = [curve[0][0] + a0, curve[0][1] + c0];
         // Shift angle
@@ -257,7 +252,7 @@ impl Efd2 {
         assert!(n > 3, "n ({}) must larger than 3", n);
         let mut t = vec![1. / (n - 1) as f64; n];
         t[0] = 0.;
-        let t = cumsum(&Array1::from(t));
+        let t = cumsum(Array1::from(t), None);
         (0..self.harmonic())
             .fold(Array2::<f64>::zeros([n, 2]), |curve, n| {
                 let angle = &t * (n + 1) as f64 * TAU;
