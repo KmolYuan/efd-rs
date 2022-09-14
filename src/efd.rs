@@ -23,7 +23,7 @@ fn pow2(x: f64) -> f64 {
 /// # let curve = PATH;
 /// // Nyquist Frequency
 /// let nyq = curve.len() / 2;
-/// let harmonic = fourier_power(Efd2::from_curve(curve, nyq), nyq, 1.);
+/// let harmonic = fourier_power(Efd2::from_curve(curve, nyq), nyq, 0.9999);
 /// # assert_eq!(harmonic, 6);
 /// ```
 pub fn fourier_power(efd: Efd2, nyq: usize, threshold: f64) -> usize {
@@ -55,7 +55,7 @@ where
 {
     let curve = curve.into();
     let nyq = curve.len() / 2;
-    fourier_power(Efd2::from_curve(curve, nyq), nyq, 1.)
+    fourier_power(Efd2::from_curve(curve, nyq), nyq, 0.9999)
 }
 
 /// Check the difference between two curves.
