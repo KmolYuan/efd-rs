@@ -87,10 +87,9 @@ where
     D: ndarray::Dimension + ndarray::RemoveAxis,
 {
     let axis = axis.unwrap_or(Axis(0));
-    let init = Array::zeros(a.raw_dim().remove_axis(axis));
-    a.axis_iter_mut(axis).fold(init, |prev, mut next| {
-        next.assign(&(prev + &next));
-        next.to_owned()
+    a.axis_iter_mut(axis).reduce(|prev, mut next| {
+        next += &prev;
+        next
     });
     a
 }
