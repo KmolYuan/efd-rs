@@ -14,7 +14,7 @@ fn pow2(x: f64) -> f64 {
 /// required to exceed the threshold fraction of the total power.
 ///
 /// This function needs to use the full of coefficients,
-/// and the threshold usually used as 1.
+/// and the threshold must between 0 and 1.
 ///
 /// ```
 /// use efd::{fourier_power, Efd2};
@@ -23,18 +23,18 @@ fn pow2(x: f64) -> f64 {
 /// # let curve = PATH;
 /// // Nyquist Frequency
 /// let nyq = curve.len() / 2;
-/// let harmonic = fourier_power(Efd2::from_curve(curve, nyq), nyq, 0.9999);
+/// let harmonic = fourier_power(Efd2::from_curve(curve, nyq), 0.9999);
 /// # assert_eq!(harmonic, 6);
 /// ```
-pub fn fourier_power(efd: Efd2, upper: usize, threshold: f64) -> usize {
+pub fn fourier_power(efd: Efd2, threshold: f64) -> usize {
+    debug_assert!((0.0..1.).contains(&threshold));
     let lut = cumsum(efd.coeffs.mapv(pow2).sum_axis(Axis(1)), None);
     let total_power = lut.last().unwrap();
     lut.iter()
-        .take(upper)
         .enumerate()
         .find(|(_, power)| *power / total_power >= threshold)
         .map(|(i, _)| i + 1)
-        .unwrap_or(upper)
+        .unwrap_or(lut.len())
 }
 
 /// A convenient function to apply Nyquist Frequency on [`fourier_power`]
@@ -54,7 +54,7 @@ where
 {
     let curve = curve.into();
     let nyq = curve.len() / 2;
-    fourier_power(Efd2::from_curve(curve, nyq), nyq, 0.9999)
+    fourier_power(Efd2::from_curve(curve, nyq), 0.9999)
 }
 
 /// Check the difference between two curves.
