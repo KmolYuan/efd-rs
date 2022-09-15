@@ -26,14 +26,15 @@ fn pow2(x: f64) -> f64 {
 /// let harmonic = fourier_power(Efd2::from_curve(curve, nyq), nyq, 0.9999);
 /// # assert_eq!(harmonic, 6);
 /// ```
-pub fn fourier_power(efd: Efd2, nyq: usize, threshold: f64) -> usize {
-    let lut = cumsum(efd.coeffs.mapv(pow2), None);
-    let total_power = lut.axis_iter(Axis(0)).last().unwrap().sum();
-    lut.axis_iter(Axis(0))
+pub fn fourier_power(efd: Efd2, upper: usize, threshold: f64) -> usize {
+    let lut = cumsum(efd.coeffs.mapv(pow2).sum_axis(Axis(1)), None);
+    let total_power = lut.last().unwrap();
+    lut.iter()
+        .take(upper)
         .enumerate()
-        .find(|(_, power)| power.sum() / total_power >= threshold)
+        .find(|(_, power)| *power / total_power >= threshold)
         .map(|(i, _)| i + 1)
-        .unwrap_or(nyq)
+        .unwrap_or(upper)
 }
 
 /// A convenient function to apply Nyquist Frequency on [`fourier_power`]
