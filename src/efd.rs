@@ -14,7 +14,7 @@ fn pow2(x: f64) -> f64 {
 /// required to exceed the threshold fraction of the total power.
 ///
 /// This function needs to use the full of coefficients,
-/// and the threshold must between 0 and 1.
+/// and the threshold must in [0, 1).
 ///
 /// ```
 /// use efd::{fourier_power, Efd2};
