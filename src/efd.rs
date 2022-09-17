@@ -40,7 +40,7 @@ pub fn fourier_power(efd: Efd2, threshold: f64) -> usize {
 /// A convenient function to apply Nyquist Frequency on [`fourier_power`]
 /// function.
 ///
-/// Return none if the curve is empty.
+/// Return none if the curve is less than 1.
 ///
 /// ```
 /// use efd::fourier_power_nyq;
@@ -55,7 +55,7 @@ where
     C: Into<CowCurve<'a>>,
 {
     let curve = curve.into();
-    (!curve.is_empty())
+    (curve.len() > 1)
         .then(|| curve.len() / 2)
         .and_then(|nyq| Efd2::from_curve(curve, nyq))
         .map(|efd| fourier_power(efd, 0.9999))
@@ -142,7 +142,7 @@ impl Efd2 {
 
     /// Calculate EFD coefficients from an existing discrete points.
     ///
-    /// Return none if the curve is empty.
+    /// Return none if the curve is less than 1.
     ///
     /// If the harmonic number is not given, it will be calculated with
     /// [`fourier_power`] function.
@@ -154,7 +154,7 @@ impl Efd2 {
         let curve = curve.into();
         let harmonic = harmonic
             .into()
-            .filter(|h| *h > 0 && !curve.is_empty())
+            .filter(|h| *h > 0 && curve.len() > 1)
             .or_else(|| fourier_power_nyq(curve.as_ref()))?;
         let dxy = diff(&ndarray::arr2(&curve), Some(Axis(0)));
         let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
