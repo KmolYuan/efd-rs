@@ -40,6 +40,8 @@ pub fn fourier_power(efd: Efd2, threshold: f64) -> usize {
 /// A convenient function to apply Nyquist Frequency on [`fourier_power`]
 /// function.
 ///
+/// Panic if the curve is empty.
+///
 /// ```
 /// use efd::fourier_power_nyq;
 /// # use efd::tests::PATH;
@@ -53,6 +55,7 @@ where
     C: Into<CowCurve<'a>>,
 {
     let curve = curve.into();
+    assert!(!curve.is_empty());
     let nyq = curve.len() / 2;
     fourier_power(Efd2::from_curve(curve, nyq), 0.9999)
 }
@@ -138,6 +141,8 @@ impl Efd2 {
 
     /// Calculate EFD coefficients from an existing discrete points.
     ///
+    /// Panic if the curve is empty.
+    ///
     /// If the harmonic number is not given, it will be calculated with
     /// [`fourier_power`] function.
     pub fn from_curve<'a, C, H>(curve: C, harmonic: H) -> Self
@@ -146,6 +151,7 @@ impl Efd2 {
         H: Into<Option<usize>>,
     {
         let curve = curve.into();
+        assert!(!curve.is_empty());
         let harmonic = harmonic
             .into()
             .unwrap_or_else(|| fourier_power_nyq(curve.as_ref()));
@@ -247,7 +253,7 @@ impl Efd2 {
 
     /// Generate the normalized curve **without** geometry information.
     ///
-    /// The number of the points `n` must given.
+    /// The number of the points `n` must lager than 3.
     pub fn generate_norm(&self, n: usize) -> Vec<[f64; 2]> {
         assert!(n > 3, "n ({}) must larger than 3", n);
         let mut t = vec![1. / (n - 1) as f64; n];
