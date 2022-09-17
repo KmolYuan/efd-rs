@@ -23,7 +23,7 @@ fn pow2(x: f64) -> f64 {
 /// # let curve = PATH;
 /// // Nyquist Frequency
 /// let nyq = curve.len() / 2;
-/// let harmonic = fourier_power(Efd2::from_curve(curve, nyq), 0.9999);
+/// let harmonic = fourier_power(Efd2::from_curve(curve, nyq).unwrap(), 0.9999);
 /// # assert_eq!(harmonic, 6);
 /// ```
 pub fn fourier_power(efd: Efd2, threshold: f64) -> usize {
@@ -40,7 +40,7 @@ pub fn fourier_power(efd: Efd2, threshold: f64) -> usize {
 /// A convenient function to apply Nyquist Frequency on [`fourier_power`]
 /// function.
 ///
-/// Panic if the curve is empty.
+/// Return none if the curve is empty.
 ///
 /// ```
 /// use efd::fourier_power_nyq;
@@ -48,16 +48,19 @@ pub fn fourier_power(efd: Efd2, threshold: f64) -> usize {
 ///
 /// # let curve = PATH;
 /// let harmonic = fourier_power_nyq(curve);
-/// # assert_eq!(harmonic, 6);
+/// # assert_eq!(harmonic, Some(6));
 /// ```
-pub fn fourier_power_nyq<'a, C>(curve: C) -> usize
+pub fn fourier_power_nyq<'a, C>(curve: C) -> Option<usize>
 where
     C: Into<CowCurve<'a>>,
 {
     let curve = curve.into();
-    assert!(!curve.is_empty());
-    let nyq = curve.len() / 2;
-    fourier_power(Efd2::from_curve(curve, nyq), 0.9999)
+    if !curve.is_empty() {
+        let nyq = curve.len() / 2;
+        Some(fourier_power(Efd2::from_curve(curve, nyq)?, 0.9999))
+    } else {
+        None
+    }
 }
 
 /// Check the difference between two curves.
@@ -141,20 +144,19 @@ impl Efd2 {
 
     /// Calculate EFD coefficients from an existing discrete points.
     ///
-    /// Panic if the curve is empty.
+    /// Return none if the curve is empty.
     ///
     /// If the harmonic number is not given, it will be calculated with
     /// [`fourier_power`] function.
-    pub fn from_curve<'a, C, H>(curve: C, harmonic: H) -> Self
+    pub fn from_curve<'a, C, H>(curve: C, harmonic: H) -> Option<Self>
     where
         C: Into<CowCurve<'a>>,
         H: Into<Option<usize>>,
     {
         let curve = curve.into();
-        assert!(!curve.is_empty());
         let harmonic = harmonic
             .into()
-            .unwrap_or_else(|| fourier_power_nyq(curve.as_ref()));
+            .or_else(|| fourier_power_nyq(curve.as_ref()))?;
         let dxy = diff(&ndarray::arr2(&curve), Some(Axis(0)));
         let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = concatenate![Axis(0), array![0.], cumsum(dt.clone(), None)];
@@ -218,7 +220,7 @@ impl Efd2 {
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
         let geo = Geo2Info { rot: -psi, scale, center };
-        Self { coeffs, geo }
+        Some(Self { coeffs, geo })
     }
 
     /// Consume self and return raw array.

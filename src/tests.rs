@@ -3,7 +3,7 @@
 #[test]
 fn efd() {
     use crate::*;
-    let efd = Efd2::from_curve(PATH, None);
+    let efd = Efd2::from_curve(PATH, None).unwrap();
     // Test geometry information
     assert!((efd.center[0] - -2.41571330022796).abs() < f64::EPSILON);
     assert!((efd.center[1] - 53.43791856115811).abs() < f64::EPSILON);

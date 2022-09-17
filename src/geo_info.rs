@@ -55,8 +55,8 @@ impl Geo2Info {
     /// # let path1 = PATH;
     /// # let path2 = PATH;
     ///
-    /// let a = Efd2::from_curve(path1, None);
-    /// let b = Efd2::from_curve(path2, None);
+    /// let a = Efd2::from_curve(path1, None).unwrap();
+    /// let b = Efd2::from_curve(path2, None).unwrap();
     /// assert!(curve_diff(&a.to(&b).transform(path1), path2) < 1e-12);
     /// ```
     pub fn to(&self, rhs: &Self) -> Self {
@@ -82,7 +82,7 @@ impl Geo2Info {
     /// # use efd::{curve_diff, tests::{PATH, TARGET}, Efd2};
     /// # let path = PATH;
     /// # let target = TARGET;
-    /// # let efd = Efd2::from_curve(path, None);
+    /// # let efd = Efd2::from_curve(path, None).unwrap();
     /// # let path = efd.generate_norm(target.len());
     /// let path1 = efd.transform(&path);
     /// # let geo = &efd;
