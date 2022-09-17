@@ -154,6 +154,7 @@ impl Efd2 {
         let curve = curve.into();
         let harmonic = harmonic
             .into()
+            .filter(|h| *h > 0 && !curve.is_empty())
             .or_else(|| fourier_power_nyq(curve.as_ref()))?;
         let dxy = diff(&ndarray::arr2(&curve), Some(Axis(0)));
         let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
