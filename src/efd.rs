@@ -1,7 +1,7 @@
 use crate::{CowCurve, Efd2Error, Geo2Info};
 use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
-use ndarray::{array, concatenate, s, Array, Array1, Array2, AsArray, Axis, Slice};
+use ndarray::{array, s, Array, Array1, Array2, Axis};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
@@ -77,12 +77,12 @@ where
 fn diff<'a, D, A>(arr: A, axis: Option<Axis>) -> Array<f64, D>
 where
     D: ndarray::Dimension,
-    A: AsArray<'a, f64, D>,
+    A: ndarray::AsArray<'a, f64, D>,
 {
     let arr = arr.into();
     let axis = axis.unwrap_or_else(|| Axis(arr.ndim() - 1));
-    let head = arr.slice_axis(axis, Slice::from(..-1));
-    let tail = arr.slice_axis(axis, Slice::from(1..));
+    let head = arr.slice_axis(axis, (..-1).into());
+    let tail = arr.slice_axis(axis, (1..).into());
     &tail - &head
 }
 
@@ -158,30 +158,34 @@ impl Efd2 {
             .or_else(|| fourier_power_nyq(curve.as_ref()))?;
         let dxy = diff(&ndarray::arr2(&curve), Some(Axis(0)));
         let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
-        let t = concatenate![Axis(0), array![0.], cumsum(dt.clone(), None)];
-        let zt = t[t.len() - 1];
+        let t = ndarray::concatenate![Axis(0), array![0.], cumsum(dt.clone(), None)];
+        let zt = t.last().unwrap();
         let phi = &t * TAU / (zt + f64::EPSILON);
         let mut coeffs = Array2::zeros((harmonic, 4));
-        for n in 0..harmonic {
-            let n1 = n as f64 + 1.;
-            let c = 0.5 * zt / (n1 * n1 * PI * PI);
+        for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
+            let n1 = i as f64 + 1.;
+            let t = 0.5 * zt / (n1 * n1 * PI * PI);
             let phi_n = &phi * n1;
             let phi_n_front = phi_n.slice(s![..-1]);
             let phi_n_back = phi_n.slice(s![1..]);
             let cos_phi_n = (phi_n_back.mapv(f64::cos) - phi_n_front.mapv(f64::cos)) / &dt;
             let sin_phi_n = (phi_n_back.mapv(f64::sin) - phi_n_front.mapv(f64::sin)) / &dt;
-            coeffs[[n, 0]] = c * (&dxy.slice(s![.., 1]) * &cos_phi_n).sum();
-            coeffs[[n, 1]] = c * (&dxy.slice(s![.., 1]) * &sin_phi_n).sum();
-            coeffs[[n, 2]] = c * (&dxy.slice(s![.., 0]) * &cos_phi_n).sum();
-            coeffs[[n, 3]] = c * (&dxy.slice(s![.., 0]) * &sin_phi_n).sum();
+            c[0] = t * (&dxy.slice(s![.., 1]) * &cos_phi_n).sum();
+            c[1] = t * (&dxy.slice(s![.., 1]) * &sin_phi_n).sum();
+            c[2] = t * (&dxy.slice(s![.., 0]) * &cos_phi_n).sum();
+            c[3] = t * (&dxy.slice(s![.., 0]) * &sin_phi_n).sum();
         }
-        let tdt = &t.slice(s![1..]) / &dt;
-        let xi = cumsum(dxy.slice(s![.., 0]).to_owned(), None) - &dxy.slice(s![.., 0]) * &tdt;
-        let c = diff(&t.mapv(pow2), None) * 0.5 / &dt;
-        let a0 = (&dxy.slice(s![.., 0]) * &c + xi * &dt).sum() / (zt + f64::EPSILON);
-        let delta = cumsum(dxy.slice(s![.., 1]).to_owned(), None) - &dxy.slice(s![.., 1]) * &tdt;
-        let c0 = (&dxy.slice(s![.., 1]) * c + delta * dt).sum() / (zt + f64::EPSILON);
-        let center = [curve[0][0] + a0, curve[0][1] + c0];
+        let center = {
+            let tdt = &t.slice(s![1..]) / &dt;
+            let xi = cumsum(dxy.slice(s![.., 0]).to_owned(), None) - &dxy.slice(s![.., 0]) * &tdt;
+            let c = diff(&t.mapv(pow2), None) * 0.5 / &dt;
+            let a0 = (&dxy.slice(s![.., 0]) * &c + xi * &dt).sum() / (zt + f64::EPSILON);
+            let delta =
+                cumsum(dxy.slice(s![.., 1]).to_owned(), None) - &dxy.slice(s![.., 1]) * &tdt;
+            let c0 = (&dxy.slice(s![.., 1]) * c + delta * dt).sum() / (zt + f64::EPSILON);
+            let [x, y] = curve.first().unwrap();
+            [x + a0, y + c0]
+        };
         // Shift angle
         let theta1 = {
             let dy = 2. * (coeffs[[0, 0]] * coeffs[[0, 1]] + coeffs[[0, 2]] * coeffs[[0, 3]]);
@@ -190,31 +194,24 @@ impl Efd2 {
                 - coeffs[[0, 3]] * coeffs[[0, 3]];
             dy.atan2(dx) * 0.5
         };
-        for n in 0..harmonic {
-            let angle = (n + 1) as f64 * theta1;
+        for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
+            let angle = (i + 1) as f64 * theta1;
             let rot = array![[angle.cos(), -angle.sin()], [angle.sin(), angle.cos()]];
-            let m = array![
-                [coeffs[[n, 0]], coeffs[[n, 1]]],
-                [coeffs[[n, 2]], coeffs[[n, 3]]],
-            ]
-            .dot(&rot);
-            coeffs[[n, 0]] = m[[0, 0]];
-            coeffs[[n, 1]] = m[[0, 1]];
-            coeffs[[n, 2]] = m[[1, 0]];
-            coeffs[[n, 3]] = m[[1, 1]];
+            let m = array![[c[0], c[1]], [c[2], c[3]]].dot(&rot);
+            c[0] = m[[0, 0]];
+            c[1] = m[[0, 1]];
+            c[2] = m[[1, 0]];
+            c[3] = m[[1, 1]];
         }
         // The angle of semi-major axis
         let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
         let rot = array![[psi.cos(), psi.sin()], [-psi.sin(), psi.cos()]];
-        for n in 0..harmonic {
-            let m = rot.dot(&array![
-                [coeffs[[n, 0]], coeffs[[n, 1]]],
-                [coeffs[[n, 2]], coeffs[[n, 3]]],
-            ]);
-            coeffs[[n, 0]] = m[[0, 0]];
-            coeffs[[n, 1]] = m[[0, 1]];
-            coeffs[[n, 2]] = m[[1, 0]];
-            coeffs[[n, 3]] = m[[1, 1]];
+        for mut c in coeffs.axis_iter_mut(Axis(0)) {
+            let m = rot.dot(&array![[c[0], c[1]], [c[2], c[3]],]);
+            c[0] = m[[0, 0]];
+            c[1] = m[[0, 1]];
+            c[2] = m[[1, 0]];
+            c[3] = m[[1, 1]];
         }
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
@@ -259,14 +256,16 @@ impl Efd2 {
         assert!(n > 3, "n ({}) must larger than 3", n);
         let mut t = vec![1. / (n - 1) as f64; n];
         t[0] = 0.;
-        let t = cumsum(Array1::from(t), None);
-        (0..self.harmonic())
-            .fold(Array2::<f64>::zeros([n, 2]), |curve, n| {
-                let angle = &t * (n + 1) as f64 * TAU;
+        let t = cumsum(Array1::from(t), None) * TAU;
+        self.coeffs
+            .axis_iter(Axis(0))
+            .enumerate()
+            .fold(Array2::zeros([n, 2]), |curve, (i, coeffs)| {
+                let angle = &t * (i + 1) as f64;
                 let cos = angle.mapv(f64::cos);
                 let sin = angle.mapv(f64::sin);
-                let x = &cos * self.coeffs[[n, 2]] + &sin * self.coeffs[[n, 3]];
-                let y = &cos * self.coeffs[[n, 0]] + &sin * self.coeffs[[n, 1]];
+                let x = &cos * coeffs[2] + &sin * coeffs[3];
+                let y = &cos * coeffs[0] + &sin * coeffs[1];
                 curve + ndarray::stack![Axis(1), x, y]
             })
             .axis_iter(Axis(0))
