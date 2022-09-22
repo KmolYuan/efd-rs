@@ -1,7 +1,7 @@
 use crate::{CowCurve, Efd2Error, Geo2Info};
 use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
-use ndarray::{array, s, Array, Array1, Array2, Axis};
+use ndarray::{array, s, Array, Array1, Array2, Axis, CowArray, Dimension};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
@@ -28,7 +28,7 @@ fn pow2(x: f64) -> f64 {
 /// ```
 pub fn fourier_power(efd: Efd2, threshold: f64) -> usize {
     debug_assert!((0.0..1.).contains(&threshold));
-    let lut = cumsum(efd.coeffs.mapv(pow2).sum_axis(Axis(1)), None);
+    let lut = cumsum(efd.coeffs.mapv(pow2), None).sum_axis(Axis(1));
     let total_power = lut.last().unwrap();
     lut.iter()
         .enumerate()
@@ -76,8 +76,8 @@ where
 
 fn diff<'a, D, A>(arr: A, axis: Option<Axis>) -> Array<f64, D>
 where
-    D: ndarray::Dimension,
-    A: ndarray::AsArray<'a, f64, D>,
+    D: Dimension,
+    A: Into<CowArray<'a, f64, D>>,
 {
     let arr = arr.into();
     let axis = axis.unwrap_or_else(|| Axis(arr.ndim() - 1));
@@ -86,16 +86,18 @@ where
     &tail - &head
 }
 
-fn cumsum<D>(mut a: Array<f64, D>, axis: Option<Axis>) -> Array<f64, D>
+fn cumsum<'a, D, A>(arr: A, axis: Option<Axis>) -> Array<f64, D>
 where
-    D: ndarray::Dimension + ndarray::RemoveAxis,
+    D: Dimension + ndarray::RemoveAxis,
+    A: Into<CowArray<'a, f64, D>>,
 {
+    let mut arr = arr.into().to_owned();
     let axis = axis.unwrap_or(Axis(0));
-    a.axis_iter_mut(axis).reduce(|prev, mut next| {
+    arr.axis_iter_mut(axis).reduce(|prev, mut next| {
         next += &prev;
         next
     });
-    a
+    arr
 }
 
 /// 2D Elliptical Fourier Descriptor coefficients.
@@ -156,9 +158,9 @@ impl Efd2 {
             .into()
             .filter(|h| *h > 0 && curve.len() > 1)
             .or_else(|| fourier_power_nyq(curve.as_ref()))?;
-        let dxy = diff(&ndarray::arr2(&curve), Some(Axis(0)));
+        let dxy = diff(ndarray::arr2(&curve), Some(Axis(0)));
         let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
-        let t = ndarray::concatenate![Axis(0), array![0.], cumsum(dt.clone(), None)];
+        let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
         let zt = t.last().unwrap();
         let phi = &t * TAU / (zt + f64::EPSILON);
         let mut coeffs = Array2::zeros((harmonic, 4));
@@ -177,11 +179,10 @@ impl Efd2 {
         }
         let center = {
             let tdt = &t.slice(s![1..]) / &dt;
-            let xi = cumsum(dxy.slice(s![.., 0]).to_owned(), None) - &dxy.slice(s![.., 0]) * &tdt;
-            let c = diff(&t.mapv(pow2), None) * 0.5 / &dt;
+            let xi = cumsum(dxy.slice(s![.., 0]), None) - &dxy.slice(s![.., 0]) * &tdt;
+            let c = diff(t.mapv(pow2), None) * 0.5 / &dt;
             let a0 = (&dxy.slice(s![.., 0]) * &c + xi * &dt).sum() / (zt + f64::EPSILON);
-            let delta =
-                cumsum(dxy.slice(s![.., 1]).to_owned(), None) - &dxy.slice(s![.., 1]) * &tdt;
+            let delta = cumsum(dxy.slice(s![.., 1]), None) - &dxy.slice(s![.., 1]) * &tdt;
             let c0 = (&dxy.slice(s![.., 1]) * c + delta * dt).sum() / (zt + f64::EPSILON);
             let [x, y] = curve.first().unwrap();
             [x + a0, y + c0]
