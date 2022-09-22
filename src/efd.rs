@@ -34,7 +34,7 @@ pub fn fourier_power(efd: Efd2, threshold: f64) -> usize {
         .enumerate()
         .find(|(_, power)| *power / total_power >= threshold)
         .map(|(i, _)| i + 1)
-        .unwrap_or(lut.len())
+        .unwrap()
 }
 
 /// A convenient function to apply Nyquist Frequency on [`fourier_power`]
