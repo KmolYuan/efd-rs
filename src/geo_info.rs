@@ -64,7 +64,7 @@ impl Geo2Info {
         let scale = rhs.scale / self.scale;
         let center_a = self.center[1].atan2(self.center[0]) + rot;
         let d = self.center[1].hypot(self.center[0]) * scale;
-        Geo2Info {
+        Self {
             rot,
             scale,
             center: [
