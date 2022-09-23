@@ -165,9 +165,9 @@ impl Efd2 {
         let phi = &t * TAU / (zt + f64::EPSILON);
         let mut coeffs = Array2::zeros((harmonic, 4));
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
-            let n1 = i as f64 + 1.;
-            let t = 0.5 * zt / (n1 * n1 * PI * PI);
-            let phi_n = &phi * n1;
+            let n = i as f64 + 1.;
+            let t = 0.5 * zt / (n * n * PI * PI);
+            let phi_n = &phi * n;
             let phi_n_front = phi_n.slice(s![..-1]);
             let phi_n_back = phi_n.slice(s![1..]);
             let cos_phi_n = (phi_n_back.mapv(f64::cos) - phi_n_front.mapv(f64::cos)) / &dt;
@@ -261,12 +261,12 @@ impl Efd2 {
         self.coeffs
             .axis_iter(Axis(0))
             .enumerate()
-            .fold(Array2::zeros([n, 2]), |curve, (i, coeffs)| {
+            .fold(Array2::zeros([n, 2]), |curve, (i, c)| {
                 let angle = &t * (i + 1) as f64;
                 let cos = angle.mapv(f64::cos);
                 let sin = angle.mapv(f64::sin);
-                let x = &cos * coeffs[2] + &sin * coeffs[3];
-                let y = &cos * coeffs[0] + &sin * coeffs[1];
+                let x = &cos * c[2] + &sin * c[3];
+                let y = &cos * c[0] + &sin * c[1];
                 curve + ndarray::stack![Axis(1), x, y]
             })
             .axis_iter(Axis(0))
