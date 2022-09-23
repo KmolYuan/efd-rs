@@ -56,7 +56,7 @@ where
 {
     let curve = curve.into();
     (curve.len() > 1)
-        .then(|| curve.len() / 2)
+        .then_some(curve.len() / 2)
         .and_then(|nyq| Efd2::from_curve(curve, nyq))
         .map(|efd| fourier_power(efd, 0.9999))
 }
