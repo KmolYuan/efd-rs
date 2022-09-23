@@ -5,7 +5,7 @@
 //! use efd::Efd2;
 //!
 //! let curve = vec![[0.; 2], [1.; 2], [2.; 2], [3.; 2]];
-//! let new_curve = Efd2::from_curve(curve, None).unwrap().generate(20);
+//! let new_curve = Efd2::from_curve_gate(curve, None).unwrap().generate(20);
 //! # assert_eq!(new_curve.len(), 20);
 //! ```
 //!

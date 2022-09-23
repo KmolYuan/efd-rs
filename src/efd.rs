@@ -18,12 +18,12 @@ fn pow2(x: f64) -> f64 {
 ///
 /// ```
 /// use efd::{fourier_power, Efd2};
-/// # use efd::tests::PATH;
 ///
-/// # let curve = PATH;
+/// # let curve = efd::tests::PATH;
 /// // Nyquist Frequency
 /// let nyq = curve.len() / 2;
-/// let harmonic = fourier_power(Efd2::from_curve(curve, nyq).unwrap(), 0.9999);
+/// let efd = Efd2::from_curve_harmonic(curve, nyq).unwrap();
+/// let harmonic = fourier_power(efd, 0.9999);
 /// # assert_eq!(harmonic, 6);
 /// ```
 pub fn fourier_power(efd: Efd2, threshold: f64) -> usize {
@@ -37,16 +37,14 @@ pub fn fourier_power(efd: Efd2, threshold: f64) -> usize {
         .unwrap()
 }
 
-/// A convenient function to apply Nyquist Frequency on [`fourier_power`]
-/// function.
+/// Apply Nyquist Frequency on [`fourier_power`] with 99.99% threshold value.
 ///
 /// Return none if the curve is less than 1.
 ///
 /// ```
 /// use efd::fourier_power_nyq;
-/// # use efd::tests::PATH;
 ///
-/// # let curve = PATH;
+/// # let curve = efd::tests::PATH;
 /// let harmonic = fourier_power_nyq(curve);
 /// # assert_eq!(harmonic, Some(6));
 /// ```
@@ -54,11 +52,22 @@ pub fn fourier_power_nyq<'a, C>(curve: C) -> Option<usize>
 where
     C: Into<CowCurve<'a>>,
 {
+    fourier_power_nyq_gate(curve, 0.9999)
+}
+
+/// Apply Nyquist Frequency on [`fourier_power`] with a custom threshold value.
+///
+/// The threshold must in [0, 1).
+/// This function return none if the curve is less than 1.
+pub fn fourier_power_nyq_gate<'a, C>(curve: C, threshold: f64) -> Option<usize>
+where
+    C: Into<CowCurve<'a>>,
+{
     let curve = curve.into();
     (curve.len() > 1)
         .then_some(curve.len() / 2)
-        .and_then(|nyq| Efd2::from_curve(curve, nyq))
-        .map(|efd| fourier_power(efd, 0.9999))
+        .and_then(|nyq| Efd2::from_curve_harmonic(curve, nyq))
+        .map(|efd| fourier_power(efd, threshold))
 }
 
 /// Check the difference between two curves.
@@ -137,33 +146,42 @@ impl Efd2 {
             .ok_or(Efd2Error)
     }
 
-    /// Builder method for adding geometric information.
-    pub fn with_geo(self, geo: Geo2Info) -> Self {
-        Self { geo, ..self }
+    /// Calculate EFD coefficients from an existing discrete points and Fourier
+    /// power gate.
+    ///
+    /// Return none if the curve is less than 1.
+    pub fn from_curve_gate<'a, C, T>(curve: C, threshold: T) -> Option<Self>
+    where
+        C: Into<CowCurve<'a>>,
+        T: Into<Option<f64>>,
+    {
+        let curve = curve.into();
+        let threshold = threshold.into().unwrap_or(0.9999);
+        let harmonic = fourier_power_nyq_gate(curve.as_ref(), threshold)?;
+        Self::from_curve_harmonic(curve, harmonic)
     }
 
     /// Calculate EFD coefficients from an existing discrete points.
     ///
-    /// Return none if the curve is less than 1.
+    /// Return none if harmonic is zero or the curve is less than 1.
     ///
     /// If the harmonic number is not given, it will be calculated with
     /// [`fourier_power`] function.
-    pub fn from_curve<'a, C, H>(curve: C, harmonic: H) -> Option<Self>
+    pub fn from_curve_harmonic<'a, C>(curve: C, harmonic: usize) -> Option<Self>
     where
         C: Into<CowCurve<'a>>,
-        H: Into<Option<usize>>,
     {
         let curve = curve.into();
-        let harmonic = harmonic
-            .into()
-            .filter(|h| *h > 0 && curve.len() > 1)
-            .or_else(|| fourier_power_nyq(curve.as_ref()))?;
+        assert!(harmonic > 0);
+        if curve.len() < 2 {
+            return None;
+        }
         let dxy = diff(ndarray::arr2(&curve), Some(Axis(0)));
         let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
         let zt = t.last().unwrap();
         let phi = &t * TAU / (zt + f64::EPSILON);
-        let mut coeffs = Array2::zeros((harmonic, 4));
+        let mut coeffs = Array2::zeros([harmonic, 4]);
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let n = i as f64 + 1.;
             let t = 0.5 * zt / (n * n * PI * PI);
@@ -218,6 +236,11 @@ impl Efd2 {
         coeffs /= scale;
         let geo = Geo2Info { rot: -psi, scale, center };
         Some(Self { coeffs, geo })
+    }
+
+    /// Builder method for adding geometric information.
+    pub fn with_geo(self, geo: Geo2Info) -> Self {
+        Self { geo, ..self }
     }
 
     /// Consume self and return raw array.
