@@ -149,7 +149,7 @@ impl Efd2 {
     /// Calculate EFD coefficients from an existing discrete points and Fourier
     /// power gate.
     ///
-    /// Return none if the curve is less than 1.
+    /// Return none if the curve length is less than 1.
     pub fn from_curve_gate<'a, C, T>(curve: C, threshold: T) -> Option<Self>
     where
         C: Into<CowCurve<'a>>,
@@ -163,7 +163,7 @@ impl Efd2 {
 
     /// Calculate EFD coefficients from an existing discrete points.
     ///
-    /// Return none if harmonic is zero or the curve is less than 1.
+    /// Return none if harmonic is zero or the curve length is less than 1.
     ///
     /// If the harmonic number is not given, it will be calculated with
     /// [`fourier_power`] function.
@@ -239,7 +239,7 @@ impl Efd2 {
     }
 
     /// Builder method for adding geometric information.
-    pub fn with_geo(self, geo: Geo2Info) -> Self {
+    pub fn geo(self, geo: Geo2Info) -> Self {
         Self { geo, ..self }
     }
 
@@ -254,7 +254,7 @@ impl Efd2 {
     }
 
     /// Get the geometry information.
-    pub fn geo(&self) -> &Geo2Info {
+    pub fn as_geo(&self) -> &Geo2Info {
         self
     }
 
