@@ -273,6 +273,24 @@ impl Efd2 {
         (&self.coeffs - &rhs.coeffs).mapv(pow2).sum().sqrt()
     }
 
+    /// Reverse the order of described curve then return a mutable reference.
+    pub fn reverse(&mut self) -> &mut Self {
+        let mut s = self.coeffs.slice_mut(s![.., 1]);
+        s *= -1.;
+        let mut s = self.coeffs.slice_mut(s![.., 3]);
+        s *= -1.;
+        self
+    }
+
+    /// Consume and return a reversed version of the coefficients. This method
+    /// can avoid mutable require.
+    ///
+    /// Please clone the object if you want to do self-comparison.
+    pub fn reversed(mut self) -> Self {
+        self.reverse();
+        self
+    }
+
     /// Generate the normalized curve **without** geometry information.
     ///
     /// The number of the points `n` must lager than 3.
