@@ -253,8 +253,13 @@ impl Efd2 {
         self.coeffs.view()
     }
 
-    /// Get the geometry information.
+    /// Get the reference of geometry information.
     pub fn as_geo(&self) -> &Geo2Info {
+        self
+    }
+
+    /// Get the mutable reference of geometry information.
+    pub fn as_geo_mut(&mut self) -> &mut Geo2Info {
         self
     }
 
@@ -328,5 +333,11 @@ impl std::ops::Deref for Efd2 {
 
     fn deref(&self) -> &Self::Target {
         &self.geo
+    }
+}
+
+impl std::ops::DerefMut for Efd2 {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.geo
     }
 }
