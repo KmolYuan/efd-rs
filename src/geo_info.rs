@@ -1,4 +1,3 @@
-use crate::CowCurve;
 use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
@@ -89,12 +88,12 @@ impl Geo2Info {
     /// # assert!(curve_diff(&path1, TARGET) < 1e-12);
     /// # assert!(curve_diff(&path2, TARGET) < 1e-12);
     /// ```
-    pub fn transform<'a, C>(&self, curve: C) -> Vec<[f64; 2]>
+    pub fn transform<C>(&self, curve: C) -> Vec<[f64; 2]>
     where
-        C: Into<CowCurve<'a>>,
+        C: AsRef<[[f64; 2]]>,
     {
         curve
-            .into()
+            .as_ref()
             .iter()
             .map(|[x, y]| {
                 let dx = x * self.scale;

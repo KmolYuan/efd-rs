@@ -1,4 +1,4 @@
-use crate::{CowCurve, Efd2Error, Geo2Info};
+use crate::{Efd2Error, Geo2Info};
 use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
 use ndarray::{array, s, Array, Array1, Array2, Axis, CowArray, Dimension};
@@ -48,9 +48,9 @@ pub fn fourier_power(efd: Efd2, threshold: f64) -> usize {
 /// let harmonic = fourier_power_nyq(curve);
 /// # assert_eq!(harmonic, Some(6));
 /// ```
-pub fn fourier_power_nyq<'a, C>(curve: C) -> Option<usize>
+pub fn fourier_power_nyq<C>(curve: C) -> Option<usize>
 where
-    C: Into<CowCurve<'a>>,
+    C: AsRef<[[f64; 2]]>,
 {
     fourier_power_nyq_gate(curve, 0.9999)
 }
@@ -59,11 +59,11 @@ where
 ///
 /// The threshold must in [0, 1).
 /// This function return none if the curve is less than 1.
-pub fn fourier_power_nyq_gate<'a, C>(curve: C, threshold: f64) -> Option<usize>
+pub fn fourier_power_nyq_gate<C>(curve: C, threshold: f64) -> Option<usize>
 where
-    C: Into<CowCurve<'a>>,
+    C: AsRef<[[f64; 2]]>,
 {
-    let curve = curve.into();
+    let curve = curve.as_ref();
     (curve.len() > 1)
         .then_some(curve.len() / 2)
         .and_then(|nyq| Efd2::from_curve_harmonic(curve, nyq))
@@ -71,14 +71,14 @@ where
 }
 
 /// Check the difference between two curves.
-pub fn curve_diff<'a, 'b, C1, C2>(a: C1, b: C2) -> f64
+pub fn curve_diff<C1, C2>(a: C1, b: C2) -> f64
 where
-    C1: Into<CowCurve<'a>>,
-    C2: Into<CowCurve<'a>>,
+    C1: AsRef<[[f64; 2]]>,
+    C2: AsRef<[[f64; 2]]>,
 {
-    a.into()
+    a.as_ref()
         .iter()
-        .zip(b.into().iter())
+        .zip(b.as_ref())
         .map(|(a, b)| (a[0] - b[0]).abs() + (a[1] - b[1]).abs())
         .sum()
 }
@@ -150,14 +150,14 @@ impl Efd2 {
     /// power gate.
     ///
     /// Return none if the curve length is less than 1.
-    pub fn from_curve_gate<'a, C, T>(curve: C, threshold: T) -> Option<Self>
+    pub fn from_curve_gate<C, T>(curve: C, threshold: T) -> Option<Self>
     where
-        C: Into<CowCurve<'a>>,
+        C: AsRef<[[f64; 2]]>,
         T: Into<Option<f64>>,
     {
-        let curve = curve.into();
+        let curve = curve.as_ref();
         let threshold = threshold.into().unwrap_or(0.9999);
-        let harmonic = fourier_power_nyq_gate(curve.as_ref(), threshold)?;
+        let harmonic = fourier_power_nyq_gate(curve, threshold)?;
         Self::from_curve_harmonic(curve, harmonic)
     }
 
@@ -167,16 +167,16 @@ impl Efd2 {
     ///
     /// If the harmonic number is not given, it will be calculated with
     /// [`fourier_power`] function.
-    pub fn from_curve_harmonic<'a, C>(curve: C, harmonic: usize) -> Option<Self>
+    pub fn from_curve_harmonic<C>(curve: C, harmonic: usize) -> Option<Self>
     where
-        C: Into<CowCurve<'a>>,
+        C: AsRef<[[f64; 2]]>,
     {
-        let curve = curve.into();
+        let curve = curve.as_ref();
         assert!(harmonic > 0);
         if curve.len() < 2 {
             return None;
         }
-        let dxy = diff(ndarray::arr2(&curve), Some(Axis(0)));
+        let dxy = diff(ndarray::arr2(curve), Some(Axis(0)));
         let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
         let zt = t.last().unwrap();

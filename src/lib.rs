@@ -1,6 +1,9 @@
 //! This crate implements Elliptical Fourier Descriptor (EFD) and its related
 //! functions.
 //!
+//! This crate support both `Vec<[f64; 2]>` and `&[[f64; 2]]` as input type via
+//! `AsRef<[[f64; 2]]>`.
+//!
 //! ```
 //! use efd::Efd2;
 //!
@@ -21,11 +24,6 @@ extern crate alloc;
 extern crate core as std; // for `ndarray::s!` macro
 
 pub use crate::{efd::*, error::*, geo_info::*};
-
-/// Copy-on-write curve type.
-///
-/// This crate support both `Vec<[f64; 2]>` and `&[[f64; 2]]` as input type.
-pub type CowCurve<'a> = alloc::borrow::Cow<'a, [[f64; 2]]>;
 
 mod efd;
 mod error;
