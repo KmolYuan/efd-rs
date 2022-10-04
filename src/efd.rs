@@ -1,9 +1,12 @@
-use crate::{Efd2Error, Geo2Info};
+use crate::*;
 use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
 use ndarray::{array, s, Array, Array1, Array2, Axis, CowArray, Dimension};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
+
+/// Alias of the 2D EFD type.
+pub type Efd2 = Efd;
 
 #[inline(always)]
 fn pow2(x: f64) -> f64 {
@@ -26,7 +29,7 @@ fn pow2(x: f64) -> f64 {
 /// let harmonic = fourier_power(efd, 0.9999);
 /// # assert_eq!(harmonic, 6);
 /// ```
-pub fn fourier_power(efd: Efd2, threshold: f64) -> usize {
+pub fn fourier_power(efd: Efd, threshold: f64) -> usize {
     debug_assert!((0.0..1.).contains(&threshold));
     let lut = cumsum(efd.coeffs.mapv(pow2), None).sum_axis(Axis(1));
     let total_power = lut.last().unwrap();
@@ -66,7 +69,7 @@ where
     let curve = curve.as_ref();
     (curve.len() > 1)
         .then_some(curve.len() / 2)
-        .and_then(|nyq| Efd2::from_curve_harmonic(curve, nyq))
+        .and_then(|nyq| Efd::from_curve_harmonic(curve, nyq))
         .map(|efd| fourier_power(efd, threshold))
 }
 
@@ -122,28 +125,28 @@ where
 /// Secondly, the data is rotated with respect to the major axis. Thirdly,
 /// the coefficients are normalized with regard to the absolute value of A₁.
 ///
-/// Please see [`Geo2Info`] for more information.
+/// Please see [`GeoInfo`] for more information.
 #[derive(Clone, Debug)]
-pub struct Efd2 {
+pub struct Efd {
     coeffs: Array2<f64>,
-    geo: Geo2Info,
+    geo: GeoInfo,
 }
 
-impl Efd2 {
+impl Efd {
     /// Create constant object from a nx4 array without boundary check.
     ///
     /// # Safety
     ///
     /// An invalid width may cause failure operation.
     pub const unsafe fn from_coeffs_unchecked(coeffs: Array2<f64>) -> Self {
-        Self { coeffs, geo: Geo2Info::new() }
+        Self { coeffs, geo: GeoInfo::new() }
     }
 
     /// Create object from a nx4 array with boundary check.
-    pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, Efd2Error> {
+    pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, EfdError> {
         (coeffs.ncols() == 4)
-            .then(|| Self { coeffs, geo: Geo2Info::new() })
-            .ok_or(Efd2Error)
+            .then(|| Self { coeffs, geo: GeoInfo::new() })
+            .ok_or(EfdError(()))
     }
 
     /// Calculate EFD coefficients from an existing discrete points and Fourier
@@ -234,12 +237,12 @@ impl Efd2 {
         }
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
-        let geo = Geo2Info { rot: -psi, scale, center };
+        let geo = GeoInfo { rot: -psi, scale, center };
         Some(Self { coeffs, geo })
     }
 
     /// Builder method for adding geometric information.
-    pub fn geo(self, geo: Geo2Info) -> Self {
+    pub fn geo(self, geo: GeoInfo) -> Self {
         Self { geo, ..self }
     }
 
@@ -254,12 +257,12 @@ impl Efd2 {
     }
 
     /// Get the reference of geometry information.
-    pub fn as_geo(&self) -> &Geo2Info {
+    pub fn as_geo(&self) -> &GeoInfo {
         self
     }
 
     /// Get the mutable reference of geometry information.
-    pub fn as_geo_mut(&mut self) -> &mut Geo2Info {
+    pub fn as_geo_mut(&mut self) -> &mut GeoInfo {
         self
     }
 
@@ -336,15 +339,15 @@ impl Efd2 {
     }
 }
 
-impl std::ops::Deref for Efd2 {
-    type Target = Geo2Info;
+impl std::ops::Deref for Efd {
+    type Target = GeoInfo;
 
     fn deref(&self) -> &Self::Target {
         &self.geo
     }
 }
 
-impl std::ops::DerefMut for Efd2 {
+impl std::ops::DerefMut for Efd {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.geo
     }

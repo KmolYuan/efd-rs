@@ -2,6 +2,9 @@ use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
+/// Alias of the 2D geometric information type.
+pub type GeoInfo2 = GeoInfo;
+
 /// 2D geometric information.
 ///
 /// This type record the information of raw coefficients.
@@ -9,7 +12,7 @@ use num_traits::Float as _;
 /// Since [`Efd2`](crate::Efd2) implemented `Deref` for this type,
 /// the methods are totally shared.
 #[derive(Clone, Debug)]
-pub struct Geo2Info {
+pub struct GeoInfo {
     /// Angle of the semi-major axis,
     /// the rotation angle of the first ellipse.
     pub rot: f64,
@@ -20,13 +23,13 @@ pub struct Geo2Info {
     pub center: [f64; 2],
 }
 
-impl Default for Geo2Info {
+impl Default for GeoInfo {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Geo2Info {
+impl GeoInfo {
     /// Create a non-offset info.
     pub const fn new() -> Self {
         Self { rot: 0., scale: 1., center: [0.; 2] }
@@ -43,7 +46,7 @@ impl Geo2Info {
         }
     }
 
-    /// An operator on two [`Geo2Info`]. Same as the transformation matrix.
+    /// An operator on two [`GeoInfo2`]. Same as the transformation matrix.
     ///
     /// It can be used on a not normalized contour `a` transforming to another
     /// geometry `b`.
