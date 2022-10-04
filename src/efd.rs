@@ -268,14 +268,22 @@ impl Efd2 {
         self.coeffs.nrows()
     }
 
-    /// Manhattan distance.
-    pub fn manhattan(&self, rhs: &Self) -> f64 {
+    /// L1 norm error, aka Manhattan distance.
+    pub fn l1_norm(&self, rhs: &Self) -> f64 {
         (&self.coeffs - &rhs.coeffs).mapv(f64::abs).sum()
     }
 
-    /// Euclidean distance.
-    pub fn euclidean(&self, rhs: &Self) -> f64 {
+    /// L2 norm error, aka Euclidean distance.
+    pub fn l2_norm(&self, rhs: &Self) -> f64 {
         (&self.coeffs - &rhs.coeffs).mapv(pow2).sum().sqrt()
+    }
+
+    /// Lp norm error, slower than [`Self::l1_norm()`] and [`Self::l2_norm()`].
+    pub fn lp_norm(&self, rhs: &Self, p: i32) -> f64 {
+        (&self.coeffs - &rhs.coeffs)
+            .mapv(|x| x.abs().powi(p))
+            .sum()
+            .powf(1. / p as f64)
     }
 
     /// Reverse the order of described curve then return a mutable reference.
