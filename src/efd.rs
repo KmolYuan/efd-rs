@@ -115,9 +115,9 @@ where
 /// Elliptical Fourier Descriptor coefficients.
 /// Provide transformation between discrete points and coefficients.
 ///
-/// # Geometry Information
+/// # Transformation
 ///
-/// The geometry information of normalized coefficients.
+/// The transformation of normalized coefficients.
 ///
 /// Implements Kuhl and Giardina method of normalizing the coefficients
 /// An, Bn, Cn, Dn. Performs 3 separate normalizations. First, it makes the
@@ -125,11 +125,11 @@ where
 /// Secondly, the data is rotated with respect to the major axis. Thirdly,
 /// the coefficients are normalized with regard to the absolute value of A₁.
 ///
-/// Please see [`GeoInfo`] for more information.
+/// Please see [`Transform`] for more information.
 #[derive(Clone, Debug)]
 pub struct Efd {
     coeffs: Array2<f64>,
-    geo: GeoInfo,
+    trans: Transform,
 }
 
 impl Efd {
@@ -139,13 +139,13 @@ impl Efd {
     ///
     /// An invalid width may cause failure operation.
     pub const unsafe fn from_coeffs_unchecked(coeffs: Array2<f64>) -> Self {
-        Self { coeffs, geo: GeoInfo::new() }
+        Self { coeffs, trans: Transform::new() }
     }
 
     /// Create object from a nx4 array with boundary check.
     pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, EfdError> {
         (coeffs.ncols() == 4)
-            .then(|| Self { coeffs, geo: GeoInfo::new() })
+            .then(|| Self { coeffs, trans: Transform::new() })
             .ok_or(EfdError(()))
     }
 
@@ -241,13 +241,13 @@ impl Efd {
         }
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
-        let geo = GeoInfo { rot: -psi, scale, center };
-        Some(Self { coeffs, geo })
+        let trans = Transform { rot: -psi, scale, center };
+        Some(Self { coeffs, trans })
     }
 
-    /// Builder method for adding geometric information.
-    pub fn geo(self, geo: GeoInfo) -> Self {
-        Self { geo, ..self }
+    /// Builder method for adding transform type.
+    pub fn trans(self, trans: Transform) -> Self {
+        Self { trans, ..self }
     }
 
     /// Consume self and return raw array.
@@ -260,13 +260,13 @@ impl Efd {
         self.coeffs.view()
     }
 
-    /// Get the reference of geometry information.
-    pub fn as_geo(&self) -> &GeoInfo {
+    /// Get the reference of transform type.
+    pub fn as_trans(&self) -> &Transform {
         self
     }
 
-    /// Get the mutable reference of geometry information.
-    pub fn as_geo_mut(&mut self) -> &mut GeoInfo {
+    /// Get the mutable reference of transform type.
+    pub fn as_trans_mut(&mut self) -> &mut Transform {
         self
     }
 
@@ -311,7 +311,7 @@ impl Efd {
         self
     }
 
-    /// Generate the normalized curve **without** geometry information.
+    /// Generate the normalized curve **without** transformation.
     ///
     /// The number of the points `n` must lager than 3.
     pub fn generate_norm(&self, n: usize) -> Vec<[f64; 2]> {
@@ -339,20 +339,20 @@ impl Efd {
     ///
     /// The number of the points `n` must given.
     pub fn generate(&self, n: usize) -> Vec<[f64; 2]> {
-        self.geo.transform(&self.generate_norm(n))
+        self.trans.transform(&self.generate_norm(n))
     }
 }
 
 impl std::ops::Deref for Efd {
-    type Target = GeoInfo;
+    type Target = Transform;
 
     fn deref(&self) -> &Self::Target {
-        &self.geo
+        &self.trans
     }
 }
 
 impl std::ops::DerefMut for Efd {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.geo
+        &mut self.trans
     }
 }

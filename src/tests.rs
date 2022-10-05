@@ -4,7 +4,7 @@
 fn efd() {
     use crate::*;
     let efd = Efd2::from_curve_gate(PATH, None).unwrap();
-    // Test geometry information
+    // Test transformation
     assert!((efd.center[0] - -2.41571330022796).abs() < f64::EPSILON);
     assert!((efd.center[1] - 53.43791856115811).abs() < f64::EPSILON);
     assert!((efd.rot - -0.871056726153095).abs() < f64::EPSILON);

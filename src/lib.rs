@@ -23,9 +23,9 @@ extern crate alloc;
 #[cfg(not(feature = "std"))]
 extern crate core as std; // for `ndarray::s!` macro
 
-pub use crate::{efd::*, error::*, geo_info::*};
+pub use crate::{efd::*, error::*, transform::*};
 
 mod efd;
 mod error;
-mod geo_info;
 pub mod tests;
+mod transform;

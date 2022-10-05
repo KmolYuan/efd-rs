@@ -2,17 +2,17 @@ use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
-/// Alias of the 2D geometric information type.
-pub type GeoInfo2 = GeoInfo;
+/// Alias of the 2D transformation type.
+pub type Transform2 = Transform;
 
-/// Geometric information.
+/// Transform type.
 ///
 /// This type record the information of raw coefficients.
 ///
 /// Since [`Efd2`](crate::Efd2) implemented `Deref` for this type,
 /// the methods are totally shared.
 #[derive(Clone, Debug)]
-pub struct GeoInfo {
+pub struct Transform {
     /// Angle of the semi-major axis,
     /// the rotation angle of the first ellipse.
     pub rot: f64,
@@ -23,19 +23,19 @@ pub struct GeoInfo {
     pub center: [f64; 2],
 }
 
-impl Default for GeoInfo {
+impl Default for Transform {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl GeoInfo {
-    /// Create a non-offset info.
+impl Transform {
+    /// Create without transform.
     pub const fn new() -> Self {
         Self { rot: 0., scale: 1., center: [0.; 2] }
     }
 
-    /// Create information from two vectors.
+    /// Create from two vectors.
     pub fn from_vector(start: [f64; 2], end: [f64; 2]) -> Self {
         let dx = end[0] - start[0];
         let dy = end[1] - start[1];
@@ -46,10 +46,9 @@ impl GeoInfo {
         }
     }
 
-    /// An operator on two [`GeoInfo2`]. Same as the transformation matrix.
+    /// An operator on two transformation matrices.
     ///
-    /// It can be used on a not normalized contour `a` transforming to another
-    /// geometry `b`.
+    /// It can be used on a not normalized contour `a` transforming to `b`.
     ///
     /// ```
     /// use efd::{curve_diff, Efd2};
@@ -86,8 +85,8 @@ impl GeoInfo {
     /// # let efd = Efd2::from_curve_gate(path, None).unwrap();
     /// # let path = efd.generate_norm(target.len());
     /// let path1 = efd.transform(&path);
-    /// # let geo = &efd;
-    /// let path2 = geo.transform(&path);
+    /// # let trans = &efd;
+    /// let path2 = trans.transform(&path);
     /// # assert!(curve_diff(&path1, TARGET) < 1e-12);
     /// # assert!(curve_diff(&path2, TARGET) < 1e-12);
     /// ```
