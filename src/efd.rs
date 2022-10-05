@@ -112,7 +112,7 @@ where
     arr
 }
 
-/// 2D Elliptical Fourier Descriptor coefficients.
+/// Elliptical Fourier Descriptor coefficients.
 /// Provide transformation between discrete points and coefficients.
 ///
 /// # Geometry Information
@@ -152,6 +152,8 @@ impl Efd {
     /// Calculate EFD coefficients from an existing discrete points and Fourier
     /// power gate.
     ///
+    /// **The curve must be closed. (first == last)**
+    ///
     /// Return none if the curve length is less than 1.
     pub fn from_curve_gate<C, T>(curve: C, threshold: T) -> Option<Self>
     where
@@ -165,6 +167,8 @@ impl Efd {
     }
 
     /// Calculate EFD coefficients from an existing discrete points.
+    ///
+    /// **The curve must be closed. (first == last)**
     ///
     /// Return none if harmonic is zero or the curve length is less than 1.
     ///

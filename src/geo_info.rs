@@ -5,7 +5,7 @@ use num_traits::Float as _;
 /// Alias of the 2D geometric information type.
 pub type GeoInfo2 = GeoInfo;
 
-/// 2D geometric information.
+/// Geometric information.
 ///
 /// This type record the information of raw coefficients.
 ///
