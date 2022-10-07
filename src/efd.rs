@@ -313,12 +313,12 @@ impl Efd {
 
     /// Generate the normalized curve **without** transformation.
     ///
-    /// The number of the points `n` must lager than 3.
+    /// The number of the points `n` must larger than 3.
     pub fn generate_norm(&self, n: usize) -> Vec<[f64; 2]> {
         assert!(n > 3, "n ({}) must larger than 3", n);
-        let mut t = vec![1. / (n - 1) as f64; n];
+        let mut t = Array1::from_elem(n, 1. / (n - 1) as f64);
         t[0] = 0.;
-        let t = cumsum(Array1::from(t), None) * TAU;
+        let t = cumsum(t, None) * TAU;
         self.coeffs
             .axis_iter(Axis(0))
             .enumerate()
