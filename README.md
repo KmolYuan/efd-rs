@@ -22,11 +22,19 @@ This is an unofficial implementation.
 }
 ```
 
-Example code:
+Example of re-describing a new curve:
 
 ```rust
-use efd::Efd2;
-
-let curve = vec![[0.; 2], [1.; 2], [2.; 2], [3.; 2]];
-let new_curve = Efd2::from_curve(&curve, None).generate(20);
+let curve = vec![
+    [0., 0.],
+    [1., 1.],
+    [2., 2.],
+    [3., 3.],
+    [2., 2.],
+    [1., 1.],
+    [0., 0.],
+];
+let described_curve = efd::Efd2::from_curve_gate(curve, None)
+    .unwrap()
+    .generate(20);
 ```

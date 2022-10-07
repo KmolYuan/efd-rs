@@ -5,11 +5,19 @@
 //! `AsRef<[[f64; 2]]>`.
 //!
 //! ```
-//! let curve = vec![[0.; 2], [1.; 2], [2.; 2], [3.; 2]];
-//! let new_curve = efd::Efd2::from_curve_gate(curve, None)
+//! let curve = vec![
+//!     [0., 0.],
+//!     [1., 1.],
+//!     [2., 2.],
+//!     [3., 3.],
+//!     [2., 2.],
+//!     [1., 1.],
+//!     [0., 0.],
+//! ];
+//! let described_curve = efd::Efd2::from_curve_gate(curve, None)
 //!     .unwrap()
 //!     .generate(20);
-//! # assert_eq!(new_curve.len(), 20);
+//! # assert_eq!(described_curve.len(), 20);
 //! ```
 //!
 //! # Features

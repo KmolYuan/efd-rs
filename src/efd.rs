@@ -7,6 +7,7 @@ use num_traits::Float as _;
 
 /// Alias of the 2D EFD type.
 pub type Efd2 = Efd;
+type CowCurve<'a> = alloc::borrow::Cow<'a, [[f64; 2]]>;
 
 #[inline(always)]
 fn pow2(x: f64) -> f64 {
@@ -155,14 +156,14 @@ impl Efd {
     /// **The curve must be closed. (first == last)**
     ///
     /// Return none if the curve length is less than 1.
-    pub fn from_curve_gate<C, T>(curve: C, threshold: T) -> Option<Self>
+    pub fn from_curve_gate<'a, C, T>(curve: C, threshold: T) -> Option<Self>
     where
-        C: AsRef<[[f64; 2]]>,
+        C: Into<CowCurve<'a>>,
         T: Into<Option<f64>>,
     {
-        let curve = curve.as_ref();
+        let curve = curve.into();
         let threshold = threshold.into().unwrap_or(0.9999);
-        let harmonic = fourier_power_nyq_gate(curve, threshold)?;
+        let harmonic = fourier_power_nyq_gate(&curve, threshold)?;
         Self::from_curve_harmonic(curve, harmonic)
     }
 
@@ -174,16 +175,16 @@ impl Efd {
     ///
     /// If the harmonic number is not given, it will be calculated with
     /// [`fourier_power`] function.
-    pub fn from_curve_harmonic<C>(curve: C, harmonic: usize) -> Option<Self>
+    pub fn from_curve_harmonic<'a, C>(curve: C, harmonic: usize) -> Option<Self>
     where
-        C: AsRef<[[f64; 2]]>,
+        C: Into<CowCurve<'a>>,
     {
-        let curve = curve.as_ref();
+        let curve = curve.into().into_owned();
         assert!(harmonic > 0);
         if curve.len() < 2 {
             return None;
         }
-        let dxy = diff(ndarray::arr2(curve), Some(Axis(0)));
+        let dxy = diff(ndarray::arr2(&curve), Some(Axis(0)));
         let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
         let zt = t.last().unwrap();
@@ -215,29 +216,22 @@ impl Efd {
         // Shift angle
         let theta1 = {
             let dy = 2. * (coeffs[[0, 0]] * coeffs[[0, 1]] + coeffs[[0, 2]] * coeffs[[0, 3]]);
-            let dx = coeffs[[0, 0]] * coeffs[[0, 0]] - coeffs[[0, 1]] * coeffs[[0, 1]]
-                + coeffs[[0, 2]] * coeffs[[0, 2]]
-                - coeffs[[0, 3]] * coeffs[[0, 3]];
+            let dx = pow2(coeffs[[0, 0]]) - pow2(coeffs[[0, 1]]) + pow2(coeffs[[0, 2]])
+                - pow2(coeffs[[0, 3]]);
             dy.atan2(dx) * 0.5
         };
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let angle = (i + 1) as f64 * theta1;
             let rot = array![[angle.cos(), -angle.sin()], [angle.sin(), angle.cos()]];
             let m = array![[c[0], c[1]], [c[2], c[3]]].dot(&rot);
-            c[0] = m[[0, 0]];
-            c[1] = m[[0, 1]];
-            c[2] = m[[1, 0]];
-            c[3] = m[[1, 1]];
+            c.assign(&Array1::from_iter(m));
         }
         // The angle of semi-major axis
         let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
         let rot = array![[psi.cos(), psi.sin()], [-psi.sin(), psi.cos()]];
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
-            let m = rot.dot(&array![[c[0], c[1]], [c[2], c[3]],]);
-            c[0] = m[[0, 0]];
-            c[1] = m[[0, 1]];
-            c[2] = m[[1, 0]];
-            c[3] = m[[1, 1]];
+            let m = rot.dot(&array![[c[0], c[1]], [c[2], c[3]]]);
+            c.assign(&Array1::from_iter(m));
         }
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
@@ -322,14 +316,16 @@ impl Efd {
         self.coeffs
             .axis_iter(Axis(0))
             .enumerate()
-            .fold(Array2::zeros([n, 2]), |curve, (i, c)| {
+            .map(|(i, c)| {
                 let angle = &t * (i + 1) as f64;
                 let cos = angle.mapv(f64::cos);
                 let sin = angle.mapv(f64::sin);
                 let x = &cos * c[2] + &sin * c[3];
                 let y = &cos * c[0] + &sin * c[1];
-                curve + ndarray::stack![Axis(1), x, y]
+                ndarray::stack![Axis(1), x, y]
             })
+            .reduce(|a, b| a + b)
+            .unwrap()
             .axis_iter(Axis(0))
             .map(|c| [c[0], c[1]])
             .collect()
