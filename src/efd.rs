@@ -192,11 +192,13 @@ impl Efd {
     ///
     /// If the harmonic number is not given, it will be calculated with
     /// [`fourier_power`] function.
-    pub fn from_curve_harmonic<'a, C>(curve: C, harmonic: usize) -> Option<Self>
+    pub fn from_curve_harmonic<'a, C, H>(curve: C, harmonic: H) -> Option<Self>
     where
         C: Into<CowCurve<'a>>,
+        H: Into<Option<usize>>,
     {
         let curve = curve.into().into_owned();
+        let harmonic = harmonic.into().or_else(|| fourier_power_nyq(&curve))?;
         assert!(harmonic > 0);
         if curve.len() < 2 {
             return None;
