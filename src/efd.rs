@@ -27,10 +27,14 @@ fn pow2(x: f64) -> f64 {
 /// // Nyquist Frequency
 /// let nyq = curve.len() / 2;
 /// let efd = Efd2::from_curve_harmonic(curve, nyq).unwrap();
-/// let harmonic = fourier_power(efd, 0.9999);
+/// let harmonic = fourier_power(efd, 0.98);
 /// # assert_eq!(harmonic, 6);
 /// ```
-pub fn fourier_power(efd: Efd, threshold: f64) -> usize {
+pub fn fourier_power<T>(efd: Efd, threshold: T) -> usize
+where
+    T: Into<Option<f64>>,
+{
+    let threshold = threshold.into().unwrap_or(0.9999);
     debug_assert!((0.0..1.).contains(&threshold));
     let lut = cumsum(efd.coeffs.mapv(pow2), None).sum_axis(Axis(1));
     let total_power = lut.last().unwrap();
@@ -56,16 +60,17 @@ pub fn fourier_power_nyq<C>(curve: C) -> Option<usize>
 where
     C: AsRef<[[f64; 2]]>,
 {
-    fourier_power_nyq_gate(curve, 0.9999)
+    fourier_power_nyq_gate(curve, None)
 }
 
 /// Apply Nyquist Frequency on [`fourier_power`] with a custom threshold value.
 ///
 /// The threshold must in [0, 1).
 /// This function return none if the curve is less than 1.
-pub fn fourier_power_nyq_gate<C>(curve: C, threshold: f64) -> Option<usize>
+pub fn fourier_power_nyq_gate<C, T>(curve: C, threshold: T) -> Option<usize>
 where
     C: AsRef<[[f64; 2]]>,
+    T: Into<Option<f64>>,
 {
     let curve = curve.as_ref();
     (curve.len() > 1)
@@ -150,6 +155,18 @@ impl Efd {
             .ok_or(EfdError(()))
     }
 
+    /// Calculate EFD coefficients from an existing discrete points.
+    ///
+    /// **The curve must be closed. (first == last)**
+    ///
+    /// Return none if the curve length is less than 1.
+    pub fn from_curve<'a, C>(curve: C) -> Option<Self>
+    where
+        C: Into<CowCurve<'a>>,
+    {
+        Self::from_curve_gate(curve, None)
+    }
+
     /// Calculate EFD coefficients from an existing discrete points and Fourier
     /// power gate.
     ///
@@ -162,7 +179,6 @@ impl Efd {
         T: Into<Option<f64>>,
     {
         let curve = curve.into();
-        let threshold = threshold.into().unwrap_or(0.9999);
         let harmonic = fourier_power_nyq_gate(&curve, threshold)?;
         Self::from_curve_harmonic(curve, harmonic)
     }
