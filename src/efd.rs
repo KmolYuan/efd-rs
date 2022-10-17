@@ -27,7 +27,8 @@ fn pow2(x: f64) -> f64 {
 /// // Nyquist Frequency
 /// let nyq = curve.len() / 2;
 /// let efd = Efd2::from_curve_harmonic(curve, nyq).unwrap();
-/// let harmonic = fourier_power(efd, 0.98);
+/// // Use "None" for the default threshold (99.99%)
+/// let harmonic = fourier_power(efd, None);
 /// # assert_eq!(harmonic, 6);
 /// ```
 pub fn fourier_power<T>(efd: Efd, threshold: T) -> usize
