@@ -237,7 +237,12 @@ impl Efd {
             let dy = 2. * (coeffs[[0, 0]] * coeffs[[0, 1]] + coeffs[[0, 2]] * coeffs[[0, 3]]);
             let dx = pow2(coeffs[[0, 0]]) - pow2(coeffs[[0, 1]]) + pow2(coeffs[[0, 2]])
                 - pow2(coeffs[[0, 3]]);
-            dy.atan2(dx) * 0.5
+            let theta = dy.atan2(dx) * 0.5;
+            if harmonic > 1 && coeffs[[0, 0]] * coeffs[[1, 0]] > 0. {
+                theta + PI
+            } else {
+                theta
+            }
         };
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let angle = (i + 1) as f64 * theta1;
