@@ -237,12 +237,7 @@ impl Efd {
             let dy = 2. * (coeffs[[0, 0]] * coeffs[[0, 1]] + coeffs[[0, 2]] * coeffs[[0, 3]]);
             let dx = pow2(coeffs[[0, 0]]) - pow2(coeffs[[0, 1]]) + pow2(coeffs[[0, 2]])
                 - pow2(coeffs[[0, 3]]);
-            let theta = dy.atan2(dx) * 0.5;
-            if harmonic > 1 && coeffs[[0, 0]] * coeffs[[1, 0]] > 0. {
-                theta + PI
-            } else {
-                theta
-            }
+            dy.atan2(dx) * 0.5
         };
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let angle = (i + 1) as f64 * theta1;
@@ -251,13 +246,22 @@ impl Efd {
             c.assign(&Array1::from_iter(m));
         }
         // The angle of semi-major axis
-        let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
+        let psi = {
+            let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
+            if harmonic > 1 && coeffs[[0, 0]] * coeffs[[1, 0]] > 0. {
+                let mut s = coeffs.slice_mut(s![1..;2, ..]);
+                s *= -1.;
+                psi - PI
+            } else {
+                psi
+            }
+        };
         let rot = array![[psi.cos(), psi.sin()], [-psi.sin(), psi.cos()]];
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = rot.dot(&array![[c[0], c[1]], [c[2], c[3]]]);
             c.assign(&Array1::from_iter(m));
         }
-        let scale = coeffs[[0, 0]].abs();
+        let scale = coeffs[[0, 0]];
         coeffs /= scale;
         let trans = Transform { rot: -psi, scale, center };
         Some(Self { coeffs, trans })
