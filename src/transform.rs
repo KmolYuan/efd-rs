@@ -11,7 +11,7 @@ pub type Transform2 = Transform;
 ///
 /// Since [`Efd2`](crate::Efd2) implemented `Deref` for this type,
 /// the methods are totally shared.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Transform {
     /// Angle of the semi-major axis,
     /// the rotation angle of the first ellipse.
