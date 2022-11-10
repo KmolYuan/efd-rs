@@ -249,7 +249,7 @@ impl Efd {
         let psi = {
             let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
             if harmonic > 1 && coeffs[[0, 0]] * coeffs[[1, 0]] > 0. {
-                let mut s = coeffs.slice_mut(s![1..;2, ..]);
+                let mut s = coeffs.slice_mut(s![..;2, ..]);
                 s *= -1.;
                 psi - PI
             } else {
@@ -261,7 +261,7 @@ impl Efd {
             let m = rot.dot(&array![[c[0], c[1]], [c[2], c[3]]]);
             c.assign(&Array1::from_iter(m));
         }
-        let scale = coeffs[[0, 0]];
+        let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
         let trans = Transform { rot: -psi, scale, center };
         Some(Self { coeffs, trans })
