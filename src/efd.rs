@@ -297,6 +297,11 @@ impl Efd {
         self.coeffs.nrows()
     }
 
+    /// Square error.
+    pub fn square_err(&self, rhs: &Self) -> f64 {
+        (&self.coeffs - &rhs.coeffs).mapv(pow2).sum()
+    }
+
     /// L1 norm error, aka Manhattan distance.
     pub fn l1_norm(&self, rhs: &Self) -> f64 {
         (&self.coeffs - &rhs.coeffs).mapv(f64::abs).sum()
