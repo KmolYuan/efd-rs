@@ -5,8 +5,6 @@ use ndarray::{array, s, Array, Array1, Array2, Axis, CowArray, Dimension};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
-/// Alias of the 2D EFD type.
-pub type Efd2 = Efd;
 type CowCurve<'a> = alloc::borrow::Cow<'a, [[f64; 2]]>;
 
 #[inline(always)]
@@ -31,7 +29,7 @@ fn pow2(x: f64) -> f64 {
 /// let harmonic = fourier_power(efd, None);
 /// # assert_eq!(harmonic, 6);
 /// ```
-pub fn fourier_power<T>(efd: Efd, threshold: T) -> usize
+pub fn fourier_power<T>(efd: Efd2, threshold: T) -> usize
 where
     T: Into<Option<f64>>,
 {
@@ -76,7 +74,7 @@ where
     let curve = curve.as_ref();
     (curve.len() > 1)
         .then_some(curve.len() / 2)
-        .and_then(|nyq| Efd::from_curve_harmonic(curve, nyq))
+        .and_then(|nyq| Efd2::from_curve_harmonic(curve, nyq))
         .map(|efd| fourier_power(efd, threshold))
 }
 
@@ -134,25 +132,25 @@ where
 ///
 /// Please see [`Transform`] for more information.
 #[derive(Clone, Debug)]
-pub struct Efd {
+pub struct Efd2 {
     coeffs: Array2<f64>,
-    trans: Transform,
+    trans: Transform2,
 }
 
-impl Efd {
+impl Efd2 {
     /// Create constant object from a nx4 array without boundary check.
     ///
     /// # Safety
     ///
     /// An invalid width may cause failure operation.
     pub const unsafe fn from_coeffs_unchecked(coeffs: Array2<f64>) -> Self {
-        Self { coeffs, trans: Transform::new() }
+        Self { coeffs, trans: Transform2::new() }
     }
 
     /// Create object from a nx4 array with boundary check.
     pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, EfdError> {
         (coeffs.nrows() > 0 && coeffs.ncols() == 4 && coeffs[[0, 0]] == 1.)
-            .then(|| Self { coeffs, trans: Transform::new() })
+            .then(|| Self { coeffs, trans: Transform2::new() })
             .ok_or(EfdError(()))
     }
 
@@ -263,12 +261,12 @@ impl Efd {
         }
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
-        let trans = Transform { rot: -psi, scale, center };
+        let trans = Transform2 { rot: -psi, scale, center };
         Some(Self { coeffs, trans })
     }
 
     /// Builder method for adding transform type.
-    pub fn trans(self, trans: Transform) -> Self {
+    pub fn trans(self, trans: Transform2) -> Self {
         Self { trans, ..self }
     }
 
@@ -283,12 +281,12 @@ impl Efd {
     }
 
     /// Get the reference of transform type.
-    pub fn as_trans(&self) -> &Transform {
+    pub fn as_trans(&self) -> &Transform2 {
         self
     }
 
     /// Get the mutable reference of transform type.
-    pub fn as_trans_mut(&mut self) -> &mut Transform {
+    pub fn as_trans_mut(&mut self) -> &mut Transform2 {
         self
     }
 
@@ -372,15 +370,15 @@ impl Efd {
     }
 }
 
-impl std::ops::Deref for Efd {
-    type Target = Transform;
+impl std::ops::Deref for Efd2 {
+    type Target = Transform2;
 
     fn deref(&self) -> &Self::Target {
         &self.trans
     }
 }
 
-impl std::ops::DerefMut for Efd {
+impl std::ops::DerefMut for Efd2 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.trans
     }

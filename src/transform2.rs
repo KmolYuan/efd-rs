@@ -2,9 +2,6 @@ use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
-/// Alias of the 2D transformation type.
-pub type Transform2 = Transform;
-
 /// Transform type.
 ///
 /// This type record the information of raw coefficients.
@@ -12,7 +9,7 @@ pub type Transform2 = Transform;
 /// Since [`Efd2`](crate::Efd2) implemented `Deref` for this type,
 /// the methods are totally shared.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Transform {
+pub struct Transform2 {
     /// Angle of the semi-major axis,
     /// the rotation angle of the first ellipse.
     pub rot: f64,
@@ -23,13 +20,13 @@ pub struct Transform {
     pub center: [f64; 2],
 }
 
-impl Default for Transform {
+impl Default for Transform2 {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Transform {
+impl Transform2 {
     /// Create without transform.
     pub const fn new() -> Self {
         Self { rot: 0., scale: 1., center: [0.; 2] }
