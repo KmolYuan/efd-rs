@@ -1,16 +1,9 @@
 use crate::*;
 use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
-use ndarray::{array, s, Array, Array1, Array2, Axis, CowArray, Dimension};
+use ndarray::{array, s, Array1, Array2, Axis};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
-
-type CowCurve<'a> = alloc::borrow::Cow<'a, [[f64; 2]]>;
-
-#[inline(always)]
-fn pow2(x: f64) -> f64 {
-    x * x
-}
 
 /// Compute the total Fourier power and find the minimum number of harmonics
 /// required to exceed the threshold fraction of the total power.
@@ -76,45 +69,6 @@ where
         .then_some(curve.len() / 2)
         .and_then(|nyq| Efd2::from_curve_harmonic(curve, nyq))
         .map(|efd| fourier_power(efd, threshold))
-}
-
-/// Check the difference between two curves.
-pub fn curve_diff<C1, C2>(a: C1, b: C2) -> f64
-where
-    C1: AsRef<[[f64; 2]]>,
-    C2: AsRef<[[f64; 2]]>,
-{
-    a.as_ref()
-        .iter()
-        .zip(b.as_ref())
-        .map(|(a, b)| (a[0] - b[0]).abs() + (a[1] - b[1]).abs())
-        .sum()
-}
-
-fn diff<'a, D, A>(arr: A, axis: Option<Axis>) -> Array<f64, D>
-where
-    D: Dimension,
-    A: Into<CowArray<'a, f64, D>>,
-{
-    let arr = arr.into();
-    let axis = axis.unwrap_or_else(|| Axis(arr.ndim() - 1));
-    let head = arr.slice_axis(axis, (..-1).into());
-    let tail = arr.slice_axis(axis, (1..).into());
-    &tail - &head
-}
-
-fn cumsum<'a, D, A>(arr: A, axis: Option<Axis>) -> Array<f64, D>
-where
-    D: Dimension + ndarray::RemoveAxis,
-    A: Into<CowArray<'a, f64, D>>,
-{
-    let mut arr = arr.into().to_owned();
-    let axis = axis.unwrap_or(Axis(0));
-    arr.axis_iter_mut(axis).reduce(|prev, mut next| {
-        next += &prev;
-        next
-    });
-    arr
 }
 
 /// Elliptical Fourier Descriptor coefficients.
