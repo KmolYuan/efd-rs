@@ -1,16 +1,24 @@
-/// Alias of the 2D error type.
-pub type Efd2Error = EfdError;
+macro_rules! impl_err {
+    ($(struct $name:ident { $d:literal, $w:literal })+) => {$(
+        /// An error type for
+        #[doc = $d]
+        /// EFD coefficients.
+        /// Raised when the input array width is not correct to its dimension.
+        #[derive(Debug)]
+        pub struct $name(pub(crate) ());
 
-/// An error type for EFD coefficients.
-/// Raised when the input array width is not correct to its dimension.
-#[derive(Debug)]
-pub struct EfdError(pub(crate) ());
+        impl core::fmt::Display for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                write!(f, concat!["input array width must be ", $w])
+            }
+        }
 
-impl core::fmt::Display for EfdError {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "input array width must be 4")
-    }
+        #[cfg(feature = "std")]
+        impl std::error::Error for $name {}
+    )+};
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for EfdError {}
+impl_err! {
+    struct Efd2Error { "2D", "4" }
+    struct Efd3Error { "3D", "6" }
+}

@@ -102,10 +102,10 @@ impl Efd2 {
     }
 
     /// Create object from a nx4 array with boundary check.
-    pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, EfdError> {
+    pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, Efd2Error> {
         (coeffs.nrows() > 0 && coeffs.ncols() == 4 && coeffs[[0, 0]] == 1.)
             .then(|| Self { coeffs, trans: Transform2::new() })
-            .ok_or(EfdError(()))
+            .ok_or(Efd2Error(()))
     }
 
     /// Calculate EFD coefficients from an existing discrete points.
