@@ -246,7 +246,7 @@ impl Efd2 {
         // The angle of semi-major axis
         let psi = {
             let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
-            if harmonic > 1 && coeffs[[0, 0]] * coeffs[[1, 0]] > 0. {
+            if psi > PI {
                 let mut s = coeffs.slice_mut(s![..;2, ..]);
                 s *= -1.;
                 psi - PI
