@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 /// 3D transform type.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Transform3 {
