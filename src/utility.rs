@@ -1,4 +1,6 @@
 use ndarray::{Array, Axis, CowArray, Dimension};
+#[cfg(not(feature = "std"))]
+use num_traits::Float as _;
 
 pub(crate) type CowCurve<'a> = alloc::borrow::Cow<'a, [[f64; 2]]>;
 
