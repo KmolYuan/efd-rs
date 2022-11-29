@@ -1,4 +1,4 @@
-# efd
+# EFD Rust Library
 
 [![dependency status](https://deps.rs/repo/github/KmolYuan/efd-rs/status.svg)](https://deps.rs/crate/efd/)
 [![documentation](https://docs.rs/efd/badge.svg)](https://docs.rs/efd)
