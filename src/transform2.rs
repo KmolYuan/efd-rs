@@ -59,15 +59,38 @@ impl Transform2 {
     pub fn to(&self, rhs: &Self) -> Self {
         let rot = rhs.rot - self.rot;
         let scale = rhs.scale / self.scale;
-        let center_a = self.center[1].atan2(self.center[0]) + rot;
+        let theta = self.center[1].atan2(self.center[0]) + rot;
         let d = self.center[1].hypot(self.center[0]) * scale;
         Self {
             rot,
             scale,
             center: [
-                rhs.center[0] - d * center_a.cos(),
-                rhs.center[1] - d * center_a.sin(),
+                rhs.center[0] - d * theta.cos(),
+                rhs.center[1] - d * theta.sin(),
             ],
+        }
+    }
+
+    /// Multiply two transformation together.
+    pub fn add(&self, rhs: &Self) -> Self {
+        Self {
+            rot: self.rot + rhs.rot,
+            scale: self.scale * rhs.scale,
+            center: [
+                self.center[0] + rhs.center[0],
+                self.center[1] + rhs.center[1],
+            ],
+        }
+    }
+
+    /// Inverse the operation of this information.
+    pub fn inverse(&self) -> Self {
+        let theta = self.center[1].atan2(self.center[0]) - self.rot;
+        let d = self.center[1].hypot(self.center[0]) / self.scale;
+        Self {
+            rot: -self.rot,
+            scale: 1. / self.scale,
+            center: [-d * theta.cos(), -d * theta.sin()],
         }
     }
 
@@ -77,15 +100,16 @@ impl Transform2 {
     ///
     /// ```
     /// # use efd::{curve_diff, tests::{PATH, TARGET}, Efd2};
-    /// # let path = PATH;
     /// # let target = TARGET;
-    /// # let efd = Efd2::from_curve_gate(path, None).unwrap();
+    /// # let efd = Efd2::from_curve_gate(PATH, None).unwrap();
     /// # let path = efd.generate_norm(target.len());
     /// let path1 = efd.transform(&path);
     /// # let trans = &efd;
+    /// let path1_inv = trans.inverse().transform(&path1);
     /// let path2 = trans.transform(&path);
     /// # assert!(curve_diff(&path1, TARGET) < 1e-12);
     /// # assert!(curve_diff(&path2, TARGET) < 1e-12);
+    /// # assert!(curve_diff(&path1_inv, &path) < 1e-12);
     /// ```
     pub fn transform<C>(&self, curve: C) -> Vec<[f64; 2]>
     where
@@ -94,7 +118,7 @@ impl Transform2 {
         curve
             .as_ref()
             .iter()
-            .map(|[x, y]| {
+            .map(|&[x, y]| {
                 let dx = x * self.scale;
                 let dy = y * self.scale;
                 let ca = self.rot.cos();
