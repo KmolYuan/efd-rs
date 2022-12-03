@@ -1,8 +1,9 @@
-use ndarray::{Array, Axis, CowArray, Dimension};
+use ndarray::{arr2, Array, Axis, CowArray, Dimension, FixedInitializer};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
-pub(crate) type CowCurve<'a> = alloc::borrow::Cow<'a, [[f64; 2]]>;
+pub(crate) type CowCurve2<'a> = alloc::borrow::Cow<'a, [[f64; 2]]>;
+pub(crate) type CowCurve3<'a> = alloc::borrow::Cow<'a, [[f64; 3]]>;
 
 #[inline(always)]
 pub(crate) fn pow2(x: f64) -> f64 {
@@ -36,14 +37,15 @@ where
 }
 
 /// Check the difference between two curves.
-pub fn curve_diff<C1, C2>(a: C1, b: C2) -> f64
+pub fn curve_diff<A, B>(a: &[A], b: &[B]) -> f64
 where
-    C1: AsRef<[[f64; 2]]>,
-    C2: AsRef<[[f64; 2]]>,
+    A: FixedInitializer<Elem = f64> + Clone,
+    B: FixedInitializer<Elem = f64> + Clone,
 {
-    a.as_ref()
-        .iter()
-        .zip(b.as_ref())
-        .map(|(a, b)| (a[0] - b[0]).abs() + (a[1] - b[1]).abs())
+    let a = arr2(a);
+    let b = arr2(b);
+    a.axis_iter(Axis(0))
+        .zip(b.axis_iter(Axis(0)))
+        .map(|(a, b)| (&a - &b).mapv(f64::abs).sum())
         .sum()
 }

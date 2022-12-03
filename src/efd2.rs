@@ -115,7 +115,7 @@ impl Efd2 {
     /// Return none if the curve length is less than 1.
     pub fn from_curve<'a, C>(curve: C) -> Option<Self>
     where
-        C: Into<CowCurve<'a>>,
+        C: Into<CowCurve2<'a>>,
     {
         Self::from_curve_gate(curve, None)
     }
@@ -128,7 +128,7 @@ impl Efd2 {
     /// Return none if the curve length is less than 1.
     pub fn from_curve_gate<'a, C, T>(curve: C, threshold: T) -> Option<Self>
     where
-        C: Into<CowCurve<'a>>,
+        C: Into<CowCurve2<'a>>,
         T: Into<Option<f64>>,
     {
         let curve = curve.into();
@@ -146,7 +146,7 @@ impl Efd2 {
     /// [`fourier_power`] function.
     pub fn from_curve_harmonic<'a, C, H>(curve: C, harmonic: H) -> Option<Self>
     where
-        C: Into<CowCurve<'a>>,
+        C: Into<CowCurve2<'a>>,
         H: Into<Option<usize>>,
     {
         let curve = curve.into().into_owned();

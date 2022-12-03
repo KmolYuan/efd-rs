@@ -26,12 +26,12 @@ impl Transform3 {
         Self { rot: [0.; 3], scale: 1., center: [0.; 3] }
     }
 
-    /// Create from two vectors.
+    /// TODO: Create from two vectors.
     pub fn from_vector(start: [f64; 3], end: [f64; 3]) -> Self {
         todo!()
     }
 
-    /// An operator on two transformation matrices.
+    /// TODO: An operator on two transformation matrices.
     ///
     /// It can be used on a not normalized contour `a` transforming to `b`.
     ///
@@ -48,7 +48,7 @@ impl Transform3 {
         todo!()
     }
 
-    /// Transform a contour with this information.
+    /// TODO: Transform a contour with this information.
     ///
     /// This function rotates first, then translates.
     ///
