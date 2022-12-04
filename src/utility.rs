@@ -1,4 +1,4 @@
-use ndarray::{arr2, Array, Axis, CowArray, Dimension, FixedInitializer};
+use ndarray::{arr2, Array, ArrayView2, Axis, CowArray, Dimension, FixedInitializer};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
@@ -48,4 +48,36 @@ where
         .zip(b.axis_iter(Axis(0)))
         .map(|(a, b)| (&a - &b).mapv(f64::abs).sum())
         .sum()
+}
+
+/// Compute the total Fourier power and find the minimum number of harmonics
+/// required to exceed the threshold fraction of the total power.
+///
+/// This function needs to use the full of coefficients,
+/// and the threshold must in [0, 1).
+///
+/// ```
+/// use efd::{fourier_power, Efd2};
+///
+/// # let curve = efd::tests::PATH;
+/// // Nyquist Frequency
+/// let nyq = curve.len() / 2;
+/// let efd = Efd2::from_curve_harmonic(curve, nyq).unwrap();
+/// // Use "None" for the default threshold (99.99%)
+/// let harmonic = fourier_power(efd.coeffs(), None);
+/// # assert_eq!(harmonic, 6);
+/// ```
+pub fn fourier_power<T>(coeffs: ArrayView2<f64>, threshold: T) -> usize
+where
+    T: Into<Option<f64>>,
+{
+    let threshold = threshold.into().unwrap_or(0.9999);
+    debug_assert!((0.0..1.).contains(&threshold));
+    let lut = cumsum(coeffs.mapv(pow2), None).sum_axis(Axis(1));
+    let total_power = lut.last().unwrap();
+    lut.iter()
+        .enumerate()
+        .find(|(_, power)| *power / total_power >= threshold)
+        .map(|(i, _)| i + 1)
+        .unwrap()
 }

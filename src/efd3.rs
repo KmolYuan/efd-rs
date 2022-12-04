@@ -5,6 +5,30 @@ use ndarray::{array, s, Array1, Array2, Axis};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
+/// Apply Nyquist Frequency on [`fourier_power`] with a custom threshold value.
+///
+/// The threshold must in [0, 1).
+/// This function return none if the curve is less than 1.
+///
+/// ```
+/// use efd::fourier_power3;
+///
+/// # let curve = efd::tests::PATH3D;
+/// let harmonic = fourier_power3(curve, None);
+/// # assert_eq!(harmonic, Some(5));
+/// ```
+pub fn fourier_power3<C, T>(curve: C, threshold: T) -> Option<usize>
+where
+    C: AsRef<[[f64; 3]]>,
+    T: Into<Option<f64>>,
+{
+    let curve = curve.as_ref();
+    (curve.len() > 1)
+        .then_some(curve.len() / 2)
+        .and_then(|nyq| Efd3::from_curve_harmonic(curve, nyq))
+        .map(|efd| fourier_power(efd.coeffs(), threshold))
+}
+
 /// 3D EFD implementation.
 #[derive(Clone, Debug)]
 pub struct Efd3 {
@@ -13,6 +37,50 @@ pub struct Efd3 {
 }
 
 impl Efd3 {
+    /// Create constant object from a nx4 array without boundary check.
+    ///
+    /// # Safety
+    ///
+    /// An invalid width may cause failure operation.
+    pub const unsafe fn from_coeffs_unchecked(coeffs: Array2<f64>) -> Self {
+        Self { coeffs, trans: Transform3::new() }
+    }
+
+    /// Create object from a nx4 array with boundary check.
+    pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, Efd3Error> {
+        (coeffs.nrows() > 0 && coeffs.ncols() == 4 && coeffs[[0, 0]] == 1.)
+            .then(|| Self { coeffs, trans: Transform3::new() })
+            .ok_or(Efd3Error(()))
+    }
+
+    /// Calculate EFD coefficients from an existing discrete points.
+    ///
+    /// **The curve must be closed. (first == last)**
+    ///
+    /// Return none if the curve length is less than 1.
+    pub fn from_curve<'a, C>(curve: C) -> Option<Self>
+    where
+        C: Into<CowCurve3<'a>>,
+    {
+        Self::from_curve_gate(curve, None)
+    }
+
+    /// Calculate EFD coefficients from an existing discrete points and Fourier
+    /// power gate.
+    ///
+    /// **The curve must be closed. (first == last)**
+    ///
+    /// Return none if the curve length is less than 1.
+    pub fn from_curve_gate<'a, C, T>(curve: C, threshold: T) -> Option<Self>
+    where
+        C: Into<CowCurve3<'a>>,
+        T: Into<Option<f64>>,
+    {
+        let curve = curve.into();
+        let harmonic = fourier_power3(&curve, threshold)?;
+        Self::from_curve_harmonic(curve, harmonic)
+    }
+
     /// FIXME: Calculate EFD coefficients from an existing discrete points.
     ///
     /// **The curve must be closed. (first == last)**
@@ -21,13 +89,14 @@ impl Efd3 {
     ///
     /// If the harmonic number is not given, it will be calculated with
     /// [`fourier_power`] function.
-    pub fn from_curve_harmonic<'a, C /* H */>(curve: C, harmonic: usize) -> Option<Self>
+    pub fn from_curve_harmonic<'a, C, H>(curve: C, harmonic: H) -> Option<Self>
     where
         C: Into<CowCurve3<'a>>,
-        // H: Into<Option<usize>>,
+        H: Into<Option<usize>>,
     {
+        // FIXME: Remove type annotation
         let curve: Vec<[f64; 3]> = curve.into().into_owned();
-        // FIXME: let harmonic = harmonic.into().or_else(|| fourier_power_nyq(&curve))?;
+        let harmonic = harmonic.into().or_else(|| fourier_power3(&curve, None))?;
         assert!(harmonic > 0);
         if curve.len() < 2 {
             return None;

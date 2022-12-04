@@ -5,61 +5,19 @@ use ndarray::{array, s, Array1, Array2, Axis};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
-/// Compute the total Fourier power and find the minimum number of harmonics
-/// required to exceed the threshold fraction of the total power.
-///
-/// This function needs to use the full of coefficients,
-/// and the threshold must in [0, 1).
-///
-/// ```
-/// use efd::{fourier_power, Efd2};
-///
-/// # let curve = efd::tests::PATH;
-/// // Nyquist Frequency
-/// let nyq = curve.len() / 2;
-/// let efd = Efd2::from_curve_harmonic(curve, nyq).unwrap();
-/// // Use "None" for the default threshold (99.99%)
-/// let harmonic = fourier_power(efd, None);
-/// # assert_eq!(harmonic, 6);
-/// ```
-pub fn fourier_power<T>(efd: Efd2, threshold: T) -> usize
-where
-    T: Into<Option<f64>>,
-{
-    let threshold = threshold.into().unwrap_or(0.9999);
-    debug_assert!((0.0..1.).contains(&threshold));
-    let lut = cumsum(efd.coeffs.mapv(pow2), None).sum_axis(Axis(1));
-    let total_power = lut.last().unwrap();
-    lut.iter()
-        .enumerate()
-        .find(|(_, power)| *power / total_power >= threshold)
-        .map(|(i, _)| i + 1)
-        .unwrap()
-}
-
-/// Apply Nyquist Frequency on [`fourier_power`] with 99.99% threshold value.
-///
-/// Return none if the curve is less than 1.
-///
-/// ```
-/// use efd::fourier_power_nyq;
-///
-/// # let curve = efd::tests::PATH;
-/// let harmonic = fourier_power_nyq(curve);
-/// # assert_eq!(harmonic, Some(6));
-/// ```
-pub fn fourier_power_nyq<C>(curve: C) -> Option<usize>
-where
-    C: AsRef<[[f64; 2]]>,
-{
-    fourier_power_nyq_gate(curve, None)
-}
-
 /// Apply Nyquist Frequency on [`fourier_power`] with a custom threshold value.
 ///
 /// The threshold must in [0, 1).
 /// This function return none if the curve is less than 1.
-pub fn fourier_power_nyq_gate<C, T>(curve: C, threshold: T) -> Option<usize>
+///
+/// ```
+/// use efd::fourier_power2;
+///
+/// # let curve = efd::tests::PATH;
+/// let harmonic = fourier_power2(curve, None);
+/// # assert_eq!(harmonic, Some(6));
+/// ```
+pub fn fourier_power2<C, T>(curve: C, threshold: T) -> Option<usize>
 where
     C: AsRef<[[f64; 2]]>,
     T: Into<Option<f64>>,
@@ -68,7 +26,7 @@ where
     (curve.len() > 1)
         .then_some(curve.len() / 2)
         .and_then(|nyq| Efd2::from_curve_harmonic(curve, nyq))
-        .map(|efd| fourier_power(efd, threshold))
+        .map(|efd| fourier_power(efd.coeffs(), threshold))
 }
 
 /// Elliptical Fourier Descriptor coefficients.
@@ -132,7 +90,7 @@ impl Efd2 {
         T: Into<Option<f64>>,
     {
         let curve = curve.into();
-        let harmonic = fourier_power_nyq_gate(&curve, threshold)?;
+        let harmonic = fourier_power2(&curve, threshold)?;
         Self::from_curve_harmonic(curve, harmonic)
     }
 
@@ -150,7 +108,7 @@ impl Efd2 {
         H: Into<Option<usize>>,
     {
         let curve = curve.into().into_owned();
-        let harmonic = harmonic.into().or_else(|| fourier_power_nyq(&curve))?;
+        let harmonic = harmonic.into().or_else(|| fourier_power2(&curve, None))?;
         assert!(harmonic > 0);
         if curve.len() < 2 {
             return None;
