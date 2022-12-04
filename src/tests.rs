@@ -25,8 +25,8 @@ fn efd3d() {
     assert_eq!(efd.harmonic(), 5);
     // dbg!(efd.coeffs());
     // dbg!(efd.as_trans());
-    // dbg!(efd.generate(30));
-    // dbg!(efd.generate_norm(30));
+    // dbg!(efd.generate(20));
+    // dbg!(efd.generate_norm(20));
 }
 
 pub const PATH: &[[f64; 2]] = &[

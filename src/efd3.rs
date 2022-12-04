@@ -267,7 +267,7 @@ impl Efd3 {
             .reduce(|a, b| a + b)
             .unwrap()
             .axis_iter(Axis(0))
-            .map(|c| [c[0], c[1], c[3]])
+            .map(|c| [c[0], c[1], c[2]])
             .collect()
     }
 
