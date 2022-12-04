@@ -1,4 +1,5 @@
 use crate::*;
+use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
 use ndarray::{array, s, Array1, Array2, Axis};
 #[cfg(not(feature = "std"))]
@@ -25,7 +26,7 @@ impl Efd3 {
         C: Into<CowCurve3<'a>>,
         // H: Into<Option<usize>>,
     {
-        let curve: std::vec::Vec<[f64; 3]> = curve.into().into_owned();
+        let curve: Vec<[f64; 3]> = curve.into().into_owned();
         // FIXME: let harmonic = harmonic.into().or_else(|| fourier_power_nyq(&curve))?;
         assert!(harmonic > 0);
         if curve.len() < 2 {
@@ -74,7 +75,7 @@ impl Efd3 {
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let angle = (i + 1) as f64 * theta1;
             let rot = array![[angle.cos(), -angle.sin()], [angle.sin(), angle.cos()]];
-            let m = array![[c[0], c[1]], [c[2], c[3]]].dot(&rot);
+            let m = array![[c[0], c[1]], [c[2], c[3]], [c[4], c[5]]].dot(&rot);
             c.assign(&Array1::from_iter(m));
         }
         // FIXME: The angle of semi-major axis
@@ -90,7 +91,11 @@ impl Efd3 {
         };
         let rot = array![[psi.cos(), psi.sin()], [-psi.sin(), psi.cos()]];
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
-            let m = rot.dot(&array![[c[0], c[1]], [c[2], c[3]], [c[2], c[3]]]);
+            let m = rot
+                .t()
+                .dot(&array![[c[0], c[1]], [c[2], c[3]], [c[4], c[5]]].t())
+                .t()
+                .to_owned();
             c.assign(&Array1::from_iter(m));
         }
         let scale = coeffs[[0, 0]].abs();
@@ -168,6 +173,40 @@ impl Efd3 {
     pub fn reversed(mut self) -> Self {
         self.reverse();
         self
+    }
+
+    /// Generate the normalized curve **without** transformation.
+    ///
+    /// The number of the points `n` must larger than 3.
+    pub fn generate_norm(&self, n: usize) -> Vec<[f64; 3]> {
+        assert!(n > 3, "n ({}) must larger than 3", n);
+        let mut t = Array1::from_elem(n, 1. / (n - 1) as f64);
+        t[0] = 0.;
+        let t = cumsum(t, None) * TAU;
+        self.coeffs
+            .axis_iter(Axis(0))
+            .enumerate()
+            .map(|(i, c)| {
+                let angle = &t * (i + 1) as f64;
+                let cos = angle.mapv(f64::cos);
+                let sin = angle.mapv(f64::sin);
+                let x = &cos * c[4] + &sin * c[5];
+                let y = &cos * c[2] + &sin * c[3];
+                let z = &cos * c[0] + &sin * c[1];
+                ndarray::stack![Axis(1), x, y, z]
+            })
+            .reduce(|a, b| a + b)
+            .unwrap()
+            .axis_iter(Axis(0))
+            .map(|c| [c[0], c[1], c[3]])
+            .collect()
+    }
+
+    /// Generate the described curve from the coefficients.
+    ///
+    /// The number of the points `n` must given.
+    pub fn generate(&self, n: usize) -> Vec<[f64; 3]> {
+        self.trans.transform(&self.generate_norm(n))
     }
 }
 

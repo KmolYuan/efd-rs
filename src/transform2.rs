@@ -71,18 +71,6 @@ impl Transform2 {
         }
     }
 
-    /// Multiply two transformation together.
-    pub fn add(&self, rhs: &Self) -> Self {
-        Self {
-            rot: self.rot + rhs.rot,
-            scale: self.scale * rhs.scale,
-            center: [
-                self.center[0] + rhs.center[0],
-                self.center[1] + rhs.center[1],
-            ],
-        }
-    }
-
     /// Inverse the operation of this information.
     pub fn inverse(&self) -> Self {
         let theta = self.center[1].atan2(self.center[0]) - self.rot;
@@ -106,26 +94,23 @@ impl Transform2 {
     /// let path1 = efd.transform(&path);
     /// # let trans = &efd;
     /// let path1_inv = trans.inverse().transform(&path1);
-    /// let path2 = trans.transform(&path);
     /// # assert!(curve_diff(&path1, TARGET) < 1e-12);
-    /// # assert!(curve_diff(&path2, TARGET) < 1e-12);
     /// # assert!(curve_diff(&path1_inv, &path) < 1e-12);
     /// ```
     pub fn transform<C>(&self, curve: C) -> Vec<[f64; 2]>
     where
         C: AsRef<[[f64; 2]]>,
     {
+        let trans = na::Translation2::new(self.center[0], self.center[1]);
+        let rot = na::Rotation2::new(self.rot);
+        let scale = na::Scale2::new(self.scale, self.scale);
         curve
             .as_ref()
             .iter()
             .map(|&[x, y]| {
-                let dx = x * self.scale;
-                let dy = y * self.scale;
-                let ca = self.rot.cos();
-                let sa = self.rot.sin();
-                let x = self.center[0] + dx * ca - dy * sa;
-                let y = self.center[1] + dx * sa + dy * ca;
-                [x, y]
+                let p = na::Point2::new(x, y);
+                let p = trans.transform_point(&rot.transform_point(&scale.transform_point(&p)));
+                [p.x, p.y]
             })
             .collect()
     }
