@@ -182,8 +182,8 @@ impl Efd2 {
         Self { trans, ..self }
     }
 
-    /// Consume self and return raw array.
-    pub fn unwrap(self) -> Array2<f64> {
+    /// Consume self and return a raw array.
+    pub fn into_inner(self) -> Array2<f64> {
         self.coeffs
     }
 
