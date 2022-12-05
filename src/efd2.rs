@@ -146,15 +146,15 @@ impl Efd2 {
             [x + a0, y + c0]
         };
         // Shift angle
-        let theta1 = {
+        let phi = {
             let c = &coeffs;
             let dy = 2. * (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]]);
             let dx = pow2(c[[0, 0]]) + pow2(c[[0, 2]]) - pow2(c[[0, 1]]) - pow2(c[[0, 3]]);
             dy.atan2(dx) * 0.5
         };
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
-            let angle = (i + 1) as f64 * theta1;
-            let rot = array![[angle.cos(), -angle.sin()], [angle.sin(), angle.cos()]];
+            let phi = (i + 1) as f64 * phi;
+            let rot = array![[phi.cos(), -phi.sin()], [phi.sin(), phi.cos()]];
             let m = array![[c[0], c[1]], [c[2], c[3]]].dot(&rot);
             c.assign(&Array1::from_iter(m));
         }

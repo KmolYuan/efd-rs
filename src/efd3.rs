@@ -137,7 +137,7 @@ impl Efd3 {
             [x + a0, y + c0, z + e0]
         };
         // FIXME: Shift angle
-        let theta1 = {
+        let phi = {
             let c = &coeffs;
             let dy = 2. * (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]] + c[[0, 4]] * c[[0, 5]]);
             let dx = pow2(c[[0, 0]]) + pow2(c[[0, 2]]) + pow2(c[[0, 4]])
@@ -147,13 +147,41 @@ impl Efd3 {
             dy.atan2(dx) * 0.5
         };
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
-            let angle = (i + 1) as f64 * theta1;
-            let rot = array![[angle.cos(), -angle.sin()], [angle.sin(), angle.cos()]];
+            let phi = (i + 1) as f64 * phi;
+            let rot = array![[phi.cos(), -phi.sin()], [phi.sin(), phi.cos()]];
             let m = array![[c[0], c[1]], [c[2], c[3]], [c[4], c[5]]].dot(&rot);
             c.assign(&Array1::from_iter(m));
         }
         // FIXME: The angle of semi-major axis
         let psi = {
+            let c = &coeffs;
+            let a2 = (pow2(c[[0, 1]]) + pow2(c[[0, 3]]) + pow2(c[[0, 5]])) * pow2(phi.cos())
+                + (pow2(c[[0, 0]]) + pow2(c[[0, 2]]) + pow2(c[[0, 4]])) * pow2(phi.sin())
+                - (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]] + c[[0, 4]] * c[[0, 5]])
+                    * (phi * 2.).sin();
+            let a = a2.sqrt();
+            let b2 = (pow2(c[[0, 1]]) + pow2(c[[0, 3]]) + pow2(c[[0, 5]])) * pow2(phi.sin())
+                + (pow2(c[[0, 0]]) + pow2(c[[0, 2]]) + pow2(c[[0, 4]])) * pow2(phi.cos())
+                + (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]] + c[[0, 4]] * c[[0, 5]])
+                    * (phi * 2.).sin();
+            let b = b2.sqrt();
+            let o21 = (c[[0, 3]] * phi.cos() - c[[0, 2]] * phi.sin()) / a;
+            let o31 = (c[[0, 5]] * phi.cos() - c[[0, 4]] * phi.sin()) / a;
+            let o22 = (c[[0, 3]] * phi.sin() + c[[0, 2]] * phi.cos()) / b;
+            let o32 = (c[[0, 5]] * phi.sin() + c[[0, 4]] * phi.cos()) / b;
+            let w = a * b / (c[[0, 1]] * c[[0, 5]] - c[[0, 0]] * c[[0, 4]]);
+            let row = (c[[0, 3]] * c[[0, 4]] - c[[0, 2]] * c[[0, 5]])
+                .atan2(c[[0, 1]] * c[[0, 4]] - c[[0, 0]] * c[[0, 5]]);
+            let yew = (w * (o21 * o31 + o22 * o32)).acos();
+            let pitch = (o32 / yew.sin()).acos();
+            let (row, yew) = match (w > 0., row > PI) {
+                (true, true) => (row - PI, -yew),
+                (true, false) => (row, yew),
+                (false, true) => (row - PI, yew),
+                (false, false) => (row, -yew),
+            };
+            // TODO: Rotation angle
+            let _rot = [row, yew, pitch];
             let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
             if psi > PI {
                 let mut s = coeffs.slice_mut(s![..;2, ..]);
