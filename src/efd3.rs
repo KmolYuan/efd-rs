@@ -94,8 +94,7 @@ impl Efd3 {
         C: Into<CowCurve3<'a>>,
         H: Into<Option<usize>>,
     {
-        // FIXME: Remove type annotation
-        let curve: Vec<[f64; 3]> = curve.into().into_owned();
+        let curve = curve.into().into_owned();
         let harmonic = harmonic.into().or_else(|| fourier_power3(&curve, None))?;
         assert!(harmonic > 0);
         if curve.len() < 2 {
@@ -104,8 +103,9 @@ impl Efd3 {
         let dxyz = diff(ndarray::arr2(&curve), Some(Axis(0)));
         let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
-        let zt = t.last().unwrap();
-        let phi = &t * TAU / (zt + f64::EPSILON);
+        let zt = *t.last().unwrap();
+        debug_assert!(zt != 0.);
+        let phi = &t * TAU / zt;
         let mut coeffs = Array2::zeros([harmonic, 6]);
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let n = i as f64 + 1.;
@@ -115,30 +115,35 @@ impl Efd3 {
             let phi_n_back = phi_n.slice(s![1..]);
             let cos_phi_n = (phi_n_back.mapv(f64::cos) - phi_n_front.mapv(f64::cos)) / &dt;
             let sin_phi_n = (phi_n_back.mapv(f64::sin) - phi_n_front.mapv(f64::sin)) / &dt;
-            c[0] = t * (&dxyz.slice(s![.., 1]) * &cos_phi_n).sum();
-            c[1] = t * (&dxyz.slice(s![.., 1]) * &sin_phi_n).sum();
-            c[2] = t * (&dxyz.slice(s![.., 0]) * &cos_phi_n).sum();
-            c[3] = t * (&dxyz.slice(s![.., 0]) * &sin_phi_n).sum();
-            c[4] = t * (&dxyz.slice(s![.., 2]) * &cos_phi_n).sum();
-            c[5] = t * (&dxyz.slice(s![.., 2]) * &sin_phi_n).sum();
+            let s_cos = t * (&dxyz * cos_phi_n.insert_axis(Axis(1)));
+            let s_sin = t * (&dxyz * sin_phi_n.insert_axis(Axis(1)));
+            c[0] = s_cos.slice(s![.., 2]).sum();
+            c[1] = s_sin.slice(s![.., 2]).sum();
+            c[2] = s_cos.slice(s![.., 1]).sum();
+            c[3] = s_sin.slice(s![.., 1]).sum();
+            c[4] = s_cos.slice(s![.., 0]).sum();
+            c[5] = s_sin.slice(s![.., 0]).sum();
         }
         let center = {
             let tdt = &t.slice(s![1..]) / &dt;
             let xi = cumsum(dxyz.slice(s![.., 0]), None) - &dxyz.slice(s![.., 0]) * &tdt;
             let c = diff(t.mapv(pow2), None) * 0.5 / &dt;
-            let a0 = (&dxyz.slice(s![.., 0]) * &c + xi * &dt).sum() / (zt + f64::EPSILON);
+            let a0 = (&dxyz.slice(s![.., 0]) * &c + xi * &dt).sum() / zt;
             let xi = cumsum(dxyz.slice(s![.., 1]), None) - &dxyz.slice(s![.., 1]) * &tdt;
-            let c0 = (&dxyz.slice(s![.., 1]) * &c + xi * &dt).sum() / (zt + f64::EPSILON);
+            let c0 = (&dxyz.slice(s![.., 1]) * &c + xi * &dt).sum() / zt;
             let xi = cumsum(dxyz.slice(s![.., 2]), None) - &dxyz.slice(s![.., 2]) * &tdt;
-            let e0 = (&dxyz.slice(s![.., 2]) * &c + xi * &dt).sum() / (zt + f64::EPSILON);
+            let e0 = (&dxyz.slice(s![.., 2]) * &c + xi * &dt).sum() / zt;
             let [x, y, z] = curve.first().unwrap();
             [x + a0, y + c0, z + e0]
         };
         // FIXME: Shift angle
         let theta1 = {
-            let dy = 2. * (coeffs[[0, 0]] * coeffs[[0, 1]] + coeffs[[0, 2]] * coeffs[[0, 3]]);
-            let dx = pow2(coeffs[[0, 0]]) - pow2(coeffs[[0, 1]]) + pow2(coeffs[[0, 2]])
-                - pow2(coeffs[[0, 3]]);
+            let c = &coeffs;
+            let dy = 2. * (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]] + c[[0, 4]] * c[[0, 5]]);
+            let dx = pow2(c[[0, 0]]) + pow2(c[[0, 2]]) + pow2(c[[0, 4]])
+                - pow2(c[[0, 1]])
+                - pow2(c[[0, 3]])
+                - pow2(c[[0, 5]]);
             dy.atan2(dx) * 0.5
         };
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
