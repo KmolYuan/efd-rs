@@ -28,11 +28,6 @@ impl Transform3 {
         Self { rot: [0.; 3], scale: 1., center: [0.; 3] }
     }
 
-    /// TODO: Create from two vectors.
-    pub fn from_vector(start: [f64; 3], end: [f64; 3]) -> Self {
-        todo!()
-    }
-
     /// TODO: Transform a contour with this information.
     ///
     /// This function rotates first, then translates.
@@ -53,19 +48,14 @@ impl Transform3 {
     where
         C: AsRef<[[f64; 3]]>,
     {
-        let trans = na::Translation3::new(self.center[0], self.center[1], self.center[2]);
-        let rxy = na::Rotation3::new(na::Vector3::z() * self.rot[0]);
-        let ryz = na::Rotation3::new(na::Vector3::x() * self.rot[1]);
-        let rxz = na::Rotation3::new(na::Vector3::y() * self.rot[2]);
-        let scale = na::Scale3::new(self.scale, self.scale, self.scale);
+        let trans = na::Vector3::new(self.center[0], self.center[1], self.center[2]);
+        let rot = na::Rotation3::from_euler_angles(self.rot[0], self.rot[1], self.rot[2]);
+        let sim = na::Similarity3::new(trans, rot.scaled_axis(), self.scale);
         curve
             .as_ref()
             .iter()
             .map(|&[x, y, z]| {
-                let p = na::Point3::new(x, y, z);
-                let p = scale.transform_point(&p);
-                let p = rxz.transform_point(&ryz.transform_point(&rxy.transform_point(&p)));
-                let p = trans.transform_point(&p);
+                let p = sim.transform_point(&na::Point3::new(x, y, z));
                 [p.x, p.y, p.z]
             })
             .collect()

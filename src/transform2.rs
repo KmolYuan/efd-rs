@@ -32,17 +32,6 @@ impl Transform2 {
         Self { rot: 0., scale: 1., center: [0.; 2] }
     }
 
-    /// Create from two vectors.
-    pub fn from_vector(start: [f64; 2], end: [f64; 2]) -> Self {
-        let dx = end[0] - start[0];
-        let dy = end[1] - start[1];
-        Self {
-            rot: dy.atan2(dx),
-            scale: dx.hypot(dy),
-            center: start,
-        }
-    }
-
     /// An operator on two transformation matrices.
     ///
     /// It can be used on a not normalized contour `a` transforming to `b`.
@@ -101,15 +90,13 @@ impl Transform2 {
     where
         C: AsRef<[[f64; 2]]>,
     {
-        let trans = na::Translation2::new(self.center[0], self.center[1]);
-        let rot = na::Rotation2::new(self.rot);
-        let scale = na::Scale2::new(self.scale, self.scale);
+        let trans = na::Vector2::new(self.center[0], self.center[1]);
+        let sim = na::Similarity2::new(trans, self.rot, self.scale);
         curve
             .as_ref()
             .iter()
             .map(|&[x, y]| {
-                let p = na::Point2::new(x, y);
-                let p = trans.transform_point(&rot.transform_point(&scale.transform_point(&p)));
+                let p = sim.transform_point(&na::Point2::new(x, y));
                 [p.x, p.y]
             })
             .collect()
