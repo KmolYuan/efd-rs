@@ -32,12 +32,11 @@ extern crate alloc;
 extern crate core as std; // for `ndarray::s!` macro
 extern crate nalgebra as na;
 
-pub use crate::{efd2::*, efd3::*, error::*, transform2::*, transform3::*, utility::*};
+pub use crate::{efd2::*, efd3::*, error::*, transform::*, utility::*};
 
 mod efd2;
 mod efd3;
 mod error;
 pub mod tests;
-mod transform2;
-mod transform3;
+mod transform;
 mod utility;

@@ -55,14 +55,14 @@ impl Efd2 {
     /// # Safety
     ///
     /// An invalid width may cause failure operation.
-    pub const unsafe fn from_coeffs_unchecked(coeffs: Array2<f64>) -> Self {
-        Self { coeffs, trans: Transform2::new() }
+    pub unsafe fn from_coeffs_unchecked(coeffs: Array2<f64>) -> Self {
+        Self { coeffs, trans: Transform2::identity() }
     }
 
     /// Create object from a nx4 array with boundary check.
     pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, Efd2Error> {
         (coeffs.nrows() > 0 && coeffs.ncols() == 4 && coeffs[[0, 0]] == 1.)
-            .then(|| Self { coeffs, trans: Transform2::new() })
+            .then(|| Self { coeffs, trans: Transform2::identity() })
             .ok_or(Efd2Error(()))
     }
 
@@ -173,12 +173,12 @@ impl Efd2 {
         }
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
-        let trans = Transform2 { rot: -psi, scale, center };
+        let trans = Transform2::new(center, -psi, scale);
         Some(Self { coeffs, trans })
     }
 
     /// Builder method for adding transform type.
-    pub fn trans(self, trans: Transform2) -> Self {
+    pub fn with_trans(self, trans: Transform2) -> Self {
         Self { trans, ..self }
     }
 

@@ -42,14 +42,14 @@ impl Efd3 {
     /// # Safety
     ///
     /// An invalid width may cause failure operation.
-    pub const unsafe fn from_coeffs_unchecked(coeffs: Array2<f64>) -> Self {
-        Self { coeffs, trans: Transform3::new() }
+    pub unsafe fn from_coeffs_unchecked(coeffs: Array2<f64>) -> Self {
+        Self { coeffs, trans: Transform3::identity() }
     }
 
     /// Create object from a nx4 array with boundary check.
     pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, Efd3Error> {
         (coeffs.nrows() > 0 && coeffs.ncols() == 4 && coeffs[[0, 0]] == 1.)
-            .then(|| Self { coeffs, trans: Transform3::new() })
+            .then(|| Self { coeffs, trans: Transform3::identity() })
             .ok_or(Efd3Error(()))
     }
 
@@ -169,7 +169,7 @@ impl Efd3 {
         }
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
-        let trans = Transform3 { rot: [-psi; 3], scale, center };
+        let trans = Transform3::new(center, [-psi, 0., 0.], scale);
         Some(Self { coeffs, trans })
     }
 
