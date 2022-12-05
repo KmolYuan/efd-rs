@@ -16,5 +16,9 @@ std = ["num-traits/std", "ndarray/std", "nalgebra/std"]
 
 [dependencies]
 num-traits = { version = "0.2", default-features = false, features = ["libm"] }
-nalgebra = { version = "0.31", default-features = false, features = ["libm"] }
 ndarray = { version = "0.15", default-features = false }
+
+[dependencies.nalgebra]
+version = "0.31"
+default-features = false
+features = ["libm", "macros"]
