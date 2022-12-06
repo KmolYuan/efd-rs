@@ -137,7 +137,7 @@ impl Efd3 {
             [x + a0, y + c0, z + e0]
         };
         // FIXME: Shift angle
-        let phi = {
+        let theta = {
             let c = &coeffs;
             let dy = 2. * (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]] + c[[0, 4]] * c[[0, 5]]);
             let dx = pow2(c[[0, 0]]) + pow2(c[[0, 2]]) + pow2(c[[0, 4]])
@@ -147,28 +147,28 @@ impl Efd3 {
             dy.atan2(dx) * 0.5
         };
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
-            let phi = (i + 1) as f64 * phi;
-            let rot = array![[phi.cos(), -phi.sin()], [phi.sin(), phi.cos()]];
+            let theta = (i + 1) as f64 * theta;
+            let rot = array![[theta.cos(), -theta.sin()], [theta.sin(), theta.cos()]];
             let m = array![[c[0], c[1]], [c[2], c[3]], [c[4], c[5]]].dot(&rot);
             c.assign(&Array1::from_iter(m));
         }
         // FIXME: The angle of semi-major axis
         let psi = {
             let c = &coeffs;
-            let a2 = (pow2(c[[0, 1]]) + pow2(c[[0, 3]]) + pow2(c[[0, 5]])) * pow2(phi.cos())
-                + (pow2(c[[0, 0]]) + pow2(c[[0, 2]]) + pow2(c[[0, 4]])) * pow2(phi.sin())
+            let a2 = (pow2(c[[0, 1]]) + pow2(c[[0, 3]]) + pow2(c[[0, 5]])) * pow2(theta.cos())
+                + (pow2(c[[0, 0]]) + pow2(c[[0, 2]]) + pow2(c[[0, 4]])) * pow2(theta.sin())
                 - (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]] + c[[0, 4]] * c[[0, 5]])
-                    * (phi * 2.).sin();
+                    * (theta * 2.).sin();
             let a = a2.sqrt();
-            let b2 = (pow2(c[[0, 1]]) + pow2(c[[0, 3]]) + pow2(c[[0, 5]])) * pow2(phi.sin())
-                + (pow2(c[[0, 0]]) + pow2(c[[0, 2]]) + pow2(c[[0, 4]])) * pow2(phi.cos())
+            let b2 = (pow2(c[[0, 1]]) + pow2(c[[0, 3]]) + pow2(c[[0, 5]])) * pow2(theta.sin())
+                + (pow2(c[[0, 0]]) + pow2(c[[0, 2]]) + pow2(c[[0, 4]])) * pow2(theta.cos())
                 + (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]] + c[[0, 4]] * c[[0, 5]])
-                    * (phi * 2.).sin();
+                    * (theta * 2.).sin();
             let b = b2.sqrt();
-            let o21 = (c[[0, 3]] * phi.cos() - c[[0, 2]] * phi.sin()) / a;
-            let o31 = (c[[0, 5]] * phi.cos() - c[[0, 4]] * phi.sin()) / a;
-            let o22 = (c[[0, 3]] * phi.sin() + c[[0, 2]] * phi.cos()) / b;
-            let o32 = (c[[0, 5]] * phi.sin() + c[[0, 4]] * phi.cos()) / b;
+            let o21 = (c[[0, 3]] * theta.cos() - c[[0, 2]] * theta.sin()) / a;
+            let o31 = (c[[0, 5]] * theta.cos() - c[[0, 4]] * theta.sin()) / a;
+            let o22 = (c[[0, 3]] * theta.sin() + c[[0, 2]] * theta.cos()) / b;
+            let o32 = (c[[0, 5]] * theta.sin() + c[[0, 4]] * theta.cos()) / b;
             let w = a * b / (c[[0, 1]] * c[[0, 5]] - c[[0, 0]] * c[[0, 4]]);
             let row = (c[[0, 3]] * c[[0, 4]] - c[[0, 2]] * c[[0, 5]])
                 .atan2(c[[0, 1]] * c[[0, 4]] - c[[0, 0]] * c[[0, 5]]);

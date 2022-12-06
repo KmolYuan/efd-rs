@@ -146,17 +146,18 @@ impl Efd2 {
             [x + a0, y + c0]
         };
         // Shift angle
-        let phi = {
+        let theta = {
             let c = &coeffs;
             let dy = 2. * (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]]);
             let dx = pow2(c[[0, 0]]) + pow2(c[[0, 2]]) - pow2(c[[0, 1]]) - pow2(c[[0, 3]]);
             dy.atan2(dx) * 0.5
         };
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
-            let phi = (i + 1) as f64 * phi;
-            let rot = array![[phi.cos(), -phi.sin()], [phi.sin(), phi.cos()]];
-            let m = array![[c[0], c[1]], [c[2], c[3]]].dot(&rot);
-            c.assign(&Array1::from_iter(m));
+            let theta = na::Rotation2::new((i + 1) as f64 * theta);
+            let m = na::matrix![c[0], c[1]; c[2], c[3]] * theta;
+            for i in 0..4 {
+                c[i] = *m.index((i / 2, i % 2));
+            }
         }
         // The angle of semi-major axis
         let psi = {
@@ -169,10 +170,12 @@ impl Efd2 {
                 psi
             }
         };
-        let rot = array![[psi.cos(), psi.sin()], [-psi.sin(), psi.cos()]];
+        let rot = na::Rotation2::new(-psi);
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
-            let m = rot.dot(&array![[c[0], c[1]], [c[2], c[3]]]);
-            c.assign(&Array1::from_iter(m));
+            let m = rot * na::matrix![c[0], c[1]; c[2], c[3]];
+            for i in 0..4 {
+                c[i] = *m.index((i / 2, i % 2));
+            }
         }
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
@@ -235,10 +238,10 @@ impl Efd2 {
 
     /// Reverse the order of described curve then return a mutable reference.
     pub fn reverse(&mut self) -> &mut Self {
-        let mut s = self.coeffs.slice_mut(s![.., 1]);
-        s *= -1.;
-        let mut s = self.coeffs.slice_mut(s![.., 3]);
-        s *= -1.;
+        for i in (1..self.coeffs.ncols()).step_by(2) {
+            let mut s = self.coeffs.slice_mut(s![.., i]);
+            s *= -1.;
+        }
         self
     }
 
