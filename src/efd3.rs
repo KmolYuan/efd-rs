@@ -154,24 +154,28 @@ impl Efd3 {
         }
         // FIXME: The angle of semi-major axis
         let [roll, pitch, yaw] = {
-            let c = &coeffs;
-            let a2 = (pow2(c[[0, 1]]) + pow2(c[[0, 3]]) + pow2(c[[0, 5]])) * pow2(theta.cos())
-                + (pow2(c[[0, 0]]) + pow2(c[[0, 2]]) + pow2(c[[0, 4]])) * pow2(theta.sin())
-                - (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]] + c[[0, 4]] * c[[0, 5]])
-                    * (theta * 2.).sin();
-            let b2 = (pow2(c[[0, 1]]) + pow2(c[[0, 3]]) + pow2(c[[0, 5]])) * pow2(theta.sin())
-                + (pow2(c[[0, 0]]) + pow2(c[[0, 2]]) + pow2(c[[0, 4]])) * pow2(theta.cos())
-                + (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]] + c[[0, 4]] * c[[0, 5]])
-                    * (theta * 2.).sin();
+            let [xs, xc, ys, yc, zs, zc] = [
+                coeffs[[0, 0]],
+                coeffs[[0, 1]],
+                coeffs[[0, 2]],
+                coeffs[[0, 3]],
+                coeffs[[0, 4]],
+                coeffs[[0, 5]],
+            ];
+            let a2 = (pow2(xc) + pow2(yc) + pow2(zc)) * pow2(theta.cos())
+                + (pow2(xs) + pow2(ys) + pow2(zs)) * pow2(theta.sin())
+                - (xc * xs + yc * ys + zc * zs) * (theta * 2.).sin();
+            let b2 = (pow2(xc) + pow2(yc) + pow2(zc)) * pow2(theta.sin())
+                + (pow2(xs) + pow2(ys) + pow2(zs)) * pow2(theta.cos())
+                + (xc * xs + yc * ys + zc * zs) * (theta * 2.).sin();
             let a = a2.sqrt();
             let b = b2.sqrt();
-            let o21 = (c[[0, 3]] * theta.cos() - c[[0, 2]] * theta.sin()) / a;
-            let o31 = (c[[0, 5]] * theta.cos() - c[[0, 4]] * theta.sin()) / a;
-            let o22 = (c[[0, 3]] * theta.sin() + c[[0, 2]] * theta.cos()) / b;
-            let o32 = (c[[0, 5]] * theta.sin() + c[[0, 4]] * theta.cos()) / b;
-            let w = a * b / (c[[0, 1]] * c[[0, 5]] - c[[0, 0]] * c[[0, 4]]);
-            let roll = (c[[0, 3]] * c[[0, 4]] - c[[0, 2]] * c[[0, 5]])
-                .atan2(c[[0, 1]] * c[[0, 4]] - c[[0, 0]] * c[[0, 5]]);
+            let o21 = (yc * theta.cos() - ys * theta.sin()) / a;
+            let o31 = (zc * theta.cos() - zs * theta.sin()) / a;
+            let o22 = (yc * theta.sin() + ys * theta.cos()) / b;
+            let o32 = (zc * theta.sin() + zs * theta.cos()) / b;
+            let w = a * b / (xc * zs - xs * zc);
+            let roll = (yc * zs - ys * zc).atan2(xc * zs - xs * zc);
             let pitch = (w * (o21 * o31 + o22 * o32)).acos();
             let yaw = (o32 / pitch.sin()).acos();
             // Angle fixes

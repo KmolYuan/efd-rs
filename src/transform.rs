@@ -9,6 +9,8 @@ pub type Transform3 = Transform<na::Similarity3<f64>>;
 
 /// A trait used in inner type of [`Transform`].
 pub trait TransTrait {
+    /// Dimension hint.
+    const DIM: usize;
     /// Coordinate/Translation type.
     type Coord;
     /// Rotation angle type.
@@ -34,6 +36,7 @@ pub trait TransTrait {
 }
 
 impl TransTrait for na::Similarity2<f64> {
+    const DIM: usize = 2;
     type Coord = [f64; 2];
     type Rot = f64;
     type Scale = f64;
@@ -75,6 +78,7 @@ impl TransTrait for na::Similarity2<f64> {
 }
 
 impl TransTrait for na::Similarity3<f64> {
+    const DIM: usize = 3;
     type Coord = [f64; 3];
     type Rot = [f64; 3];
     type Scale = f64;
@@ -120,9 +124,24 @@ impl TransTrait for na::Similarity3<f64> {
 /// Transform type.
 ///
 /// This type record the information of raw coefficients.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Transform<T: TransTrait> {
     inner: T,
+}
+
+impl<T: TransTrait> core::fmt::Debug for Transform<T>
+where
+    T::Coord: core::fmt::Debug,
+    T::Rot: core::fmt::Debug,
+    T::Scale: core::fmt::Debug,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_struct(&format!("Transform{}", T::DIM))
+            .field("translation", &self.inner.trans())
+            .field("rotation", &self.inner.rot())
+            .field("scale", &self.inner.scale())
+            .finish()
+    }
 }
 
 impl<T: TransTrait> Default for Transform<T> {
