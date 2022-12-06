@@ -104,7 +104,6 @@ impl Efd3 {
         let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
         let zt = *t.last().unwrap();
-        debug_assert!(zt != 0.);
         let phi = &t * TAU / zt;
         let mut coeffs = Array2::zeros([harmonic, 6]);
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
@@ -147,62 +146,49 @@ impl Efd3 {
             dy.atan2(dx) * 0.5
         };
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
-            let theta = (i + 1) as f64 * theta;
-            let rot = array![[theta.cos(), -theta.sin()], [theta.sin(), theta.cos()]];
-            let m = array![[c[0], c[1]], [c[2], c[3]], [c[4], c[5]]].dot(&rot);
-            c.assign(&Array1::from_iter(m));
+            let theta = na::Rotation2::new((i + 1) as f64 * theta);
+            let m = na::matrix![c[0], c[1]; c[2], c[3]; c[4], c[5]] * theta;
+            for i in 0..4 {
+                c[i] = *m.index((i / 2, i % 2));
+            }
         }
         // FIXME: The angle of semi-major axis
-        let psi = {
+        let [roll, pitch, yaw] = {
             let c = &coeffs;
             let a2 = (pow2(c[[0, 1]]) + pow2(c[[0, 3]]) + pow2(c[[0, 5]])) * pow2(theta.cos())
                 + (pow2(c[[0, 0]]) + pow2(c[[0, 2]]) + pow2(c[[0, 4]])) * pow2(theta.sin())
                 - (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]] + c[[0, 4]] * c[[0, 5]])
                     * (theta * 2.).sin();
-            let a = a2.sqrt();
             let b2 = (pow2(c[[0, 1]]) + pow2(c[[0, 3]]) + pow2(c[[0, 5]])) * pow2(theta.sin())
                 + (pow2(c[[0, 0]]) + pow2(c[[0, 2]]) + pow2(c[[0, 4]])) * pow2(theta.cos())
                 + (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]] + c[[0, 4]] * c[[0, 5]])
                     * (theta * 2.).sin();
+            let a = a2.sqrt();
             let b = b2.sqrt();
             let o21 = (c[[0, 3]] * theta.cos() - c[[0, 2]] * theta.sin()) / a;
             let o31 = (c[[0, 5]] * theta.cos() - c[[0, 4]] * theta.sin()) / a;
             let o22 = (c[[0, 3]] * theta.sin() + c[[0, 2]] * theta.cos()) / b;
             let o32 = (c[[0, 5]] * theta.sin() + c[[0, 4]] * theta.cos()) / b;
             let w = a * b / (c[[0, 1]] * c[[0, 5]] - c[[0, 0]] * c[[0, 4]]);
-            let row = (c[[0, 3]] * c[[0, 4]] - c[[0, 2]] * c[[0, 5]])
+            let roll = (c[[0, 3]] * c[[0, 4]] - c[[0, 2]] * c[[0, 5]])
                 .atan2(c[[0, 1]] * c[[0, 4]] - c[[0, 0]] * c[[0, 5]]);
-            let yew = (w * (o21 * o31 + o22 * o32)).acos();
-            let pitch = (o32 / yew.sin()).acos();
-            let (row, yew) = match (w > 0., row > PI) {
-                (true, true) => (row - PI, -yew),
-                (true, false) => (row, yew),
-                (false, true) => (row - PI, yew),
-                (false, false) => (row, -yew),
-            };
-            // TODO: Rotation angle
-            let _rot = [row, yew, pitch];
-            let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
-            if psi > PI {
-                let mut s = coeffs.slice_mut(s![..;2, ..]);
-                s *= -1.;
-                psi - PI
-            } else {
-                psi
-            }
+            let pitch = (w * (o21 * o31 + o22 * o32)).acos();
+            let yaw = (o32 / pitch.sin()).acos();
+            // Angle fixes
+            let roll = if w > 0. { roll } else { roll + PI };
+            let yaw = if o31 > 0. { yaw } else { -yaw };
+            [roll, pitch, yaw]
         };
-        let rot = array![[psi.cos(), psi.sin()], [-psi.sin(), psi.cos()]];
+        let psi = na::Rotation3::from_euler_angles(roll, pitch, yaw);
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
-            let m = rot
-                .t()
-                .dot(&array![[c[0], c[1]], [c[2], c[3]], [c[4], c[5]]].t())
-                .t()
-                .to_owned();
-            c.assign(&Array1::from_iter(m));
+            let m = psi * na::matrix![c[0], c[1]; c[2], c[3]; c[4], c[5]];
+            for i in 0..4 {
+                c[i] = *m.index((i / 2, i % 2));
+            }
         }
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
-        let trans = Transform3::new(center, [-psi, 0., 0.], scale);
+        let trans = Transform3::new(center, [roll, pitch, yaw], scale);
         Some(Self { coeffs, trans })
     }
 
