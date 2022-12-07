@@ -136,7 +136,7 @@ where
     T::Scale: core::fmt::Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        f.debug_struct(&format!("Transform{}", T::DIM))
+        f.debug_struct(&alloc::format!("Transform{}", T::DIM))
             .field("translation", &self.inner.trans())
             .field("rotation", &self.inner.rot())
             .field("scale", &self.inner.scale())
