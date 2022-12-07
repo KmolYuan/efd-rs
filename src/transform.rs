@@ -185,8 +185,8 @@ impl<T: TransTrait> Transform<T> {
     /// # let path1 = efd::tests::PATH;
     /// # let path2 = efd::tests::PATH;
     ///
-    /// let a = Efd2::from_curve_gate(path1, None).unwrap();
-    /// let b = Efd2::from_curve_gate(path2, None).unwrap();
+    /// let a = Efd2::from_curve(path1).unwrap();
+    /// let b = Efd2::from_curve(path2).unwrap();
     /// assert!(curve_diff(&a.to(&b).transform(path1), path2) < 1e-12);
     /// ```
     pub fn to(&self, rhs: &Self) -> Self {
@@ -208,9 +208,9 @@ impl<T: TransTrait> Transform<T> {
     /// This function rotates first, then translates.
     ///
     /// ```
-    /// # use efd::{curve_diff, tests::{PATH, TARGET}, Efd2};
+    /// # use efd::{closed_curve, curve_diff, tests::{PATH, TARGET}, Efd2};
     /// # let target = TARGET;
-    /// # let efd = Efd2::from_curve_gate(PATH, None).unwrap();
+    /// # let efd = Efd2::from_curve(closed_curve(PATH)).unwrap();
     /// # let path = efd.generate_norm(target.len());
     /// let path1 = efd.transform(&path);
     /// # let trans = &efd;

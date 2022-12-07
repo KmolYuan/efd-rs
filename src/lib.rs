@@ -1,8 +1,8 @@
-//! This crate implements Elliptical Fourier Descriptor (EFD) and its related
-//! functions.
+//! This crate implements 2D/3D Elliptical Fourier Descriptor (EFD) and its
+//! related functions.
 //!
 //! This crate support both `Vec<[f64; 2]>` and `&[[f64; 2]]` as input type via
-//! `AsRef<[[f64; 2]]>`.
+//! `AsRef<[[f64; 2]]>`, and the first coordinate must be close to the last.
 //!
 //! ```
 //! let curve = vec![
@@ -14,9 +14,7 @@
 //!     [1., 1.],
 //!     [0., 0.],
 //! ];
-//! let described_curve = efd::Efd2::from_curve_gate(curve, None)
-//!     .unwrap()
-//!     .generate(20);
+//! let described_curve = efd::Efd2::from_curve(curve).unwrap().generate(20);
 //! # assert_eq!(described_curve.len(), 20);
 //! ```
 //!

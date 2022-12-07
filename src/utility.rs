@@ -83,7 +83,7 @@ where
         .unwrap()
 }
 
-/// Close the curve
+/// Close the curve by the first coordinate.
 pub fn closed_curve<'a, A, C>(curve: C) -> Vec<A>
 where
     A: Clone + 'a,
