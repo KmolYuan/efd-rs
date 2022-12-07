@@ -74,7 +74,7 @@ impl Efd3 {
         Self::from_curve_harmonic(curve, harmonic)
     }
 
-    /// FIXME: Calculate EFD coefficients from an existing discrete points.
+    /// Calculate EFD coefficients from an existing discrete points.
     ///
     /// **The curve must be closed. (first == last)**
     ///
@@ -128,7 +128,7 @@ impl Efd3 {
             let [x, y, z] = curve.first().unwrap();
             [x + a0, y + c0, z + e0]
         };
-        // FIXME: Shift angle
+        // Shift angle
         let theta = {
             let c = &coeffs;
             let dy = 2. * (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]] + c[[0, 4]] * c[[0, 5]]);
@@ -145,7 +145,7 @@ impl Efd3 {
                 c[i] = m[(i / 2, i % 2)];
             }
         }
-        // FIXME: The angle of semi-major axis
+        // The angle of semi-major axis
         let [roll, pitch, yaw] = {
             let [xs, xc, ys, yc, zs, zc] = [
                 coeffs[[0, 0]],
@@ -171,9 +171,9 @@ impl Efd3 {
             let roll = (yc * zs - ys * zc).atan2(xc * zs - xs * zc);
             let pitch = (w * (o21 * o31 + o22 * o32)).acos();
             let yaw = (o32 / pitch.sin()).acos();
-            // Angle fixes
-            let roll = if w > 0. { roll } else { roll + PI };
-            let yaw = if o31 > 0. { yaw } else { -yaw };
+            // FIXME: Angle fixes
+            // let roll = if w > 0. { roll } else { roll + PI };
+            // let yaw = if o31 > 0. { yaw } else { -yaw };
             [-roll, -pitch, -yaw]
         };
         let psi = na::Rotation3::from_euler_angles(roll, pitch, yaw);
