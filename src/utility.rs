@@ -2,8 +2,9 @@ use ndarray::{arr2, Array, ArrayView2, Axis, CowArray, Dimension, FixedInitializ
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
-pub(crate) type CowCurve2<'a> = alloc::borrow::Cow<'a, [[f64; 2]]>;
-pub(crate) type CowCurve3<'a> = alloc::borrow::Cow<'a, [[f64; 3]]>;
+pub(crate) type CowCurve<'a, A> = alloc::borrow::Cow<'a, [A]>;
+pub(crate) type CowCurve2<'a> = CowCurve<'a, [f64; 2]>;
+pub(crate) type CowCurve3<'a> = CowCurve<'a, [f64; 3]>;
 
 #[inline(always)]
 pub(crate) fn pow2(x: f64) -> f64 {
@@ -80,4 +81,15 @@ where
         .find(|(_, power)| *power / total_power >= threshold)
         .map(|(i, _)| i + 1)
         .unwrap()
+}
+
+/// Close the curve
+pub fn closed_curve<'a, A, C>(curve: C) -> Vec<A>
+where
+    A: Clone + 'a,
+    C: Into<CowCurve<'a, A>>,
+{
+    let mut c = curve.into().into_owned();
+    c.push(c[0].clone());
+    c
 }

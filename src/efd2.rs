@@ -251,7 +251,7 @@ impl Efd2 {
     ///
     /// The number of the points `n` must larger than 3.
     pub fn generate_norm(&self, n: usize) -> Vec<[f64; 2]> {
-        assert!(n > 3, "n ({}) must larger than 3", n);
+        assert!(n > 1, "n ({n}) must larger than 1");
         let mut t = Array1::from_elem(n, 1. / (n - 1) as f64);
         t[0] = 0.;
         let t = cumsum(t, None) * TAU;
