@@ -146,43 +146,22 @@ impl Efd3 {
             }
         }
         // The angle of semi-major axis
-        let [roll, pitch, yaw] = {
-            let [xs, xc, ys, yc, zs, zc] = [
-                coeffs[[0, 0]],
-                coeffs[[0, 1]],
-                coeffs[[0, 2]],
-                coeffs[[0, 3]],
-                coeffs[[0, 4]],
-                coeffs[[0, 5]],
-            ];
-            let a2 = (pow2(xc) + pow2(yc) + pow2(zc)) * pow2(theta.cos())
-                + (pow2(xs) + pow2(ys) + pow2(zs)) * pow2(theta.sin())
-                - (xc * xs + yc * ys + zc * zs) * (theta * 2.).sin();
-            let b2 = (pow2(xc) + pow2(yc) + pow2(zc)) * pow2(theta.sin())
-                + (pow2(xs) + pow2(ys) + pow2(zs)) * pow2(theta.cos())
-                + (xc * xs + yc * ys + zc * zs) * (theta * 2.).sin();
-            let a = a2.sqrt();
-            let b = b2.sqrt();
-            let o21 = (yc * theta.cos() - ys * theta.sin()) / a;
-            let o31 = (zc * theta.cos() - zs * theta.sin()) / a;
-            let o22 = (yc * theta.sin() + ys * theta.cos()) / b;
-            let o32 = (zc * theta.sin() + zs * theta.cos()) / b;
-            let w = a * b / (xc * zs - xs * zc);
-            let roll = (yc * zs - ys * zc).atan2(xc * zs - xs * zc);
-            let pitch = (w * (o21 * o31 + o22 * o32)).acos();
-            let yaw = (o32 / pitch.sin()).acos();
-            // FIXME: Angle fixes
-            // let roll = if w > 0. { roll } else { roll + PI };
-            // let yaw = if o31 > 0. { yaw } else { -yaw };
-            [-roll, -pitch, -yaw]
+        let psi = {
+            let v1 = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], coeffs[[0, 4]]);
+            let v2 = na::Vector3::new(coeffs[[0, 1]], coeffs[[0, 3]], coeffs[[0, 5]]);
+            let v = v1.cross(&v2);
+            let g_axis = na::Vector3::x();
+            let angle = v.dot(&g_axis);
+            let axis = na::Unit::new_normalize(v.cross(&g_axis));
+            na::Rotation3::from_axis_angle(&axis, angle).inverse()
         };
-        let psi = na::Rotation3::from_euler_angles(roll, pitch, yaw);
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = psi * na::matrix![c[0], c[1]; c[2], c[3]; c[4], c[5]];
             for i in 0..Self::DIM {
                 c[i] = m[(i / 2, i % 2)];
             }
         }
+        let (roll, pitch, yaw) = psi.euler_angles();
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
         let trans = Transform3::new(center, [roll, pitch, yaw], scale);
