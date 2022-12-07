@@ -50,20 +50,13 @@ pub struct Efd2 {
 }
 
 impl Efd2 {
-    /// Create constant object from a nx4 array without boundary check.
-    ///
-    /// # Safety
-    ///
-    /// An invalid width may cause failure operation.
-    pub unsafe fn from_coeffs_unchecked(coeffs: Array2<f64>) -> Self {
-        Self { coeffs, trans: Transform2::identity() }
-    }
+    const DIM: usize = 4;
 
     /// Create object from a nx4 array with boundary check.
-    pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, Efd2Error> {
-        (coeffs.nrows() > 0 && coeffs.ncols() == 4 && coeffs[[0, 0]] == 1.)
+    pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, EfdError<{ Self::DIM }>> {
+        (coeffs.nrows() > 0 && coeffs.ncols() == Self::DIM && coeffs[[0, 0]] == 1.)
             .then(|| Self { coeffs, trans: Transform2::identity() })
-            .ok_or(Efd2Error(()))
+            .ok_or(EfdError::<{ Self::DIM }>)
     }
 
     /// Calculate EFD coefficients from an existing discrete points.
@@ -119,7 +112,7 @@ impl Efd2 {
         let zt = *t.last().unwrap();
         debug_assert!(zt != 0.);
         let phi = &t * TAU / zt;
-        let mut coeffs = Array2::zeros([harmonic, 4]);
+        let mut coeffs = Array2::zeros([harmonic, Self::DIM]);
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let n = i as f64 + 1.;
             let t = 0.5 * zt / (n * n * PI * PI);
@@ -155,8 +148,8 @@ impl Efd2 {
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let theta = na::Rotation2::new((i + 1) as f64 * theta);
             let m = na::matrix![c[0], c[1]; c[2], c[3]] * theta;
-            for i in 0..4 {
-                c[i] = *m.index((i / 2, i % 2));
+            for i in 0..Self::DIM {
+                c[i] = m[(i / 2, i % 2)];
             }
         }
         // The angle of semi-major axis
@@ -165,21 +158,21 @@ impl Efd2 {
             if psi > PI {
                 let mut s = coeffs.slice_mut(s![..;2, ..]);
                 s *= -1.;
-                psi - PI
+                -psi + PI
             } else {
-                psi
+                -psi
             }
         };
-        let rot = na::Rotation2::new(-psi);
+        let rot = na::Rotation2::new(psi);
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = rot * na::matrix![c[0], c[1]; c[2], c[3]];
-            for i in 0..4 {
-                c[i] = *m.index((i / 2, i % 2));
+            for i in 0..Self::DIM {
+                c[i] = m[(i / 2, i % 2)];
             }
         }
         let scale = coeffs[[0, 0]].abs();
         coeffs /= scale;
-        let trans = Transform2::new(center, -psi, scale);
+        let trans = Transform2::new(center, psi, scale);
         Some(Self { coeffs, trans })
     }
 
@@ -238,7 +231,7 @@ impl Efd2 {
 
     /// Reverse the order of described curve then return a mutable reference.
     pub fn reverse(&mut self) -> &mut Self {
-        for i in (1..self.coeffs.ncols()).step_by(2) {
+        for i in (1..Self::DIM).step_by(2) {
             let mut s = self.coeffs.slice_mut(s![.., i]);
             s *= -1.;
         }

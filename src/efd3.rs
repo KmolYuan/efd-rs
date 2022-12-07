@@ -37,20 +37,13 @@ pub struct Efd3 {
 }
 
 impl Efd3 {
-    /// Create constant object from a nx4 array without boundary check.
-    ///
-    /// # Safety
-    ///
-    /// An invalid width may cause failure operation.
-    pub unsafe fn from_coeffs_unchecked(coeffs: Array2<f64>) -> Self {
-        Self { coeffs, trans: Transform3::identity() }
-    }
+    const DIM: usize = 6;
 
     /// Create object from a nx4 array with boundary check.
-    pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, Efd3Error> {
-        (coeffs.nrows() > 0 && coeffs.ncols() == 4 && coeffs[[0, 0]] == 1.)
+    pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, EfdError<{ Self::DIM }>> {
+        (coeffs.nrows() > 0 && coeffs.ncols() == Self::DIM && coeffs[[0, 0]] == 1.)
             .then(|| Self { coeffs, trans: Transform3::identity() })
-            .ok_or(Efd3Error(()))
+            .ok_or(EfdError::<{ Self::DIM }>)
     }
 
     /// Calculate EFD coefficients from an existing discrete points.
@@ -105,7 +98,7 @@ impl Efd3 {
         let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
         let zt = *t.last().unwrap();
         let phi = &t * TAU / zt;
-        let mut coeffs = Array2::zeros([harmonic, 6]);
+        let mut coeffs = Array2::zeros([harmonic, Self::DIM]);
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let n = i as f64 + 1.;
             let t = 0.5 * zt / (n * n * PI * PI);
@@ -148,8 +141,8 @@ impl Efd3 {
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let theta = na::Rotation2::new((i + 1) as f64 * theta);
             let m = na::matrix![c[0], c[1]; c[2], c[3]; c[4], c[5]] * theta;
-            for i in 0..4 {
-                c[i] = *m.index((i / 2, i % 2));
+            for i in 0..Self::DIM {
+                c[i] = m[(i / 2, i % 2)];
             }
         }
         // FIXME: The angle of semi-major axis
@@ -181,13 +174,13 @@ impl Efd3 {
             // Angle fixes
             let roll = if w > 0. { roll } else { roll + PI };
             let yaw = if o31 > 0. { yaw } else { -yaw };
-            [roll, pitch, yaw]
+            [-roll, -pitch, -yaw]
         };
         let psi = na::Rotation3::from_euler_angles(roll, pitch, yaw);
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = psi * na::matrix![c[0], c[1]; c[2], c[3]; c[4], c[5]];
-            for i in 0..4 {
-                c[i] = *m.index((i / 2, i % 2));
+            for i in 0..Self::DIM {
+                c[i] = m[(i / 2, i % 2)];
             }
         }
         let scale = coeffs[[0, 0]].abs();
@@ -251,10 +244,10 @@ impl Efd3 {
 
     /// Reverse the order of described curve then return a mutable reference.
     pub fn reverse(&mut self) -> &mut Self {
-        let mut s = self.coeffs.slice_mut(s![.., 1]);
-        s *= -1.;
-        let mut s = self.coeffs.slice_mut(s![.., 3]);
-        s *= -1.;
+        for i in (1..Self::DIM).step_by(2) {
+            let mut s = self.coeffs.slice_mut(s![.., i]);
+            s *= -1.;
+        }
         self
     }
 
