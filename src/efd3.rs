@@ -185,12 +185,12 @@ impl Efd3 {
 
     /// Get the reference of transform type.
     pub fn as_trans(&self) -> &Transform3 {
-        self
+        &self.trans
     }
 
     /// Get the mutable reference of transform type.
     pub fn as_trans_mut(&mut self) -> &mut Transform3 {
-        self
+        &mut self.trans
     }
 
     /// Get the harmonic of the coefficients.
@@ -223,10 +223,8 @@ impl Efd3 {
 
     /// Reverse the order of described curve then return a mutable reference.
     pub fn reverse(&mut self) -> &mut Self {
-        for i in (1..Self::DIM).step_by(2) {
-            let mut s = self.coeffs.slice_mut(s![.., i]);
-            s *= -1.;
-        }
+        let mut s = self.coeffs.slice_mut(s![.., 1..;2]);
+        s *= -1.;
         self
     }
 
@@ -271,19 +269,5 @@ impl Efd3 {
     /// The number of the points `n` must given.
     pub fn generate(&self, n: usize) -> Vec<[f64; 3]> {
         self.trans.transform(&self.generate_norm(n))
-    }
-}
-
-impl std::ops::Deref for Efd3 {
-    type Target = Transform3;
-
-    fn deref(&self) -> &Self::Target {
-        &self.trans
-    }
-}
-
-impl std::ops::DerefMut for Efd3 {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.trans
     }
 }

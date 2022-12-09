@@ -6,17 +6,18 @@ fn efd2d() {
     let path = closed_curve(PATH);
     let efd = Efd2::from_curve(&path).unwrap();
     // Test transformation
-    assert!((efd.trans()[0] - -1.248409055632365).abs() < f64::EPSILON);
-    assert!((efd.trans()[1] - 55.26080122817753).abs() < f64::EPSILON);
-    assert!((efd.rot() - -0.9284546917601232).abs() < f64::EPSILON);
-    assert!((efd.scale() - 48.16765830752243).abs() < f64::EPSILON);
+    let trans = efd.as_trans();
+    assert!((trans.trans()[0] - -1.248409055632365).abs() < f64::EPSILON);
+    assert!((trans.trans()[1] - 55.26080122817753).abs() < f64::EPSILON);
+    assert!((trans.rot() - -0.9284546917601232).abs() < f64::EPSILON);
+    assert!((trans.scale() - 48.16765830752243).abs() < f64::EPSILON);
     assert_eq!(efd.harmonic(), 6);
     // Test normalized
     let norm = efd.generate_norm(NORM.len());
-    assert!(curve_diff(&norm, NORM) < 1e-12);
+    assert!(curve_diff(&norm, NORM) < 1e-15);
     // Test reconstruction
     let target = efd.generate(TARGET.len());
-    assert!(curve_diff(&target, TARGET) < 1e-12);
+    assert!(curve_diff(&target, TARGET) < 1e-15);
 }
 
 #[test]
@@ -24,20 +25,21 @@ fn efd3d() {
     use crate::*;
     let efd = Efd3::from_curve(PATH3D).unwrap();
     // Test transformation
-    assert!((efd.trans()[0] - 0.7235610013167717).abs() < f64::EPSILON);
-    assert!((efd.trans()[1] - 0.07958760290516126).abs() < f64::EPSILON);
-    assert!((efd.trans()[2] - 0.4985879704597386).abs() < f64::EPSILON);
-    assert!((efd.rot()[0] - -0.000694374255030466).abs() < f64::EPSILON);
-    assert!((efd.rot()[1] - -0.09601297385642525).abs() < f64::EPSILON);
-    assert!((efd.rot()[2] - 0.014452811360283688).abs() < f64::EPSILON);
-    assert!((efd.scale() - 0.4398917506743902).abs() < f64::EPSILON);
+    let trans = efd.as_trans();
+    assert!((trans.trans()[0] - 0.7235610013167717).abs() < f64::EPSILON);
+    assert!((trans.trans()[1] - 0.07958760290516126).abs() < f64::EPSILON);
+    assert!((trans.trans()[2] - 0.4985879704597386).abs() < f64::EPSILON);
+    assert!((trans.rot()[0] - -0.000694374255030466).abs() < f64::EPSILON);
+    assert!((trans.rot()[1] - -0.09601297385642525).abs() < f64::EPSILON);
+    assert!((trans.rot()[2] - 0.014452811360283688).abs() < f64::EPSILON);
+    assert!((trans.scale() - 0.4398917506743902).abs() < f64::EPSILON);
     assert_eq!(efd.harmonic(), 5);
     // Test normalized
     let norm = efd.generate_norm(NORM3D.len());
-    assert!(curve_diff(&norm, NORM3D) < 1e-12);
+    assert!(curve_diff(&norm, NORM3D) < 1e-15);
     // Test reconstruction
     let target = efd.generate(NORM3D.len());
-    assert!(curve_diff(&target, TARGET3D) < 1e-12);
+    assert!(curve_diff(&target, TARGET3D) < 1e-15);
 }
 
 pub const PATH: &[[f64; 2]] = &[

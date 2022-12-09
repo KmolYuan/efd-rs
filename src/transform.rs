@@ -187,7 +187,7 @@ impl<T: TransTrait> Transform<T> {
     ///
     /// let a = Efd2::from_curve(path1).unwrap();
     /// let b = Efd2::from_curve(path2).unwrap();
-    /// assert!(curve_diff(&a.to(&b).transform(path1), path2) < 1e-12);
+    /// assert!(curve_diff(&a.as_trans().to(b.as_trans()).transform(path1), path2) < f64::EPSILON);
     /// ```
     pub fn to(&self, rhs: &Self) -> Self {
         self.inverse().apply(rhs)
@@ -212,11 +212,11 @@ impl<T: TransTrait> Transform<T> {
     /// # let target = TARGET;
     /// # let efd = Efd2::from_curve(closed_curve(PATH)).unwrap();
     /// # let path = efd.generate_norm(target.len());
-    /// let path1 = efd.transform(&path);
-    /// # let trans = &efd;
+    /// let path1 = efd.as_trans().transform(&path);
+    /// # let trans = efd.as_trans();
     /// let path1_inv = trans.inverse().transform(&path1);
-    /// # assert!(curve_diff(&path1, TARGET) < 1e-12);
-    /// # assert!(curve_diff(&path1_inv, &path) < 1e-12);
+    /// # assert!(curve_diff(&path1, TARGET) < 1e-15);
+    /// # assert!(curve_diff(&path1_inv, &path) < 1e-15);
     /// ```
     pub fn transform<C>(&self, curve: C) -> Vec<T::Coord>
     where

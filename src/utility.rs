@@ -48,7 +48,8 @@ where
     a.axis_iter(Axis(0))
         .zip(b.axis_iter(Axis(0)))
         .map(|(a, b)| (&a - &b).mapv(f64::abs).sum())
-        .sum()
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap()
 }
 
 /// Compute the total Fourier power and find the minimum number of harmonics
