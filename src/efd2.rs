@@ -170,7 +170,7 @@ impl Efd2 {
                 c[i] = m[(i / 2, i % 2)];
             }
         }
-        let scale = coeffs[[0, 0]].abs();
+        let scale = coeffs[[0, 0]].hypot(coeffs[[0, 2]]);
         coeffs /= scale;
         let trans = Transform2::new(center, psi, scale);
         Some(Self { coeffs, trans })

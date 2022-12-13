@@ -162,7 +162,7 @@ impl Efd3 {
             }
         }
         let (roll, pitch, yaw) = psi.euler_angles();
-        let scale = coeffs[[0, 0]].abs();
+        let scale = (pow2(coeffs[[0, 0]]) + pow2(coeffs[[0, 2]]) + pow2(coeffs[[0, 4]])).sqrt();
         coeffs /= scale;
         let trans = Transform3::new(center, [roll, pitch, yaw], scale);
         Some(Self { coeffs, trans })
