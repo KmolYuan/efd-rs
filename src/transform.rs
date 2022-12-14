@@ -1,6 +1,4 @@
 use alloc::vec::Vec;
-#[cfg(not(feature = "std"))]
-use num_traits::Float as _;
 
 /// 2D transformation type.
 pub type T2 = na::Similarity2<f64>;
