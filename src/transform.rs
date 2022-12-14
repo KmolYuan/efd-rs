@@ -189,7 +189,8 @@ impl<T: Trans> Transform<T> {
     ///
     /// let a = Efd2::from_curve(path1).unwrap();
     /// let b = Efd2::from_curve(path2).unwrap();
-    /// assert!(curve_diff(&a.as_trans().to(b.as_trans()).transform(path1), path2) < f64::EPSILON);
+    /// let trans = a.as_trans().to(b.as_trans());
+    /// assert!(curve_diff(&trans.transform(path1), path2) < efd::tests::EPS);
     /// ```
     pub fn to(&self, rhs: &Self) -> Self {
         self.inverse().apply(rhs)
@@ -201,6 +202,17 @@ impl<T: Trans> Transform<T> {
     }
 
     /// Inverse the operation of this information.
+    ///
+    /// ```
+    /// use efd::{curve_diff, Efd2};
+    /// # let path = efd::tests::PATH;
+    ///
+    /// let efd = Efd2::from_curve(path).unwrap();
+    /// let path = efd.generate(path.len());
+    /// let path_norm = efd.generate_norm(path.len());
+    /// let path = efd.as_trans().inverse().transform(path);
+    /// # assert!(curve_diff(&path, &path_norm) < efd::tests::EPS);
+    /// ```
     pub fn inverse(&self) -> Self {
         Self { inner: self.inner.inverse() }
     }
