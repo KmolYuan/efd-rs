@@ -35,7 +35,7 @@ pub trait Trans {
     fn apply(&self, rhs: &Self) -> Self;
 }
 
-impl Trans for na::Similarity2<f64> {
+impl Trans for T2 {
     const DIM: usize = 2;
     type Coord = [f64; 2];
     type Rot = f64;
@@ -77,7 +77,7 @@ impl Trans for na::Similarity2<f64> {
     }
 }
 
-impl Trans for na::Similarity3<f64> {
+impl Trans for T3 {
     const DIM: usize = 3;
     type Coord = [f64; 3];
     type Rot = [f64; 3];
