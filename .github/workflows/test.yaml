@@ -10,5 +10,6 @@ jobs:
           toolchain: stable
       - run: |
           cargo clippy --all-features -- -D warnings
+          cargo clippy --no-default-features -- -D warnings
           cargo test --all-features
           cargo test --no-default-features
