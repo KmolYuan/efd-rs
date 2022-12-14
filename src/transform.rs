@@ -242,4 +242,15 @@ impl<T: Trans> Transform<T> {
             .map(|c| self.inner.transform(c))
             .collect()
     }
+
+    /// Transform a contour in placed with this information.
+    pub fn transform_inplace<C>(&self, mut curve: C)
+    where
+        C: AsMut<[T::Coord]>,
+    {
+        curve
+            .as_mut()
+            .iter_mut()
+            .for_each(|c| *c = self.inner.transform(c));
+    }
 }
