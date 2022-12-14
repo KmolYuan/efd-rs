@@ -1,8 +1,9 @@
 //! This crate implements 2D/3D Elliptical Fourier Descriptor (EFD) and its
 //! related functions.
 //!
-//! This crate support both `Vec<[f64; 2]>` and `&[[f64; 2]]` as input type via
-//! `AsRef<[[f64; 2]]>`, and the first coordinate must be close to the last.
+//! This crate support both `Vec<[f64; D]>` and `&[[f64; D]]` as input type via
+//! `Cow<[[f64; D]]>` ([`CowCurve`]), and the first coordinate must be close to
+//! the last with [`closed_curve()`].
 //!
 //! ```
 //! let curve = vec![
@@ -30,10 +31,9 @@ extern crate alloc;
 extern crate core as std; // for `ndarray::s!` macro
 extern crate nalgebra as na;
 
-pub use crate::{efd2::*, efd3::*, error::*, transform::*, utility::*};
+pub use crate::{efd2::*, error::*, transform::*, utility::*};
 
 mod efd2;
-mod efd3;
 mod error;
 pub mod tests;
 mod transform;

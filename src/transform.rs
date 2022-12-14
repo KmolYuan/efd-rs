@@ -3,20 +3,20 @@ use alloc::vec::Vec;
 use num_traits::Float as _;
 
 /// 2D transformation type.
-pub type Transform2 = Transform<na::Similarity2<f64>>;
+pub type T2 = na::Similarity2<f64>;
 /// 3D transformation type.
-pub type Transform3 = Transform<na::Similarity3<f64>>;
+pub type T3 = na::Similarity3<f64>;
 
 /// A trait used in inner type of [`Transform`].
-pub trait TransTrait {
+pub trait Trans {
     /// Dimension hint.
     const DIM: usize;
     /// Coordinate/Translation type.
-    type Coord;
+    type Coord: Clone + 'static;
     /// Rotation angle type.
-    type Rot;
+    type Rot: Clone + 'static;
     /// Scaling factor type.
-    type Scale;
+    type Scale: Clone + 'static;
     /// Default identity state.
     fn identity() -> Self;
     /// Creation from three properties.
@@ -35,7 +35,7 @@ pub trait TransTrait {
     fn apply(&self, rhs: &Self) -> Self;
 }
 
-impl TransTrait for na::Similarity2<f64> {
+impl Trans for na::Similarity2<f64> {
     const DIM: usize = 2;
     type Coord = [f64; 2];
     type Rot = f64;
@@ -77,7 +77,7 @@ impl TransTrait for na::Similarity2<f64> {
     }
 }
 
-impl TransTrait for na::Similarity3<f64> {
+impl Trans for na::Similarity3<f64> {
     const DIM: usize = 3;
     type Coord = [f64; 3];
     type Rot = [f64; 3];
@@ -125,11 +125,11 @@ impl TransTrait for na::Similarity3<f64> {
 ///
 /// This type record the information of raw coefficients.
 #[derive(Clone)]
-pub struct Transform<T: TransTrait> {
+pub struct Transform<T: Trans> {
     inner: T,
 }
 
-impl<T: TransTrait> core::fmt::Debug for Transform<T>
+impl<T: Trans> core::fmt::Debug for Transform<T>
 where
     T::Coord: core::fmt::Debug,
     T::Rot: core::fmt::Debug,
@@ -144,13 +144,13 @@ where
     }
 }
 
-impl<T: TransTrait> Default for Transform<T> {
+impl<T: Trans> Default for Transform<T> {
     fn default() -> Self {
         Self::identity()
     }
 }
 
-impl<T: TransTrait> Transform<T> {
+impl<T: Trans> Transform<T> {
     /// Create without transform.
     pub fn identity() -> Self {
         Self { inner: T::identity() }
@@ -215,8 +215,8 @@ impl<T: TransTrait> Transform<T> {
     /// let path1 = efd.as_trans().transform(&path);
     /// # let trans = efd.as_trans();
     /// let path1_inv = trans.inverse().transform(&path1);
-    /// # assert!(curve_diff(&path1, TARGET) < 1e-15);
-    /// # assert!(curve_diff(&path1_inv, &path) < 1e-15);
+    /// # assert!(curve_diff(&path1, TARGET) < efd::tests::EPS);
+    /// # assert!(curve_diff(&path1_inv, &path) < efd::tests::EPS);
     /// ```
     pub fn transform<C>(&self, curve: C) -> Vec<T::Coord>
     where

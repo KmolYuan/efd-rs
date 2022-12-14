@@ -1,13 +1,31 @@
+use crate::{EfdDim, Trans};
+use alloc::format;
+use core::marker::PhantomData;
+
 /// An error type for EFD coefficients.
 /// Raised when the input array width is not correct to its dimension.
-#[derive(Debug)]
-pub struct EfdError<const DIM: usize>;
+pub struct EfdError<D: EfdDim> {
+    _marker: PhantomData<D>,
+}
 
-impl<const DIM: usize> core::fmt::Display for EfdError<DIM> {
+impl<D: EfdDim> EfdError<D> {
+    pub(crate) fn new() -> Self {
+        Self { _marker: PhantomData }
+    }
+}
+
+impl<D: EfdDim> core::fmt::Debug for EfdError<D> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "input array width must be {DIM}")
+        f.debug_struct(&format!("EfdError{}", <D::Trans as Trans>::DIM))
+            .finish()
+    }
+}
+
+impl<D: EfdDim> core::fmt::Display for EfdError<D> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "input array width must be {}", D::Trans::DIM * 2)
     }
 }
 
 #[cfg(feature = "std")]
-impl<const DIM: usize> std::error::Error for EfdError<DIM> {}
+impl<D: EfdDim> std::error::Error for EfdError<D> {}
