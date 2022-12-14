@@ -184,13 +184,13 @@ impl<T: Trans> Transform<T> {
     ///
     /// ```
     /// use efd::{curve_diff, Efd2};
-    /// # let path1 = efd::tests::PATH;
-    /// # let path2 = efd::tests::PATH;
+    /// # let path1 = efd::tests::PATH.to_vec();
+    /// # let path2 = efd::tests::PATH.to_vec();
     ///
-    /// let a = Efd2::from_curve(path1).unwrap();
-    /// let b = Efd2::from_curve(path2).unwrap();
+    /// let a = Efd2::from_curve(&path1).unwrap();
+    /// let b = Efd2::from_curve(&path2).unwrap();
     /// let trans = a.as_trans().to(b.as_trans());
-    /// assert!(curve_diff(&trans.transform(path1), path2) < efd::tests::EPS);
+    /// assert!(dbg!(curve_diff(&trans.transform(path1), &path2)) < efd::tests::EPS);
     /// ```
     pub fn to(&self, rhs: &Self) -> Self {
         self.inverse().apply(rhs)
