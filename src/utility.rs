@@ -4,6 +4,8 @@ use ndarray::{arr2, Array, Axis, CowArray, Dimension, FixedInitializer};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
+/// Owned curve type.
+pub type Curve<D> = Vec<<D as Trans>::Coord>;
 /// Copy-on-write curve type.
 pub type CowCurve<'a, D> = alloc::borrow::Cow<'a, [<D as Trans>::Coord]>;
 

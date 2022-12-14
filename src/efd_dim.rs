@@ -1,5 +1,5 @@
 use crate::*;
-use alloc::{vec, vec::Vec};
+use alloc::vec;
 use core::f64::consts::{PI, TAU};
 use ndarray::{array, s, Array1, Array2, ArrayView1, Axis};
 #[cfg(not(feature = "std"))]
@@ -25,7 +25,7 @@ pub trait EfdDim {
         C: Into<CowCurve<'a, Self::Trans>>;
 
     /// Generate coordinates.
-    fn generate_norm<'a, I>(iter: I) -> Vec<<Self::Trans as Trans>::Coord>
+    fn generate_norm<'a, I>(iter: I) -> Curve<Self::Trans>
     where
         I: Iterator<Item = CoeffsTerm<'a>>;
 }
@@ -112,7 +112,7 @@ impl EfdDim for D2 {
         (coeffs, trans)
     }
 
-    fn generate_norm<'a, I>(iter: I) -> Vec<<Self::Trans as Trans>::Coord>
+    fn generate_norm<'a, I>(iter: I) -> Curve<Self::Trans>
     where
         I: Iterator<Item = CoeffsTerm<'a>>,
     {
@@ -216,7 +216,7 @@ impl EfdDim for D3 {
         (coeffs, trans)
     }
 
-    fn generate_norm<'a, I>(iter: I) -> Vec<<Self::Trans as Trans>::Coord>
+    fn generate_norm<'a, I>(iter: I) -> Curve<Self::Trans>
     where
         I: Iterator<Item = CoeffsTerm<'a>>,
     {

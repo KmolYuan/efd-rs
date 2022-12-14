@@ -1,5 +1,4 @@
 use crate::*;
-use alloc::vec::Vec;
 use core::{f64::consts::TAU, marker::PhantomData};
 use ndarray::{s, Array1, Array2, Axis};
 #[cfg(not(feature = "std"))]
@@ -204,7 +203,7 @@ impl<D: EfdDim> Efd<D> {
     /// Generate the normalized curve **without** transformation.
     ///
     /// The number of the points `n` must larger than 3.
-    pub fn generate_norm(&self, n: usize) -> Vec<<D::Trans as Trans>::Coord> {
+    pub fn generate_norm(&self, n: usize) -> Curve<D::Trans> {
         assert!(n > 1, "n ({n}) must larger than 1");
         let mut t = Array1::from_elem(n, 1. / (n - 1) as f64);
         t[0] = 0.;
@@ -219,7 +218,7 @@ impl<D: EfdDim> Efd<D> {
     /// Generate the described curve from the coefficients.
     ///
     /// The number of the points `n` must given.
-    pub fn generate(&self, n: usize) -> Vec<<D::Trans as Trans>::Coord> {
+    pub fn generate(&self, n: usize) -> Curve<D::Trans> {
         self.trans.transform(&self.generate_norm(n))
     }
 }
