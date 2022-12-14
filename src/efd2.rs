@@ -109,7 +109,7 @@ impl EfdDim for [f64; 2] {
                 c[i] = m[(i / 2, i % 2)];
             }
         }
-        let scale = coeffs[[0, 0]].abs();
+        let scale = coeffs[[0, 0]].hypot(coeffs[[0, 2]]);
         coeffs /= scale;
         let trans = Transform::new(center, psi, scale);
         (coeffs, trans)
@@ -213,7 +213,7 @@ impl EfdDim for [f64; 3] {
             }
         }
         let (roll, pitch, yaw) = psi.euler_angles();
-        let scale = coeffs[[0, 0]].abs();
+        let scale = (pow2(coeffs[[0, 0]]) + pow2(coeffs[[0, 2]]) + pow2(coeffs[[0, 4]])).sqrt();
         coeffs /= scale;
         let trans = Transform::new(center, [roll, pitch, yaw], scale);
         (coeffs, trans)
