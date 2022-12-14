@@ -75,7 +75,7 @@ impl Trans for T2 {
     }
 
     fn apply(&self, rhs: &Self) -> Self {
-        self * rhs
+        rhs * self
     }
 }
 
@@ -119,7 +119,7 @@ impl Trans for T3 {
     }
 
     fn apply(&self, rhs: &Self) -> Self {
-        self * rhs
+        rhs * self
     }
 }
 
