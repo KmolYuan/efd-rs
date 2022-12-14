@@ -1,9 +1,13 @@
 use alloc::vec::Vec;
 
-/// 2D transformation type.
+/// 2D transformation inner type.
 pub type T2 = na::Similarity2<f64>;
-/// 3D transformation type.
+/// 3D transformation inner type.
 pub type T3 = na::Similarity3<f64>;
+/// 2D transformation type.
+pub type Transform2 = Transform<T2>;
+/// 3D transformation type.
+pub type Transform3 = Transform<T3>;
 
 /// A trait used in inner type of [`Transform`].
 pub trait Trans {
