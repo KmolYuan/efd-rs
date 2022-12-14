@@ -34,7 +34,7 @@ pub struct Efd<D: EfdDim> {
 impl<D: EfdDim> Efd<D> {
     /// Create object from a nx4 array with boundary check.
     pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, EfdError<D>> {
-        (coeffs.nrows() > 0 && coeffs.ncols() == D::Trans::DIM * 2 && coeffs[[0, 0]] == 1.)
+        (coeffs.nrows() > 0 && coeffs.ncols() == D::Trans::DIM * 2)
             .then(|| Self {
                 coeffs,
                 trans: Transform::identity(),
