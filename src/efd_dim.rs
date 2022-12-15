@@ -201,7 +201,7 @@ impl EfdDim for D3 {
             let g_axis = na::Vector3::x();
             let angle = uv.dot(&g_axis);
             let axis = na::Unit::new_normalize(uv.cross(&g_axis));
-            na::Rotation3::from_axis_angle(&axis, angle).inverse()
+            na::Rotation3::from_axis_angle(&axis, -angle)
         };
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = psi * na::matrix![c[0], c[1]; c[2], c[3]; c[4], c[5]];
