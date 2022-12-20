@@ -59,10 +59,12 @@ impl EfdDim for D2 {
             let sin_phi_n = (phi_n_back.mapv(f64::sin) - phi_n_front.mapv(f64::sin)) / &dt;
             let s_cos = t * (&dxy * cos_phi_n.insert_axis(Axis(1)));
             let s_sin = t * (&dxy * sin_phi_n.insert_axis(Axis(1)));
-            c[0] = s_cos.slice(s![.., 1]).sum();
-            c[1] = s_sin.slice(s![.., 1]).sum();
-            c[2] = s_cos.slice(s![.., 0]).sum();
-            c[3] = s_sin.slice(s![.., 0]).sum();
+            for i in 0..DIM {
+                let j = (DIM - 1 - i) / 2;
+                c[i] = if i % 2 == 0 { &s_cos } else { &s_sin }
+                    .slice(s![.., j])
+                    .sum();
+            }
         }
         let center = {
             let tdt = &t.slice(s![1..]) / &dt;
@@ -157,12 +159,12 @@ impl EfdDim for D3 {
             let sin_phi_n = (phi_n_back.mapv(f64::sin) - phi_n_front.mapv(f64::sin)) / &dt;
             let s_cos = t * (&dxyz * cos_phi_n.insert_axis(Axis(1)));
             let s_sin = t * (&dxyz * sin_phi_n.insert_axis(Axis(1)));
-            c[0] = s_cos.slice(s![.., 2]).sum();
-            c[1] = s_sin.slice(s![.., 2]).sum();
-            c[2] = s_cos.slice(s![.., 1]).sum();
-            c[3] = s_sin.slice(s![.., 1]).sum();
-            c[4] = s_cos.slice(s![.., 0]).sum();
-            c[5] = s_sin.slice(s![.., 0]).sum();
+            for i in 0..DIM {
+                let j = (DIM - 1 - i) / 2;
+                c[i] = if i % 2 == 0 { &s_cos } else { &s_sin }
+                    .slice(s![.., j])
+                    .sum();
+            }
         }
         let center = {
             let tdt = &t.slice(s![1..]) / &dt;
