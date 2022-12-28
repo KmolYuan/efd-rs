@@ -60,7 +60,7 @@ impl EfdDim for D2 {
             let s_cos = t * (&dxy * cos_phi_n.insert_axis(Axis(1)));
             let s_sin = t * (&dxy * sin_phi_n.insert_axis(Axis(1)));
             for i in 0..DIM {
-                let j = (DIM - 1 - i) / 2;
+                let j = i / 2;
                 c[i] = if i % 2 == 0 { &s_cos } else { &s_sin }
                     .slice(s![.., j])
                     .sum();
@@ -76,7 +76,7 @@ impl EfdDim for D2 {
             let [x, y] = curve.first().unwrap();
             [x + a0, y + c0]
         };
-        // Shift angle
+        // Angle of starting point
         let theta = {
             let c = &coeffs;
             let dy = 2. * (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]]);
@@ -90,20 +90,20 @@ impl EfdDim for D2 {
                 c[i] = m[(i / 2, i % 2)];
             }
         }
-        // The angle of semi-major axis
+        // Angle of semi-major axis
         let psi = {
             let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
             if coeffs[[0, 2]] < 0. {
                 let mut s = coeffs.slice_mut(s![..;2, ..]);
                 s *= -1.;
-                -psi + PI
+                psi - PI
             } else {
-                -psi
+                psi
             }
         };
-        let rot = na::Rotation2::new(psi);
+        let psi_inv = na::Rotation2::new(-psi);
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
-            let m = rot * na::matrix![c[0], c[1]; c[2], c[3]];
+            let m = psi_inv * na::matrix![c[0], c[1]; c[2], c[3]];
             for i in 0..DIM {
                 c[i] = m[(i / 2, i % 2)];
             }
@@ -119,8 +119,8 @@ impl EfdDim for D2 {
         I: Iterator<Item = CoeffsTerm<'a>>,
     {
         iter.map(|(c, cos, sin)| {
-            let x = &cos * c[2] + &sin * c[3];
-            let y = &cos * c[0] + &sin * c[1];
+            let x = &cos * c[0] + &sin * c[1];
+            let y = &cos * c[2] + &sin * c[3];
             ndarray::stack![Axis(1), x, y]
         })
         .reduce(|a, b| a + b)
@@ -160,9 +160,8 @@ impl EfdDim for D3 {
             let s_cos = t * (&dxyz * cos_phi_n.insert_axis(Axis(1)));
             let s_sin = t * (&dxyz * sin_phi_n.insert_axis(Axis(1)));
             for i in 0..DIM {
-                let j = (DIM - 1 - i) / 2;
                 c[i] = if i % 2 == 0 { &s_cos } else { &s_sin }
-                    .slice(s![.., j])
+                    .slice(s![.., i / 2])
                     .sum();
             }
         }
@@ -178,7 +177,7 @@ impl EfdDim for D3 {
             let [x, y, z] = curve.first().unwrap();
             [x + a0, y + c0, z + e0]
         };
-        // Shift angle
+        // Angle of starting point
         let theta = {
             let c = &coeffs;
             let dy = 2. * (c[[0, 0]] * c[[0, 1]] + c[[0, 2]] * c[[0, 3]] + c[[0, 4]] * c[[0, 5]]);
@@ -195,18 +194,16 @@ impl EfdDim for D3 {
                 c[i] = m[(i / 2, i % 2)];
             }
         }
-        // The angle of semi-major axis
+        // Angle of semi-major axis
         let psi = {
             let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], coeffs[[0, 4]]);
             let v = na::Vector3::new(coeffs[[0, 1]], coeffs[[0, 3]], coeffs[[0, 5]]);
             let uv = u.cross(&v);
-            let g_axis = na::Vector3::x();
-            let angle = uv.dot(&g_axis);
-            let axis = na::Unit::new_normalize(uv.cross(&g_axis));
-            na::Rotation3::from_axis_angle(&axis, -angle)
+            na::Rotation3::from_basis_unchecked(&[u.normalize(), v.normalize(), uv.normalize()])
         };
+        let psi_inv = psi.inverse();
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
-            let m = psi * na::matrix![c[0], c[1]; c[2], c[3]; c[4], c[5]];
+            let m = psi_inv * na::matrix![c[0], c[1]; c[2], c[3]; c[4], c[5]];
             for i in 0..DIM {
                 c[i] = m[(i / 2, i % 2)];
             }
@@ -223,9 +220,9 @@ impl EfdDim for D3 {
         I: Iterator<Item = CoeffsTerm<'a>>,
     {
         iter.map(|(c, cos, sin)| {
-            let x = &cos * c[4] + &sin * c[5];
+            let x = &cos * c[0] + &sin * c[1];
             let y = &cos * c[2] + &sin * c[3];
-            let z = &cos * c[0] + &sin * c[1];
+            let z = &cos * c[4] + &sin * c[5];
             ndarray::stack![Axis(1), x, y, z]
         })
         .reduce(|a, b| a + b)
