@@ -90,17 +90,13 @@ impl EfdDim for D2 {
                 c[i] = m[(i / 2, i % 2)];
             }
         }
+        // Normalize coefficients sign
+        if harmonic > 1 && coeffs[[0, 0]] * coeffs[[1, 0]] < 0. {
+            let mut s = coeffs.slice_mut(s![..;2, ..]);
+            s *= -1.;
+        }
         // Angle of semi-major axis
-        let psi = {
-            let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
-            if coeffs[[0, 2]] < 0. {
-                let mut s = coeffs.slice_mut(s![..;2, ..]);
-                s *= -1.;
-                psi - PI
-            } else {
-                psi
-            }
-        };
+        let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
         let psi_inv = na::Rotation2::new(-psi);
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = psi_inv * na::matrix![c[0], c[1]; c[2], c[3]];
@@ -193,6 +189,11 @@ impl EfdDim for D3 {
             for i in 0..DIM {
                 c[i] = m[(i / 2, i % 2)];
             }
+        }
+        // Normalize coefficients sign
+        if harmonic > 1 && coeffs[[0, 0]] * coeffs[[1, 0]] < 0. {
+            let mut s = coeffs.slice_mut(s![..;2, ..]);
+            s *= -1.;
         }
         // Angle of semi-major axis
         let psi = {
