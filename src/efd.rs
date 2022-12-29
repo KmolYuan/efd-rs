@@ -212,9 +212,9 @@ impl<D: EfdDim> Efd<D> {
             .axis_iter(Axis(0))
             .enumerate()
             .map(|(i, c)| {
-                let angle = &t * (i + 1) as f64;
-                let cos = angle.mapv(f64::cos);
-                let sin = angle.mapv(f64::sin);
+                let lambda = &t * (i + 1) as f64;
+                let cos = lambda.mapv(f64::cos);
+                let sin = lambda.mapv(f64::sin);
                 let mut path = Array2::zeros([t.len(), D::Trans::DIM]);
                 for (i, mut s) in path.axis_iter_mut(Axis(1)).enumerate() {
                     s.assign(&(&cos * c[i * 2] + &sin * c[i * 2 + 1]));
