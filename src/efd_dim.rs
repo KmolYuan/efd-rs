@@ -182,10 +182,10 @@ impl EfdDim for D3 {
         }
         // Angle of semi-major axis
         let psi = {
-            let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], coeffs[[0, 4]]);
-            let v = na::Vector3::new(coeffs[[0, 1]], coeffs[[0, 3]], coeffs[[0, 5]]);
+            let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], coeffs[[0, 4]]).normalize();
+            let v = na::Vector3::new(coeffs[[0, 1]], coeffs[[0, 3]], coeffs[[0, 5]]).normalize();
             let uv = u.cross(&v);
-            na::Rotation3::from_basis_unchecked(&[u.normalize(), v.normalize(), uv.normalize()])
+            na::Rotation3::from_basis_unchecked(&[u, v, uv])
         };
         let psi_inv = psi.inverse();
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
