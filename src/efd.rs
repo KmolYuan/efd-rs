@@ -208,11 +208,24 @@ impl<D: EfdDim> Efd<D> {
         let mut t = Array1::from_elem(n, 1. / (n - 1) as f64);
         t[0] = 0.;
         let t = cumsum(t, None) * TAU;
-        let iter = self.coeffs.axis_iter(Axis(0)).enumerate().map(|(i, c)| {
-            let angle = &t * (i + 1) as f64;
-            (c, angle.mapv(f64::cos), angle.mapv(f64::sin))
-        });
-        D::generate_norm(iter)
+        self.coeffs
+            .axis_iter(Axis(0))
+            .enumerate()
+            .map(|(i, c)| {
+                let angle = &t * (i + 1) as f64;
+                let cos = angle.mapv(f64::cos);
+                let sin = angle.mapv(f64::sin);
+                let mut path = Array2::zeros([t.len(), D::Trans::DIM]);
+                for (i, mut s) in path.axis_iter_mut(Axis(1)).enumerate() {
+                    s.assign(&(&cos * c[i * 2] + &sin * c[i * 2 + 1]));
+                }
+                path
+            })
+            .reduce(|a, b| a + b)
+            .unwrap()
+            .axis_iter(Axis(0))
+            .map(D::to_coord)
+            .collect()
     }
 
     /// Generate the described curve from the coefficients.

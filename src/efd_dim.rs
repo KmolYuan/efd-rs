@@ -1,7 +1,7 @@
 use crate::*;
 use alloc::vec;
 use core::f64::consts::{PI, TAU};
-use ndarray::{array, s, Array1, Array2, ArrayView1, Axis};
+use ndarray::{array, s, Array2, ArrayView1, Axis};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
@@ -9,7 +9,6 @@ use num_traits::Float as _;
 pub type D2 = [f64; 2];
 /// 3D EFD dimension type.
 pub type D3 = [f64; 3];
-type CoeffsTerm<'a> = (ArrayView1<'a, f64>, Array1<f64>, Array1<f64>);
 
 /// Trait for EFD dimension.
 pub trait EfdDim {
@@ -24,10 +23,8 @@ pub trait EfdDim {
     where
         C: Into<CowCurve<'a, Self::Trans>>;
 
-    /// Generate coordinates.
-    fn generate_norm<'a, I>(iter: I) -> Curve<Self::Trans>
-    where
-        I: Iterator<Item = CoeffsTerm<'a>>;
+    /// Transform array slice to coordinate type.
+    fn to_coord(a: ArrayView1<f64>) -> <Self::Trans as Trans>::Coord;
 }
 
 impl EfdDim for D2 {
@@ -110,20 +107,8 @@ impl EfdDim for D2 {
         (coeffs, trans)
     }
 
-    fn generate_norm<'a, I>(iter: I) -> Curve<Self::Trans>
-    where
-        I: Iterator<Item = CoeffsTerm<'a>>,
-    {
-        iter.map(|(c, cos, sin)| {
-            let x = &cos * c[0] + &sin * c[1];
-            let y = &cos * c[2] + &sin * c[3];
-            ndarray::stack![Axis(1), x, y]
-        })
-        .reduce(|a, b| a + b)
-        .unwrap()
-        .axis_iter(Axis(0))
-        .map(|c| [c[0], c[1]])
-        .collect()
+    fn to_coord(a: ArrayView1<f64>) -> <Self::Trans as Trans>::Coord {
+        [a[0], a[1]]
     }
 }
 
@@ -216,20 +201,7 @@ impl EfdDim for D3 {
         (coeffs, trans)
     }
 
-    fn generate_norm<'a, I>(iter: I) -> Curve<Self::Trans>
-    where
-        I: Iterator<Item = CoeffsTerm<'a>>,
-    {
-        iter.map(|(c, cos, sin)| {
-            let x = &cos * c[0] + &sin * c[1];
-            let y = &cos * c[2] + &sin * c[3];
-            let z = &cos * c[4] + &sin * c[5];
-            ndarray::stack![Axis(1), x, y, z]
-        })
-        .reduce(|a, b| a + b)
-        .unwrap()
-        .axis_iter(Axis(0))
-        .map(|c| [c[0], c[1], c[2]])
-        .collect()
+    fn to_coord(a: ArrayView1<f64>) -> <Self::Trans as Trans>::Coord {
+        [a[0], a[1], a[2]]
     }
 }

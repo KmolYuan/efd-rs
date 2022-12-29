@@ -6,6 +6,7 @@ pub const EPS: f64 = 2e-14;
 #[test]
 fn efd2d() {
     use crate::*;
+    use alloc::vec::Vec;
     let efd = Efd2::from_curve(closed_curve(PATH)).unwrap();
     // Test starting point
     let path = PATH
@@ -35,6 +36,7 @@ fn efd2d() {
 #[test]
 fn efd3d() {
     use crate::*;
+    use alloc::vec::Vec;
     let efd = Efd3::from_curve(closed_curve(PATH3D)).unwrap();
     // Test starting point
     let path = PATH3D
