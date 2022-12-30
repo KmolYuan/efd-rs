@@ -81,10 +81,10 @@ impl EfdDim for D2 {
             dy.atan2(dx) * 0.5
         };
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
-            let theta = na::Rotation2::new((i + 1) as f64 * theta);
-            let m = na::matrix![c[0], c[1]; c[2], c[3]] * theta;
+            let theta = na::Rotation2::new((i + 1) as f64 * -theta);
+            let m = theta * na::matrix![c[0], c[2]; c[1], c[3]];
             for i in 0..DIM {
-                c[i] = m[(i / 2, i % 2)];
+                c[i] = m[(i % 2, i / 2)];
             }
         }
         // Normalize coefficients sign
@@ -169,10 +169,10 @@ impl EfdDim for D3 {
             dy.atan2(dx) * 0.5
         };
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
-            let theta = na::Rotation2::new((i + 1) as f64 * theta);
-            let m = na::matrix![c[0], c[1]; c[2], c[3]; c[4], c[5]] * theta;
+            let theta = na::Rotation2::new((i + 1) as f64 * -theta);
+            let m = theta * na::matrix![c[0], c[2], c[4]; c[1], c[3], c[5]];
             for i in 0..DIM {
-                c[i] = m[(i / 2, i % 2)];
+                c[i] = m[(i % 2, i / 2)];
             }
         }
         // Normalize coefficients sign
@@ -194,10 +194,9 @@ impl EfdDim for D3 {
                 c[i] = m[(i / 2, i % 2)];
             }
         }
-        let (roll, pitch, yaw) = psi.euler_angles();
         let scale = (pow2(coeffs[[0, 0]]) + pow2(coeffs[[0, 2]]) + pow2(coeffs[[0, 4]])).sqrt();
         coeffs /= scale;
-        let trans = Transform::new(center, [roll, pitch, yaw], scale);
+        let trans = Transform::new(center, psi.into(), scale);
         (coeffs, trans)
     }
 

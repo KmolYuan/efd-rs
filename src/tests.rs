@@ -53,9 +53,10 @@ fn efd3d() {
     assert!((trans.trans()[0] - 0.7239345388499508).abs() < f64::EPSILON);
     assert!((trans.trans()[1] - 0.09100107896533066).abs() < f64::EPSILON);
     assert!((trans.trans()[2] - 0.49979194975846675).abs() < f64::EPSILON);
-    assert!((trans.rot()[0] - 0.49727635617673194).abs() < f64::EPSILON);
-    assert!((trans.rot()[1] - -0.8703719950543978).abs() < f64::EPSILON);
-    assert!((trans.rot()[2] - 2.65163045215371).abs() < f64::EPSILON);
+    assert!((trans.rot()[0] - 0.45053605532930807).abs() < f64::EPSILON);
+    assert!((trans.rot()[1] - 0.117379763019881).abs() < f64::EPSILON);
+    assert!((trans.rot()[2] - 0.8778257767051408).abs() < f64::EPSILON);
+    assert!((trans.rot()[3] - 0.11252181936726507).abs() < f64::EPSILON);
     assert!((trans.scale() - 0.5629099155595344).abs() < f64::EPSILON);
     assert_eq!(efd.harmonic(), 5);
     // Test normalized

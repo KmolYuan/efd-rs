@@ -82,17 +82,15 @@ impl Trans for T2 {
 impl Trans for T3 {
     const DIM: usize = 3;
     type Coord = [f64; 3];
-    type Rot = [f64; 3];
+    type Rot = na::UnitQuaternion<f64>;
     type Scale = f64;
 
     fn identity() -> Self {
         Self::identity()
     }
 
-    fn new([x, y, z]: Self::Coord, [a, b, c]: Self::Rot, scale: Self::Scale) -> Self {
-        let trans = na::Vector3::new(x, y, z);
-        let rot = na::UnitQuaternion::from_euler_angles(a, b, c).scaled_axis();
-        Self::new(trans, rot, scale)
+    fn new([x, y, z]: Self::Coord, rot: Self::Rot, scale: Self::Scale) -> Self {
+        Self::from_parts(na::Translation3::new(x, y, z), rot, scale)
     }
 
     fn transform(&self, p: &Self::Coord) -> Self::Coord {
@@ -106,8 +104,7 @@ impl Trans for T3 {
     }
 
     fn rot(&self) -> Self::Rot {
-        let (r, p, y) = self.isometry.rotation.euler_angles();
-        [r, p, y]
+        self.isometry.rotation
     }
 
     fn scale(&self) -> Self::Scale {
