@@ -40,7 +40,7 @@ pub trait Trans {
 impl Trans for T2 {
     const DIM: usize = 2;
     type Coord = [f64; 2];
-    type Rot = f64;
+    type Rot = na::UnitComplex<f64>;
     type Scale = f64;
 
     fn identity() -> Self {
@@ -48,8 +48,8 @@ impl Trans for T2 {
     }
 
     fn new(trans: Self::Coord, rot: Self::Rot, scale: Self::Scale) -> Self {
-        let trans = na::Vector2::new(trans[0], trans[1]);
-        Self::new(trans, rot, scale)
+        let trans = na::Translation2::new(trans[0], trans[1]);
+        Self::from_parts(trans, rot, scale)
     }
 
     fn transform(&self, p: &Self::Coord) -> Self::Coord {
@@ -63,7 +63,7 @@ impl Trans for T2 {
     }
 
     fn rot(&self) -> Self::Rot {
-        self.isometry.rotation.angle()
+        self.isometry.rotation
     }
 
     fn scale(&self) -> Self::Scale {

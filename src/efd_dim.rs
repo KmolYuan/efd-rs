@@ -93,8 +93,12 @@ impl EfdDim for D2 {
             s *= -1.;
         }
         // Angle of semi-major axis
-        let psi = coeffs[[0, 2]].atan2(coeffs[[0, 0]]);
-        let psi_inv = na::Rotation2::new(-psi);
+        let psi = {
+            let u = na::Vector2::new(coeffs[[0, 0]], coeffs[[0, 2]]).normalize();
+            let v = na::Vector2::new(coeffs[[0, 1]], coeffs[[0, 3]]).normalize();
+            na::Rotation2::from_basis_unchecked(&[u, v])
+        };
+        let psi_inv = psi.inverse();
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = psi_inv * na::matrix![c[0], c[1]; c[2], c[3]];
             for i in 0..DIM {
@@ -103,7 +107,7 @@ impl EfdDim for D2 {
         }
         let scale = coeffs[[0, 0]].hypot(coeffs[[0, 2]]);
         coeffs /= scale;
-        let trans = Transform::new(center, psi, scale);
+        let trans = Transform::new(center, psi.into(), scale);
         (coeffs, trans)
     }
 
