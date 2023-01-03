@@ -74,7 +74,7 @@ impl<D: EfdDim> Efd<D> {
             .enumerate()
             .find(|(_, power)| *power / total_power >= threshold)
             .map(|(i, _)| i + 1)
-            .unwrap();
+            .unwrap_or(harmonic);
         Some(harmonic)
     }
 
