@@ -45,6 +45,9 @@ impl<D: EfdDim> Efd<D> {
     /// Apply Nyquist Frequency on Fourier power analysis with a custom
     /// threshold value (default to 99.99%).
     ///
+    /// This method returns the minimum harmonic number to keep the shape
+    /// features.
+    ///
     /// The threshold must in [0, 1). This function returns `None` if the curve
     /// length is less than 1.
     ///
@@ -106,14 +109,17 @@ impl<D: EfdDim> Efd<D> {
         Self::from_curve_harmonic(curve, harmonic)
     }
 
-    /// Calculate EFD coefficients from an existing discrete points.
+    /// Calculate EFD coefficients from a series of existing discrete points.
     ///
     /// **The curve must be closed. (first == last)**
     ///
-    /// Return none if harmonic is zero or the curve length is less than 1.
+    /// Return none if harmonic number is zero or the curve is less than
+    /// two points.
     ///
     /// If the harmonic number is not given, it will be calculated with
     /// [`Self::gate()`] function.
+    ///
+    /// See also [`closed_curve`].
     pub fn from_curve_harmonic<'a, C, H>(curve: C, harmonic: H) -> Option<Self>
     where
         C: Into<CowCurve<'a, D::Trans>>,
@@ -131,12 +137,12 @@ impl<D: EfdDim> Efd<D> {
         Some(Self { coeffs, trans, _dim: PhantomData })
     }
 
-    /// Builder method for adding transform type.
+    /// A builder method for changing transform type.
     pub fn with_trans(self, trans: Transform<D::Trans>) -> Self {
         Self { trans, ..self }
     }
 
-    /// Consume self and return a raw array.
+    /// Consume self and return a raw array of the coefficients.
     pub fn into_inner(self) -> Array2<f64> {
         self.coeffs
     }
@@ -156,27 +162,43 @@ impl<D: EfdDim> Efd<D> {
         &mut self.trans
     }
 
-    /// Get the harmonic of the coefficients.
+    /// Get the harmonic number of the coefficients.
     pub fn harmonic(&self) -> usize {
         self.coeffs.nrows()
     }
 
     /// Square error.
+    ///
+    /// # Panics
+    ///
+    /// When the harmonic number is different.
     pub fn square_err(&self, rhs: &Self) -> f64 {
         (&self.coeffs - &rhs.coeffs).mapv(pow2).sum()
     }
 
     /// L1 norm error, aka Manhattan distance.
+    ///
+    /// # Panics
+    ///
+    /// When the harmonic number is different.
     pub fn l1_norm(&self, rhs: &Self) -> f64 {
         (&self.coeffs - &rhs.coeffs).mapv(f64::abs).sum()
     }
 
     /// L2 norm error, aka Euclidean distance.
+    ///
+    /// # Panics
+    ///
+    /// When the harmonic number is different.
     pub fn l2_norm(&self, rhs: &Self) -> f64 {
         (&self.coeffs - &rhs.coeffs).mapv(pow2).sum().sqrt()
     }
 
     /// Lp norm error, slower than [`Self::l1_norm()`] and [`Self::l2_norm()`].
+    ///
+    /// # Panics
+    ///
+    /// When the harmonic number is different.
     pub fn lp_norm(&self, rhs: &Self, p: i32) -> f64 {
         (&self.coeffs - &rhs.coeffs)
             .mapv(|x| x.abs().powi(p))
