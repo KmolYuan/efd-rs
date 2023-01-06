@@ -93,6 +93,10 @@ impl EfdDim for D2 {
             s *= -1.;
         }
         // Angle of semi-major axis
+        // Case in 2D are equivalent to:
+        //
+        // let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], 0.).normalize();
+        // na::Rotation2::new(u.dot(&na::Vector3::x()))
         let psi = na::Rotation2::new(coeffs[[0, 2]].atan2(coeffs[[0, 0]]));
         let psi_inv = psi.inverse();
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
@@ -184,8 +188,17 @@ impl EfdDim for D3 {
         let psi = {
             let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], coeffs[[0, 4]]).normalize();
             let v = na::Vector3::new(coeffs[[0, 1]], coeffs[[0, 3]], coeffs[[0, 5]]).normalize();
-            let uv = u.cross(&v);
-            na::Rotation3::from_basis_unchecked(&[u, v, uv])
+            let rot1 = {
+                let axis = u.cross(&na::Vector3::x());
+                let angle = u.dot(&na::Vector3::x());
+                na::Rotation3::new(axis * angle)
+            };
+            let rot2 = {
+                let axis = v.cross(&na::Vector3::y());
+                let angle = v.dot(&na::Vector3::y());
+                na::Rotation3::new(axis * angle)
+            };
+            rot2 * rot1
         };
         let psi_inv = psi.inverse();
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
