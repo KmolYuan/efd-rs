@@ -194,9 +194,9 @@ impl EfdDim for D3 {
                 na::Rotation3::new(axis * angle)
             };
             let rot2 = {
-                let axis = v.cross(&na::Vector3::y());
-                let angle = v.dot(&na::Vector3::y());
-                na::Rotation3::new(axis * angle)
+                let v = rot1 * v;
+                let angle = v.z.atan2(v.y);
+                na::Rotation3::new(na::Vector3::x() * angle)
             };
             rot2 * rot1
         };
