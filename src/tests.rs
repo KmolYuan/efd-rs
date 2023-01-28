@@ -67,6 +67,68 @@ fn efd3d() {
     assert!(curve_diff(&target, TARGET3D) < EPS);
 }
 
+#[test]
+fn plot() -> Result<(), Box<dyn std::error::Error>> {
+    use crate::*;
+    use ndarray::*;
+    use plotters::prelude::*;
+
+    #[inline]
+    fn font() -> TextStyle<'static> {
+        ("Times New Roman", 24).into_font().color(&BLACK)
+    }
+
+    let efd = Efd2::from_curve(closed_curve(PATH)).unwrap();
+    let b = SVGBackend::new("test.svg", (1200, 1200));
+    let root = b.into_drawing_area();
+    root.fill(&WHITE)?;
+    let mut chart = ChartBuilder::on(&root)
+        .set_label_area_size(LabelAreaPosition::Left, (8).percent())
+        .set_label_area_size(LabelAreaPosition::Bottom, (4).percent())
+        .margin((8).percent())
+        .build_cartesian_2d(-60f64..60., -20f64..100.)?;
+    chart
+        .configure_mesh()
+        .x_label_style(font())
+        .y_label_style(font())
+        .draw()?;
+    let path = efd.generate(360);
+    chart
+        .draw_series(LineSeries::new(
+            path.into_iter().map(|[x, y]| (x, y)),
+            BLACK,
+        ))?
+        .label("Original")
+        .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLACK));
+    let trans0 = efd.as_trans();
+    let mut c0 = [0.; 2];
+    for (i, c) in efd.coeffs().axis_iter(Axis(0)).enumerate() {
+        let color = Palette99::pick(i);
+        let t = Array1::linspace(0., std::f64::consts::TAU, 100);
+        let x = c[0].hypot(c[2]) * t.mapv(f64::cos);
+        let y = c[1].hypot(c[3]) * t.mapv(f64::sin);
+        let a = c[2].atan2(c[0]);
+        let trans = trans0 * Transform2::new(c0, na::UnitComplex::new(a), 1.);
+        let ellipse = x.into_iter().zip(y).map(|(x, y)| {
+            let [x, y] = trans.transform_pt(&[x, y]);
+            (x, y)
+        });
+        c0[0] += c[0];
+        c0[1] += c[2];
+        let [x0, y0] = trans0.transform_pt(&c0);
+        chart.draw_series(LineSeries::new(ellipse, &color))?;
+        chart.draw_series([Circle::new((x0, y0), 3, color.filled())])?;
+    }
+    chart
+        .configure_series_labels()
+        .position(SeriesLabelPosition::LowerRight)
+        .background_style(WHITE)
+        .border_style(BLACK)
+        .label_font(font())
+        .draw()?;
+    Ok(())
+}
+
 pub const PATH: &[[f64; 2]] = &[
     [14.928108089437242, 90.01002059789568],
     [-3.25371009238094, 85.46456605244113],

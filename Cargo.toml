@@ -22,3 +22,6 @@ ndarray = { version = "0.15", default-features = false }
 version = "0.32"
 default-features = false
 features = ["libm", "macros"]
+
+[dev-dependencies]
+plotters = "0.3"
