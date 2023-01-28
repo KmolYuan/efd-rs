@@ -194,6 +194,17 @@ impl<T: Trans> Transform<T> {
     }
 
     /// Merge two transformation matrices.
+    ///
+    /// ```
+    /// use efd::{curve_diff, Efd2};
+    /// # let path1 = efd::tests::PATH.to_vec();
+    /// # let path2 = efd::tests::PATH.to_vec();
+    ///
+    /// let a = Efd2::from_curve(&path1).unwrap();
+    /// let b = Efd2::from_curve(&path2).unwrap();
+    /// let trans = b.as_trans() * &a.as_trans().inverse();
+    /// assert!(dbg!(curve_diff(&trans.transform(path1), &path2)) < efd::tests::EPS);
+    /// ```
     pub fn apply(&self, rhs: &Self) -> Self {
         Self { inner: self.inner.apply(&rhs.inner) }
     }
@@ -212,6 +223,13 @@ impl<T: Trans> Transform<T> {
     /// ```
     pub fn inverse(&self) -> Self {
         Self { inner: self.inner.inverse() }
+    }
+
+    /// Transform a point.
+    ///
+    /// Please see [`Self::transform()`] for more information.
+    pub fn transform_pt(&self, p: &T::Coord) -> T::Coord {
+        self.inner.transform(p)
     }
 
     /// Transform a contour with this information.
@@ -236,11 +254,11 @@ impl<T: Trans> Transform<T> {
         curve
             .as_ref()
             .iter()
-            .map(|c| self.inner.transform(c))
+            .map(|c| self.transform_pt(c))
             .collect()
     }
 
-    /// Transform a contour in placed with this information.
+    /// Transform a contour in-placed with this information.
     pub fn transform_inplace<C>(&self, mut curve: C)
     where
         C: AsMut<[T::Coord]>,
@@ -248,6 +266,31 @@ impl<T: Trans> Transform<T> {
         curve
             .as_mut()
             .iter_mut()
-            .for_each(|c| *c = self.inner.transform(c));
+            .for_each(|c| *c = self.transform_pt(c));
+    }
+
+    /// Transform an iterator contour.
+    pub fn transform_iter<'a, C>(&'a self, curve: C) -> impl Iterator<Item = T::Coord> + 'a
+    where
+        C: IntoIterator<Item = T::Coord> + 'a,
+    {
+        curve.into_iter().map(|c| self.transform_pt(&c))
     }
 }
+
+macro_rules! impl_mul {
+    ($ty1:ty, $ty2:ty) => {
+        impl<T: Trans> core::ops::Mul<$ty2> for $ty1 {
+            type Output = Transform<T>;
+
+            fn mul(self, rhs: $ty2) -> Self::Output {
+                Transform { inner: rhs.inner.apply(&self.inner) }
+            }
+        }
+    };
+}
+
+impl_mul!(Transform<T>, Self);
+impl_mul!(&Transform<T>, Self);
+impl_mul!(Transform<T>, &Self);
+impl_mul!(&Transform<T>, Transform<T>);
