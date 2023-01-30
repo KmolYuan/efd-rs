@@ -68,6 +68,7 @@ fn efd3d() {
 }
 
 #[test]
+#[cfg(feature = "std")]
 fn plot() -> Result<(), Box<dyn std::error::Error>> {
     use crate::*;
     use ndarray::*;
