@@ -116,8 +116,11 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         c0[0] += c[0];
         c0[1] += c[2];
         let [x0, y0] = trans0.transform_pt(&c0);
-        chart.draw_series(LineSeries::new(ellipse, &color))?;
         chart.draw_series([Circle::new((x0, y0), 3, color.filled())])?;
+        chart
+            .draw_series(LineSeries::new(ellipse, &color))?
+            .label(&format!("n={}", i + 1))
+            .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &color));
     }
     chart
         .configure_series_labels()
