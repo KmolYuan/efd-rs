@@ -94,6 +94,8 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         .y_label_style(font())
         .draw()?;
     let path = efd.generate(360);
+    let p0 = dbg!(path[0]);
+    chart.draw_series([Circle::new((p0[0], p0[1]), 3, BLACK.filled())])?;
     chart
         .draw_series(LineSeries::new(
             path.into_iter().map(|[x, y]| (x, y)),
@@ -103,21 +105,30 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLACK));
     let trans0 = efd.as_trans();
     let mut c0 = [0.; 2];
+    let phasor = |c: ArrayView1<f64>| {
+        let dy = 2. * (c[0] * c[1] + c[2] * c[3]);
+        let dx = pow2(c[0]) + pow2(c[2]) - pow2(c[1]) - pow2(c[3]);
+        dy.atan2(dx) * 0.5
+    };
     for (i, c) in efd.coeffs().axis_iter(Axis(0)).enumerate() {
         let color = Palette99::pick(i);
+        let m = na::matrix![c[0], c[1]; c[2], c[3]];
+        let f = |t: f64| {
+            let v = m * na::matrix![t.cos(); t.sin()];
+            [v[0], v[1]]
+        };
         let t = Array1::linspace(0., std::f64::consts::TAU, 100);
-        let x = c[0].hypot(c[2]) * t.mapv(f64::cos);
-        let y = c[1].hypot(c[3]) * t.mapv(f64::sin);
         let a = c[2].atan2(c[0]);
-        let trans = trans0 * Transform2::new(c0, na::UnitComplex::new(a), 1.);
-        let ellipse = x.into_iter().zip(y).map(|(x, y)| {
+        let b = phasor(c);
+        let trans = trans0 * Transform2::new(c0, na::UnitComplex::new(a - b), 1.);
+        let ellipse = t.into_iter().map(f).map(|[x, y]| {
             let [x, y] = trans.transform_pt(&[x, y]);
             (x, y)
         });
         c0[0] += c[0];
         c0[1] += c[2];
         let [x0, y0] = trans0.transform_pt(&c0);
-        chart.draw_series([Circle::new((x0, y0), 3, color.filled())])?;
+        chart.draw_series([Circle::new(dbg!((x0, y0)), 3, color.filled())])?;
         chart
             .draw_series(LineSeries::new(ellipse, &color))?
             .label(&format!("n={}", i + 1))
