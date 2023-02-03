@@ -56,6 +56,7 @@ impl<D: EfdDim> Efd<D> {
     /// let harmonic = efd::Efd2::gate(curve, None).unwrap();
     /// # assert_eq!(harmonic, 6);
     /// ```
+    #[must_use]
     pub fn gate<'a, C, T>(curve: C, threshold: T) -> Option<usize>
     where
         C: Into<CowCurve<'a, D::Trans>>,
@@ -86,6 +87,7 @@ impl<D: EfdDim> Efd<D> {
     /// **The curve must be closed. (first == last)**
     ///
     /// Return none if the curve length is less than 1.
+    #[must_use]
     pub fn from_curve<'a, C>(curve: C) -> Option<Self>
     where
         C: Into<CowCurve<'a, D::Trans>>,
@@ -99,6 +101,7 @@ impl<D: EfdDim> Efd<D> {
     /// **The curve must be closed. (first == last)**
     ///
     /// Return none if the curve length is less than 1.
+    #[must_use]
     pub fn from_curve_gate<'a, C, T>(curve: C, threshold: T) -> Option<Self>
     where
         C: Into<CowCurve<'a, D::Trans>>,
@@ -120,6 +123,7 @@ impl<D: EfdDim> Efd<D> {
     /// [`Self::gate()`] function.
     ///
     /// See also [`closed_curve`].
+    #[must_use]
     pub fn from_curve_harmonic<'a, C, H>(curve: C, harmonic: H) -> Option<Self>
     where
         C: Into<CowCurve<'a, D::Trans>>,
@@ -138,31 +142,37 @@ impl<D: EfdDim> Efd<D> {
     }
 
     /// A builder method for changing transform type.
+    #[must_use]
     pub fn with_trans(self, trans: Transform<D::Trans>) -> Self {
         Self { trans, ..self }
     }
 
     /// Consume self and return a raw array of the coefficients.
+    #[must_use]
     pub fn into_inner(self) -> Array2<f64> {
         self.coeffs
     }
 
     /// Get the array view of the coefficients.
+    #[must_use]
     pub fn coeffs(&self) -> ndarray::ArrayView2<f64> {
         self.coeffs.view()
     }
 
     /// Get the reference of transform type.
+    #[must_use]
     pub fn as_trans(&self) -> &Transform<D::Trans> {
         &self.trans
     }
 
     /// Get the mutable reference of transform type.
+    #[must_use]
     pub fn as_trans_mut(&mut self) -> &mut Transform<D::Trans> {
         &mut self.trans
     }
 
     /// Get the harmonic number of the coefficients.
+    #[must_use]
     pub fn harmonic(&self) -> usize {
         self.coeffs.nrows()
     }
@@ -172,6 +182,7 @@ impl<D: EfdDim> Efd<D> {
     /// # Panics
     ///
     /// When the harmonic number is different.
+    #[must_use]
     pub fn square_err(&self, rhs: &Self) -> f64 {
         (&self.coeffs - &rhs.coeffs).mapv(pow2).sum()
     }
@@ -181,6 +192,7 @@ impl<D: EfdDim> Efd<D> {
     /// # Panics
     ///
     /// When the harmonic number is different.
+    #[must_use]
     pub fn l1_norm(&self, rhs: &Self) -> f64 {
         (&self.coeffs - &rhs.coeffs).mapv(f64::abs).sum()
     }
@@ -190,6 +202,7 @@ impl<D: EfdDim> Efd<D> {
     /// # Panics
     ///
     /// When the harmonic number is different.
+    #[must_use]
     pub fn l2_norm(&self, rhs: &Self) -> f64 {
         (&self.coeffs - &rhs.coeffs).mapv(pow2).sum().sqrt()
     }
@@ -199,6 +212,7 @@ impl<D: EfdDim> Efd<D> {
     /// # Panics
     ///
     /// When the harmonic number is different.
+    #[must_use]
     pub fn lp_norm(&self, rhs: &Self, p: i32) -> f64 {
         (&self.coeffs - &rhs.coeffs)
             .mapv(|x| x.abs().powi(p))
@@ -217,6 +231,7 @@ impl<D: EfdDim> Efd<D> {
     /// can avoid mutable require.
     ///
     /// Please clone the object if you want to do self-comparison.
+    #[must_use]
     pub fn reversed(mut self) -> Self {
         self.reverse();
         self
@@ -225,6 +240,7 @@ impl<D: EfdDim> Efd<D> {
     /// Generate the normalized curve **without** transformation.
     ///
     /// The number of the points `n` must larger than 3.
+    #[must_use]
     pub fn generate_norm(&self, n: usize) -> Curve<D::Trans> {
         assert!(n > 1, "n ({n}) must larger than 1");
         let mut t = Array1::from_elem(n, 1. / (n - 1) as f64);
@@ -253,6 +269,7 @@ impl<D: EfdDim> Efd<D> {
     /// Generate the described curve from the coefficients.
     ///
     /// The number of the points `n` must given.
+    #[must_use]
     pub fn generate(&self, n: usize) -> Curve<D::Trans> {
         self.trans.transform(&self.generate_norm(n))
     }

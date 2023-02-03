@@ -151,26 +151,31 @@ impl<T: Trans> Default for Transform<T> {
 
 impl<T: Trans> Transform<T> {
     /// Create without transform.
+    #[must_use]
     pub fn identity() -> Self {
         Self { inner: T::identity() }
     }
 
     /// Create a new transform type.
+    #[must_use]
     pub fn new(trans: T::Coord, rot: T::Rot, scale: T::Scale) -> Self {
         Self { inner: T::new(trans, rot, scale) }
     }
 
     /// Translate property.
+    #[must_use]
     pub fn trans(&self) -> T::Coord {
         self.inner.trans()
     }
 
     /// Rotation property.
+    #[must_use]
     pub fn rot(&self) -> T::Rot {
         self.inner.rot()
     }
 
     /// Scaling property.
+    #[must_use]
     pub fn scale(&self) -> T::Scale {
         self.inner.scale()
     }
@@ -189,6 +194,7 @@ impl<T: Trans> Transform<T> {
     /// let trans = a.as_trans().to(b.as_trans());
     /// assert!(dbg!(curve_diff(&trans.transform(path1), &path2)) < efd::tests::EPS);
     /// ```
+    #[must_use]
     pub fn to(&self, rhs: &Self) -> Self {
         self.inverse().apply(rhs)
     }
@@ -205,6 +211,7 @@ impl<T: Trans> Transform<T> {
     /// let trans = b.as_trans() * &a.as_trans().inverse();
     /// assert!(dbg!(curve_diff(&trans.transform(path1), &path2)) < efd::tests::EPS);
     /// ```
+    #[must_use]
     pub fn apply(&self, rhs: &Self) -> Self {
         Self { inner: self.inner.apply(&rhs.inner) }
     }
@@ -221,6 +228,7 @@ impl<T: Trans> Transform<T> {
     /// let path = efd.as_trans().inverse().transform(path);
     /// # assert!(curve_diff(&path, &path_norm) < efd::tests::EPS);
     /// ```
+    #[must_use]
     pub fn inverse(&self) -> Self {
         Self { inner: self.inner.inverse() }
     }
@@ -228,6 +236,7 @@ impl<T: Trans> Transform<T> {
     /// Transform a point.
     ///
     /// Please see [`Self::transform()`] for more information.
+    #[must_use]
     pub fn transform_pt(&self, p: &T::Coord) -> T::Coord {
         self.inner.transform(p)
     }
@@ -247,6 +256,7 @@ impl<T: Trans> Transform<T> {
     /// # assert!(curve_diff(&path1, TARGET) < efd::tests::EPS);
     /// # assert!(curve_diff(&path1_inv, &path) < efd::tests::EPS);
     /// ```
+    #[must_use]
     pub fn transform<C>(&self, curve: C) -> Vec<T::Coord>
     where
         C: AsRef<[T::Coord]>,
@@ -282,7 +292,7 @@ macro_rules! impl_mul {
     ($ty1:ty, $ty2:ty) => {
         impl<T: Trans> core::ops::Mul<$ty2> for $ty1 {
             type Output = Transform<T>;
-
+            #[must_use]
             fn mul(self, rhs: $ty2) -> Self::Output {
                 Transform { inner: rhs.inner.apply(&self.inner) }
             }

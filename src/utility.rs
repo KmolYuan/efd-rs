@@ -41,6 +41,7 @@ where
 }
 
 /// The maximum coordinate difference between two curves.
+#[must_use]
 pub fn curve_diff<A, B>(a: &[A], b: &[B]) -> f64
 where
     A: FixedInitializer<Elem = f64> + Clone,
@@ -56,6 +57,7 @@ where
 }
 
 /// Close the curve by the first coordinate.
+#[must_use]
 pub fn closed_curve<'a, A, C>(curve: C) -> Vec<A>
 where
     A: Clone + 'a,
