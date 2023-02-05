@@ -94,15 +94,15 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         .y_label_style(font())
         .draw()?;
     let path = efd.generate(360);
-    let p0 = dbg!(path[0]);
+    let p0 = path[0];
     chart.draw_series([Circle::new((p0[0], p0[1]), 3, BLACK.filled())])?;
     chart
         .draw_series(LineSeries::new(
             path.into_iter().map(|[x, y]| (x, y)),
-            BLACK,
+            BLACK.stroke_width(3),
         ))?
         .label("Original")
-        .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLACK));
+        .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLACK.stroke_width(3)));
     let trans0 = efd.as_trans();
     let mut c0 = [0.; 2];
     let phasor = |c: ArrayView1<f64>| {
@@ -125,14 +125,20 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
             let [x, y] = trans.transform_pt(&[x, y]);
             (x, y)
         });
+        let p1 = c0;
         c0[0] += c[0];
         c0[1] += c[2];
-        let [x0, y0] = trans0.transform_pt(&c0);
-        chart.draw_series([Circle::new(dbg!((x0, y0)), 3, color.filled())])?;
+        let p2 = c0;
+        let [x1, y1] = trans0.transform_pt(&p1);
+        let [x2, y2] = trans0.transform_pt(&p2);
+        chart.draw_series([Circle::new((x2, y2), 3, color.filled())])?;
+        chart.draw_series(LineSeries::new([(x1, y1), (x2, y2)], &color))?;
         chart
-            .draw_series(LineSeries::new(ellipse, &color))?
+            .draw_series(LineSeries::new(ellipse, color.stroke_width(3)))?
             .label(&format!("n={}", i + 1))
-            .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &color));
+            .legend(move |(x, y)| {
+                PathElement::new(vec![(x, y), (x + 20, y)], color.stroke_width(3))
+            });
     }
     chart
         .configure_series_labels()
