@@ -7,7 +7,7 @@ pub const EPS: f64 = 2e-14;
 fn efd2d() {
     use crate::*;
     use alloc::vec::Vec;
-    let efd = Efd2::from_curve(closed_curve(PATH)).unwrap();
+    let efd = Efd2::from_curve(closed_lin(PATH)).unwrap();
     // Test starting point
     let path = PATH
         .iter()
@@ -16,7 +16,7 @@ fn efd2d() {
         .take(PATH.len())
         .copied()
         .collect::<Vec<_>>();
-    let efd_half = Efd2::from_curve(closed_curve(path)).unwrap();
+    let efd_half = Efd2::from_curve(closed_lin(path)).unwrap();
     assert!(efd.l1_norm(&efd_half) < EPS);
     // Test transformation
     let trans = efd.as_trans();
@@ -37,7 +37,7 @@ fn efd2d() {
 fn efd3d() {
     use crate::*;
     use alloc::vec::Vec;
-    let efd = Efd3::from_curve(closed_curve(PATH3D)).unwrap();
+    let efd = Efd3::from_curve(closed_lin(PATH3D)).unwrap();
     // Test starting point
     let path = PATH3D
         .iter()
@@ -46,7 +46,7 @@ fn efd3d() {
         .take(PATH3D.len())
         .copied()
         .collect::<Vec<_>>();
-    let efd_half = Efd3::from_curve(closed_curve(path)).unwrap();
+    let efd_half = Efd3::from_curve(closed_lin(path)).unwrap();
     assert!(efd.l1_norm(&efd_half) < EPS);
     // Test transformation
     let trans = efd.as_trans();
@@ -79,7 +79,7 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         ("Times New Roman", 24).into_font().color(&BLACK)
     }
 
-    let efd = Efd2::from_curve(closed_curve(PATH)).unwrap();
+    let efd = Efd2::from_curve(closed_lin(PATH)).unwrap();
     let b = SVGBackend::new("test.svg", (1200, 1200));
     let root = b.into_drawing_area();
     root.fill(&WHITE)?;
@@ -105,11 +105,6 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLACK.stroke_width(3)));
     let trans0 = efd.as_trans();
     let mut c0 = [0.; 2];
-    let phasor = |c: ArrayView1<f64>| {
-        let dy = 2. * (c[0] * c[1] + c[2] * c[3]);
-        let dx = pow2(c[0]) + pow2(c[2]) - pow2(c[1]) - pow2(c[3]);
-        dy.atan2(dx) * 0.5
-    };
     for (i, c) in efd.coeffs().axis_iter(Axis(0)).enumerate() {
         let color = Palette99::pick(i);
         let m = na::matrix![c[0], c[1]; c[2], c[3]];
@@ -118,9 +113,7 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
             [v[0], v[1]]
         };
         let t = Array1::linspace(0., std::f64::consts::TAU, 100);
-        let a = c[2].atan2(c[0]);
-        let b = phasor(c);
-        let trans = trans0 * Transform2::new(c0, na::UnitComplex::new(a - b), 1.);
+        let trans = trans0 * Transform2::new(c0, na::UnitComplex::new(0.), 1.);
         let ellipse = t.into_iter().map(f).map(|[x, y]| {
             let [x, y] = trans.transform_pt(&[x, y]);
             (x, y)
@@ -208,6 +201,20 @@ pub const TARGET: &[[f64; 2]] = &[
     [36.1418456145505, 63.692076052934084],
     [45.40004894143899, 73.34595105201664],
     [43.52580541936122, 85.41974003908112],
+];
+#[rustfmt::skip]
+pub const PATH_OPEN: &[[f64; 2]] = &[
+    [0.028607755880487345, 47.07692307692308],
+    [6.182453909726641, 52.76923076923077],
+    [14.797838525111256, 57.07692307692308],
+    [24.643992371265103, 58.61538461538461],
+    [41.10553083280357, 59.07692307692308],
+    [50.18245390972664, 56.76923076923077],
+    [60.6439923712651, 51.53846153846154],
+    [65.41322314049587, 46.0],
+    [68.79783852511126, 36.92307692307692],
+    [67.41322314049587, 25.384615384615383],
+    [60.6439923712651, 18.153846153846153],
 ];
 #[rustfmt::skip]
 pub const PATH3D: &[[f64; 3]] = &[

@@ -56,9 +56,28 @@ where
         .unwrap()
 }
 
+/// Check if a curve's first and end points are the same.
+pub fn is_closed<A: PartialEq>(curve: &[A]) -> bool {
+    match (curve.first(), curve.last()) {
+        (Some(a), Some(b)) => a == b,
+        _ => false,
+    }
+}
+
 /// Close the curve by the first coordinate.
 #[must_use]
+#[deprecated = "function renamed, please use `closed_lin` instead"]
 pub fn closed_curve<'a, A, C>(curve: C) -> Vec<A>
+where
+    A: Clone + 'a,
+    C: Into<alloc::borrow::Cow<'a, [A]>>,
+{
+    closed_lin(curve)
+}
+
+/// Close the curve by the first coordinate.
+#[must_use]
+pub fn closed_lin<'a, A, C>(curve: C) -> Vec<A>
 where
     A: Clone + 'a,
     C: Into<alloc::borrow::Cow<'a, [A]>>,
@@ -66,4 +85,19 @@ where
     let mut c = curve.into().into_owned();
     c.push(c[0].clone());
     c
+}
+
+/// Close the open curve with its direction-inverted part.
+///
+/// Panic with empty curve.
+#[must_use]
+pub fn closed_rev<'a, A, C>(curve: C) -> Vec<A>
+where
+    A: Clone + 'a,
+    C: Into<alloc::borrow::Cow<'a, [A]>>,
+{
+    let mut curve = curve.into().into_owned();
+    let curve2 = curve.iter().rev().skip(1).cloned().collect::<Vec<_>>();
+    curve.extend(curve2);
+    curve
 }
