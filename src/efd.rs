@@ -184,7 +184,7 @@ impl<D: EfdDim> Efd<D> {
     /// When the harmonic number is different.
     #[must_use]
     pub fn square_err(&self, rhs: &Self) -> f64 {
-        (&self.coeffs - &rhs.coeffs).mapv(pow2).sum()
+        padding(self, rhs, |a, b| (a - b).mapv(pow2).sum())
     }
 
     /// L1 norm error, aka Manhattan distance.
@@ -194,7 +194,7 @@ impl<D: EfdDim> Efd<D> {
     /// When the harmonic number is different.
     #[must_use]
     pub fn l1_norm(&self, rhs: &Self) -> f64 {
-        (&self.coeffs - &rhs.coeffs).mapv(f64::abs).sum()
+        padding(self, rhs, |a, b| (a - b).mapv(f64::abs).sum())
     }
 
     /// L2 norm error, aka Euclidean distance.
@@ -204,7 +204,7 @@ impl<D: EfdDim> Efd<D> {
     /// When the harmonic number is different.
     #[must_use]
     pub fn l2_norm(&self, rhs: &Self) -> f64 {
-        (&self.coeffs - &rhs.coeffs).mapv(pow2).sum().sqrt()
+        padding(self, rhs, |a, b| (a - b).mapv(pow2).sum().sqrt())
     }
 
     /// Lp norm error, slower than [`Self::l1_norm()`] and [`Self::l2_norm()`].
@@ -214,10 +214,9 @@ impl<D: EfdDim> Efd<D> {
     /// When the harmonic number is different.
     #[must_use]
     pub fn lp_norm(&self, rhs: &Self, p: i32) -> f64 {
-        (&self.coeffs - &rhs.coeffs)
-            .mapv(|x| x.abs().powi(p))
-            .sum()
-            .powf(1. / p as f64)
+        padding(self, rhs, |a, b| {
+            (a - b).mapv(|x| x.abs().powi(p)).sum().powf(1. / p as f64)
+        })
     }
 
     /// Reverse the order of described curve then return a mutable reference.
@@ -272,5 +271,32 @@ impl<D: EfdDim> Efd<D> {
     #[must_use]
     pub fn generate(&self, n: usize) -> Curve<D::Trans> {
         self.trans.transform(&self.generate_norm(n))
+    }
+}
+
+fn padding<D, F>(a: &Efd<D>, b: &Efd<D>, f: F) -> f64
+where
+    D: EfdDim,
+    F: Fn(&Array2<f64>, &Array2<f64>) -> f64,
+{
+    use core::cmp::Ordering;
+    match a.harmonic().cmp(&b.harmonic()) {
+        Ordering::Equal => f(&a.coeffs, &b.coeffs),
+        Ordering::Greater => {
+            let b = ndarray::concatenate![
+                Axis(0),
+                b.coeffs.view(),
+                Array2::zeros([a.harmonic() - b.harmonic(), 4]).view()
+            ];
+            f(&a.coeffs, &b)
+        }
+        Ordering::Less => {
+            let a = ndarray::concatenate![
+                Axis(0),
+                a.coeffs.view(),
+                Array2::zeros([b.harmonic() - a.harmonic(), 4]).view()
+            ];
+            f(&a, &b.coeffs)
+        }
     }
 }

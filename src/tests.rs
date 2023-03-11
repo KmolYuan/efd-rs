@@ -4,6 +4,18 @@
 pub const EPS: f64 = 2e-14;
 
 #[test]
+fn error() {
+    use crate::*;
+    use ndarray::*;
+    let coeff = arr2(&[[10., 20., 20., 10.], [3., 4., 4., 3.]]);
+    let a = Efd2::try_from_coeffs(coeff).unwrap();
+    let coeff = arr2(&[[10., 20., 20., 10.]]);
+    let b = Efd2::try_from_coeffs(coeff).unwrap();
+    assert_eq!(a.square_err(&b), 50.);
+    assert_eq!(b.square_err(&a), 50.);
+}
+
+#[test]
 fn efd2d() {
     use crate::*;
     use alloc::vec::Vec;
