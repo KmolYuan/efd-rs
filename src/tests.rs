@@ -74,12 +74,40 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
     use ndarray::*;
     use plotters::prelude::*;
 
-    #[inline]
-    fn font() -> TextStyle<'static> {
-        ("Times New Roman", 24).into_font().color(&BLACK)
+    pub fn bounding_box<'a>(pts: impl IntoIterator<Item = &'a [f64; 2]>) -> [f64; 4] {
+        let [mut x_min, mut x_max] = [&f64::INFINITY, &-f64::INFINITY];
+        let [mut y_min, mut y_max] = [&f64::INFINITY, &-f64::INFINITY];
+        for [x, y] in pts {
+            if x < x_min {
+                x_min = x;
+            }
+            if x > x_max {
+                x_max = x;
+            }
+            if y < y_min {
+                y_min = y;
+            }
+            if y > y_max {
+                y_max = y;
+            }
+        }
+        let dx = (x_max - x_min).abs();
+        let dy = (y_max - y_min).abs();
+        if dx > dy {
+            let cen = (y_min + y_max) * 0.5;
+            let r = dx * 0.5;
+            [*x_min, *x_max, cen - r, cen + r]
+        } else {
+            let cen = (x_min + x_max) * 0.5;
+            let r = dy * 0.5;
+            [cen - r, cen + r, *y_min, *y_max]
+        }
     }
 
-    let efd = Efd2::from_curve(closed_lin(PATH)).unwrap();
+    let coeff = arr2(&[[12., 35., 35., 13.], [5., 21., 21., 5.], [1., 12., 12., 1.]]);
+    let efd = Efd2::try_from_coeffs(coeff).unwrap();
+    let path = efd.generate(360);
+    let [x_min, x_max, y_min, y_max] = bounding_box(&path);
     let b = SVGBackend::new("test.svg", (1200, 1200));
     let root = b.into_drawing_area();
     root.fill(&WHITE)?;
@@ -87,13 +115,7 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         .set_label_area_size(LabelAreaPosition::Left, (8).percent())
         .set_label_area_size(LabelAreaPosition::Bottom, (4).percent())
         .margin((8).percent())
-        .build_cartesian_2d(-60f64..60., -20f64..100.)?;
-    chart
-        .configure_mesh()
-        .x_label_style(font())
-        .y_label_style(font())
-        .draw()?;
-    let path = efd.generate(360);
+        .build_cartesian_2d(x_min..x_max, y_min..y_max)?;
     let p0 = path[0];
     chart.draw_series([Circle::new((p0[0], p0[1]), 3, BLACK.filled())])?;
     chart
@@ -103,10 +125,12 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         ))?
         .label("Original")
         .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLACK.stroke_width(3)));
+    for (p, color) in [((10., 0.), RED), ((0., 10.), BLUE)] {
+        chart.draw_series(LineSeries::new([(0., 0.), p], color.stroke_width(5)))?;
+    }
     let trans0 = efd.as_trans();
     let mut c0 = [0.; 2];
     for (i, c) in efd.coeffs().axis_iter(Axis(0)).enumerate() {
-        let color = Palette99::pick(i);
         let m = na::matrix![c[0], c[1]; c[2], c[3]];
         let f = |t: f64| {
             let v = m * na::matrix![t.cos(); t.sin()];
@@ -124,22 +148,13 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         let p2 = c0;
         let [x1, y1] = trans0.transform_pt(&p1);
         let [x2, y2] = trans0.transform_pt(&p2);
-        chart.draw_series([Circle::new((x2, y2), 3, color.filled())])?;
-        chart.draw_series(LineSeries::new([(x1, y1), (x2, y2)], &color))?;
+        chart.draw_series([Circle::new((x2, y2), 3, RED.filled())])?;
+        chart.draw_series(LineSeries::new([(x1, y1), (x2, y2)], RED))?;
         chart
-            .draw_series(LineSeries::new(ellipse, color.stroke_width(3)))?
+            .draw_series(LineSeries::new(ellipse, RED.stroke_width(3)))?
             .label(&format!("n={}", i + 1))
-            .legend(move |(x, y)| {
-                PathElement::new(vec![(x, y), (x + 20, y)], color.stroke_width(3))
-            });
+            .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], RED.stroke_width(3)));
     }
-    chart
-        .configure_series_labels()
-        .position(SeriesLabelPosition::LowerRight)
-        .background_style(WHITE)
-        .border_style(BLACK)
-        .label_font(font())
-        .draw()?;
     Ok(())
 }
 
