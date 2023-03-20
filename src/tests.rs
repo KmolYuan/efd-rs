@@ -19,6 +19,7 @@ fn error() {
 fn efd2d() {
     use crate::*;
     use alloc::vec::Vec;
+    use approx::assert_abs_diff_eq;
     let efd = Efd2::from_curve(closed_lin(PATH)).unwrap();
     // Test starting point
     let path = PATH
@@ -32,10 +33,10 @@ fn efd2d() {
     assert!(efd.l1_norm(&efd_half) < EPS);
     // Test transformation
     let trans = efd.as_trans();
-    assert!((trans.trans()[0] - -1.248409055632365).abs() < f64::EPSILON);
-    assert!((trans.trans()[1] - 55.26080122817753).abs() < f64::EPSILON);
-    assert!((trans.rot().angle() - 0.6423416350347734).abs() < f64::EPSILON);
-    assert!((trans.scale() - 48.16765830752243).abs() < f64::EPSILON);
+    assert_abs_diff_eq!(trans.trans()[0], -1.248409055632365);
+    assert_abs_diff_eq!(trans.trans()[1], 55.26080122817753);
+    assert_abs_diff_eq!(trans.rot().angle(), 0.6423416350347734);
+    assert_abs_diff_eq!(trans.scale(), 48.16765830752243);
     assert_eq!(efd.harmonic(), 6);
     // Test normalized
     let norm = efd.generate_norm(NORM.len());
@@ -49,6 +50,7 @@ fn efd2d() {
 fn efd3d() {
     use crate::*;
     use alloc::vec::Vec;
+    use approx::assert_abs_diff_eq;
     let efd = Efd3::from_curve(closed_lin(PATH3D)).unwrap();
     // Test starting point
     let path = PATH3D
@@ -62,14 +64,14 @@ fn efd3d() {
     assert!(efd.l1_norm(&efd_half) < EPS);
     // Test transformation
     let trans = efd.as_trans();
-    assert!((trans.trans()[0] - 0.7239345388499508).abs() < f64::EPSILON);
-    assert!((trans.trans()[1] - 0.09100107896533066).abs() < f64::EPSILON);
-    assert!((trans.trans()[2] - 0.49979194975846675).abs() < f64::EPSILON);
-    assert!((trans.rot()[0] - 0.9632980654768742).abs() < f64::EPSILON);
-    assert!((trans.rot()[1] - -0.11462599352101828).abs() < f64::EPSILON);
-    assert!((trans.rot()[2] - -0.20143638985563356).abs() < f64::EPSILON);
-    assert!((trans.rot()[3] - 0.135429315510935).abs() < f64::EPSILON);
-    assert!((trans.scale() - 0.5629099155595344).abs() < f64::EPSILON);
+    assert_abs_diff_eq!(trans.trans()[0], 0.7239345388499508);
+    assert_abs_diff_eq!(trans.trans()[1], 0.09100107896533066);
+    assert_abs_diff_eq!(trans.trans()[2], 0.49979194975846675);
+    assert_abs_diff_eq!(trans.rot()[0], 0.9632980654768742);
+    assert_abs_diff_eq!(trans.rot()[1], -0.11462599352101828);
+    assert_abs_diff_eq!(trans.rot()[2], -0.20143638985563356);
+    assert_abs_diff_eq!(trans.rot()[3], 0.135429315510935);
+    assert_abs_diff_eq!(trans.scale(), 0.5629099155595344);
     assert_eq!(efd.harmonic(), 5);
     // Test normalized
     let norm = efd.generate_norm(NORM3D.len());
