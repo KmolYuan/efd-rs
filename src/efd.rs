@@ -57,9 +57,9 @@ impl<D: EfdDim> Efd<D> {
     /// # assert_eq!(harmonic, 6);
     /// ```
     #[must_use]
-    pub fn gate<'a, C, T>(curve: C, threshold: T) -> Option<usize>
+    pub fn gate<C, T>(curve: C, threshold: T) -> Option<usize>
     where
-        CowCurve<'a, D::Trans>: From<C>,
+        C: Curve<Coord<D>>,
         Option<f64>: From<T>,
     {
         Self::from_curve_gate(curve, threshold).map(|efd| efd.harmonic())
@@ -71,9 +71,9 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// Return none if the curve length is less than 1.
     #[must_use]
-    pub fn from_curve<'a, C>(curve: C) -> Option<Self>
+    pub fn from_curve<C>(curve: C) -> Option<Self>
     where
-        CowCurve<'a, D::Trans>: From<C>,
+        C: Curve<Coord<D>>,
     {
         Self::from_curve_gate(curve, None)
     }
@@ -85,12 +85,12 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// Return none if the curve length is less than 1.
     #[must_use]
-    pub fn from_curve_gate<'a, C, T>(curve: C, threshold: T) -> Option<Self>
+    pub fn from_curve_gate<C, T>(curve: C, threshold: T) -> Option<Self>
     where
-        CowCurve<'a, D::Trans>: From<C>,
+        C: Curve<Coord<D>>,
         Option<f64>: From<T>,
     {
-        let curve = CowCurve::<D::Trans>::from(curve);
+        let curve = curve.to_curve();
         if curve.len() < 2 {
             return None;
         }
@@ -122,13 +122,13 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// See also [`closed_curve`].
     #[must_use]
-    pub fn from_curve_harmonic<'a, C, H>(curve: C, harmonic: H) -> Option<Self>
+    pub fn from_curve_harmonic<C, H>(curve: C, harmonic: H) -> Option<Self>
     where
-        CowCurve<'a, D::Trans>: From<C>,
+        C: Curve<Coord<D>>,
         Option<usize>: From<H>,
     {
         if let Some(harmonic) = Option::from(harmonic) {
-            let curve = CowCurve::<D::Trans>::from(curve);
+            let curve = curve.to_curve();
             if curve.len() < 2 {
                 None
             } else {
@@ -239,7 +239,7 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// The number of the points `n` must larger than 3.
     #[must_use]
-    pub fn generate_norm(&self, n: usize) -> Curve<D::Trans> {
+    pub fn generate_norm(&self, n: usize) -> Vec<Coord<D>> {
         assert!(n > 1, "n ({n}) must larger than 1");
         let mut t = Array1::from_elem(n, 1. / (n - 1) as f64);
         t[0] = 0.;
@@ -268,7 +268,7 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// The number of the points `n` must given.
     #[must_use]
-    pub fn generate(&self, n: usize) -> Curve<D::Trans> {
+    pub fn generate(&self, n: usize) -> Vec<Coord<D>> {
         self.trans.transform(&self.generate_norm(n))
     }
 }

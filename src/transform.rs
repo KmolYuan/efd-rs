@@ -246,9 +246,9 @@ impl<T: Trans> Transform<T> {
     /// This function rotates first, then translates.
     ///
     /// ```
-    /// # use efd::{closed_curve, curve_diff, tests::{PATH, TARGET}, Efd2};
+    /// # use efd::{tests::*, *};
     /// # let target = TARGET;
-    /// # let efd = Efd2::from_curve(closed_curve(PATH)).unwrap();
+    /// # let efd = Efd2::from_curve(PATH.closed_lin()).unwrap();
     /// # let path = efd.generate_norm(target.len());
     /// let path1 = efd.as_trans().transform(&path);
     /// # let trans = efd.as_trans();
