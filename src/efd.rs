@@ -59,8 +59,8 @@ impl<D: EfdDim> Efd<D> {
     #[must_use]
     pub fn gate<'a, C, T>(curve: C, threshold: T) -> Option<usize>
     where
-        C: Into<CowCurve<'a, D::Trans>>,
-        T: Into<Option<f64>>,
+        CowCurve<'a, D::Trans>: From<C>,
+        Option<f64>: From<T>,
     {
         Self::from_curve_gate(curve, threshold).map(|efd| efd.harmonic())
     }
@@ -73,7 +73,7 @@ impl<D: EfdDim> Efd<D> {
     #[must_use]
     pub fn from_curve<'a, C>(curve: C) -> Option<Self>
     where
-        C: Into<CowCurve<'a, D::Trans>>,
+        CowCurve<'a, D::Trans>: From<C>,
     {
         Self::from_curve_gate(curve, None)
     }
@@ -87,17 +87,17 @@ impl<D: EfdDim> Efd<D> {
     #[must_use]
     pub fn from_curve_gate<'a, C, T>(curve: C, threshold: T) -> Option<Self>
     where
-        C: Into<CowCurve<'a, D::Trans>>,
-        T: Into<Option<f64>>,
+        CowCurve<'a, D::Trans>: From<C>,
+        Option<f64>: From<T>,
     {
-        let curve = curve.into();
+        let curve = CowCurve::<D::Trans>::from(curve);
         if curve.len() < 2 {
             return None;
         }
-        let threshold = threshold.into().unwrap_or(0.9999);
+        let threshold = Option::from(threshold).unwrap_or(0.9999);
         // Nyquist Frequency
         let harmonic = curve.len() / 2;
-        let (mut coeffs, trans) = D::from_curve_harmonic(curve, harmonic);
+        let (mut coeffs, trans) = D::from_curve_harmonic(&curve, harmonic);
         let lut = cumsum(coeffs.mapv(pow2), None).sum_axis(Axis(1));
         let total_power = lut.last().unwrap();
         let harmonic = lut
@@ -124,15 +124,15 @@ impl<D: EfdDim> Efd<D> {
     #[must_use]
     pub fn from_curve_harmonic<'a, C, H>(curve: C, harmonic: H) -> Option<Self>
     where
-        C: Into<CowCurve<'a, D::Trans>>,
-        H: Into<Option<usize>>,
+        CowCurve<'a, D::Trans>: From<C>,
+        Option<usize>: From<H>,
     {
-        if let Some(harmonic) = harmonic.into() {
-            let curve = curve.into();
+        if let Some(harmonic) = Option::from(harmonic) {
+            let curve = CowCurve::<D::Trans>::from(curve);
             if curve.len() < 2 {
                 None
             } else {
-                let (coeffs, trans) = D::from_curve_harmonic(curve, harmonic);
+                let (coeffs, trans) = D::from_curve_harmonic(&curve, harmonic);
                 Some(Self { coeffs, trans, _dim: PhantomData })
             }
         } else {

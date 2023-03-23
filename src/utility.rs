@@ -1,5 +1,5 @@
 use crate::Trans;
-use alloc::vec::Vec;
+use alloc::{borrow::Cow, vec::Vec};
 use ndarray::{arr2, Array, Axis, CowArray, Dimension, FixedInitializer};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
@@ -7,7 +7,7 @@ use num_traits::Float as _;
 /// Owned curve type.
 pub type Curve<D> = Vec<<D as Trans>::Coord>;
 /// Copy-on-write curve type.
-pub type CowCurve<'a, D> = alloc::borrow::Cow<'a, [<D as Trans>::Coord]>;
+pub type CowCurve<'a, D> = Cow<'a, [<D as Trans>::Coord]>;
 
 #[inline(always)]
 pub(crate) fn pow2(x: f64) -> f64 {
@@ -17,9 +17,9 @@ pub(crate) fn pow2(x: f64) -> f64 {
 pub(crate) fn diff<'a, D, A>(arr: A, axis: Option<Axis>) -> Array<f64, D>
 where
     D: Dimension,
-    A: Into<CowArray<'a, f64, D>>,
+    CowArray<'a, f64, D>: From<A>,
 {
-    let arr = arr.into();
+    let arr = CowArray::from(arr);
     let axis = axis.unwrap_or_else(|| Axis(arr.ndim() - 1));
     let head = arr.slice_axis(axis, (..-1).into());
     let tail = arr.slice_axis(axis, (1..).into());
@@ -29,9 +29,9 @@ where
 pub(crate) fn cumsum<'a, D, A>(arr: A, axis: Option<Axis>) -> Array<f64, D>
 where
     D: Dimension + ndarray::RemoveAxis,
-    A: Into<CowArray<'a, f64, D>>,
+    CowArray<'a, f64, D>: From<A>,
 {
-    let mut arr = arr.into().to_owned();
+    let mut arr = CowArray::from(arr).into_owned();
     let axis = axis.unwrap_or(Axis(0));
     arr.axis_iter_mut(axis).reduce(|prev, mut next| {
         next += &prev;
@@ -70,7 +70,7 @@ pub fn is_closed<A: PartialEq>(curve: &[A]) -> bool {
 pub fn closed_curve<'a, A, C>(curve: C) -> Vec<A>
 where
     A: Clone + 'a,
-    C: Into<alloc::borrow::Cow<'a, [A]>>,
+    Cow<'a, [A]>: From<C>,
 {
     closed_lin(curve)
 }
@@ -80,9 +80,9 @@ where
 pub fn closed_lin<'a, A, C>(curve: C) -> Vec<A>
 where
     A: Clone + 'a,
-    C: Into<alloc::borrow::Cow<'a, [A]>>,
+    Cow<'a, [A]>: From<C>,
 {
-    let mut c = curve.into().into_owned();
+    let mut c = Cow::from(curve).into_owned();
     c.push(c[0].clone());
     c
 }
@@ -94,9 +94,9 @@ where
 pub fn closed_rev<'a, A, C>(curve: C) -> Vec<A>
 where
     A: Clone + 'a,
-    C: Into<alloc::borrow::Cow<'a, [A]>>,
+    Cow<'a, [A]>: From<C>,
 {
-    let mut curve = curve.into().into_owned();
+    let mut curve = Cow::from(curve).into_owned();
     let curve2 = curve.iter().rev().skip(1).cloned().collect::<Vec<_>>();
     curve.extend(curve2);
     curve

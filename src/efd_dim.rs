@@ -16,12 +16,10 @@ pub trait EfdDim {
     type Trans: Trans;
 
     /// Generate coefficients and transform.
-    fn from_curve_harmonic<'a, C>(
-        curve: C,
+    fn from_curve_harmonic(
+        curve: &[<Self::Trans as Trans>::Coord],
         harmonic: usize,
-    ) -> (Array2<f64>, Transform<Self::Trans>)
-    where
-        C: Into<CowCurve<'a, Self::Trans>>;
+    ) -> (Array2<f64>, Transform<Self::Trans>);
 
     /// Transform array slice to coordinate type.
     fn to_coord(a: ArrayView1<f64>) -> <Self::Trans as Trans>::Coord;
@@ -30,16 +28,12 @@ pub trait EfdDim {
 impl EfdDim for D2 {
     type Trans = T2;
 
-    fn from_curve_harmonic<'a, C>(
-        curve: C,
+    fn from_curve_harmonic(
+        curve: &[<Self::Trans as Trans>::Coord],
         harmonic: usize,
-    ) -> (Array2<f64>, Transform<Self::Trans>)
-    where
-        C: Into<CowCurve<'a, Self::Trans>>,
-    {
+    ) -> (Array2<f64>, Transform<Self::Trans>) {
         const DIM: usize = T2::DIM * 2;
-        let curve = curve.into();
-        let dxy = diff(ndarray::arr2(&curve), Some(Axis(0)));
+        let dxy = diff(ndarray::arr2(curve), Some(Axis(0)));
         let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
         let zt = *t.last().unwrap();
@@ -119,16 +113,12 @@ impl EfdDim for D2 {
 impl EfdDim for D3 {
     type Trans = T3;
 
-    fn from_curve_harmonic<'a, C>(
-        curve: C,
+    fn from_curve_harmonic(
+        curve: &[<Self::Trans as Trans>::Coord],
         harmonic: usize,
-    ) -> (Array2<f64>, Transform<Self::Trans>)
-    where
-        C: Into<CowCurve<'a, Self::Trans>>,
-    {
+    ) -> (Array2<f64>, Transform<Self::Trans>) {
         const DIM: usize = T3::DIM * 2;
-        let curve = curve.into();
-        let dxyz = diff(ndarray::arr2(&curve), Some(Axis(0)));
+        let dxyz = diff(ndarray::arr2(curve), Some(Axis(0)));
         let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
         let zt = *t.last().unwrap();
