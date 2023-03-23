@@ -68,6 +68,26 @@ impl<A: Clone> Curve<A> for &Vec<A> {
     }
 }
 
+impl<A: Clone, const N: usize> Curve<A> for [A; N] {
+    fn to_curve(self) -> Vec<A> {
+        self.to_vec()
+    }
+
+    fn as_curve(&self) -> &[A] {
+        self
+    }
+}
+
+impl<A: Clone, const N: usize> Curve<A> for &[A; N] {
+    fn to_curve(self) -> Vec<A> {
+        self.to_vec()
+    }
+
+    fn as_curve(&self) -> &[A] {
+        self.as_slice()
+    }
+}
+
 impl<A: Clone> Curve<A> for &[A] {
     fn to_curve(self) -> Vec<A> {
         self.to_vec()
