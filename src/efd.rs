@@ -90,14 +90,14 @@ impl<D: EfdDim> Efd<D> {
         C: Curve<Coord<D>>,
         Option<f64>: From<T>,
     {
-        let curve = curve.to_curve();
+        let curve = curve.as_curve();
         if curve.len() < 2 {
             return None;
         }
         let threshold = Option::from(threshold).unwrap_or(0.9999);
         // Nyquist Frequency
         let harmonic = curve.len() / 2;
-        let (mut coeffs, trans) = D::from_curve_harmonic(&curve, harmonic);
+        let (mut coeffs, trans) = D::from_curve_harmonic(curve, harmonic);
         let lut = cumsum(coeffs.mapv(pow2), None).sum_axis(Axis(1));
         let total_power = lut.last().unwrap();
         let harmonic = lut
@@ -128,11 +128,11 @@ impl<D: EfdDim> Efd<D> {
         Option<usize>: From<H>,
     {
         if let Some(harmonic) = Option::from(harmonic) {
-            let curve = curve.to_curve();
+            let curve = curve.as_curve();
             if curve.len() < 2 {
                 None
             } else {
-                let (coeffs, trans) = D::from_curve_harmonic(&curve, harmonic);
+                let (coeffs, trans) = D::from_curve_harmonic(curve, harmonic);
                 Some(Self { coeffs, trans, _dim: PhantomData })
             }
         } else {
