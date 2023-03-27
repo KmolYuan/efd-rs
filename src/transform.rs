@@ -186,13 +186,14 @@ impl<T: Trans> Transform<T> {
     ///
     /// ```
     /// use efd::{curve_diff, Efd2};
-    /// # let path1 = efd::tests::PATH.to_vec();
-    /// # let path2 = efd::tests::PATH.to_vec();
+    /// # use efd::Curve as _;
+    /// # let path1 = efd::tests::PATH.closed_lin().to_vec();
+    /// # let path2 = efd::tests::PATH.closed_lin().to_vec();
     ///
     /// let a = Efd2::from_curve(&path1).unwrap();
     /// let b = Efd2::from_curve(&path2).unwrap();
     /// let trans = a.as_trans().to(b.as_trans());
-    /// assert!(dbg!(curve_diff(&trans.transform(path1), &path2)) < efd::tests::EPS);
+    /// assert!(curve_diff(&trans.transform(path1), &path2, path2.len()) < efd::tests::EPS);
     /// ```
     #[must_use]
     pub fn to(&self, rhs: &Self) -> Self {
@@ -203,13 +204,14 @@ impl<T: Trans> Transform<T> {
     ///
     /// ```
     /// use efd::{curve_diff, Efd2};
-    /// # let path1 = efd::tests::PATH.to_vec();
-    /// # let path2 = efd::tests::PATH.to_vec();
+    /// # use efd::Curve as _;
+    /// # let path1 = efd::tests::PATH.closed_lin().to_vec();
+    /// # let path2 = efd::tests::PATH.closed_lin().to_vec();
     ///
     /// let a = Efd2::from_curve(&path1).unwrap();
     /// let b = Efd2::from_curve(&path2).unwrap();
     /// let trans = b.as_trans() * &a.as_trans().inverse();
-    /// assert!(dbg!(curve_diff(&trans.transform(path1), &path2)) < efd::tests::EPS);
+    /// assert!(curve_diff(&trans.transform(path1), &path2, path2.len()) < efd::tests::EPS);
     /// ```
     #[must_use]
     pub fn apply(&self, rhs: &Self) -> Self {
@@ -226,7 +228,7 @@ impl<T: Trans> Transform<T> {
     /// let path = efd.generate(path.len());
     /// let path_norm = efd.generate_norm(path.len());
     /// let path = efd.as_trans().inverse().transform(path);
-    /// # assert!(curve_diff(&path, &path_norm) < efd::tests::EPS);
+    /// # assert!(curve_diff(&path, &path_norm, path.len()) < efd::tests::EPS);
     /// ```
     #[must_use]
     pub fn inverse(&self) -> Self {
@@ -253,8 +255,8 @@ impl<T: Trans> Transform<T> {
     /// let path1 = efd.as_trans().transform(&path);
     /// # let trans = efd.as_trans();
     /// let path1_inv = trans.inverse().transform(&path1);
-    /// # assert!(curve_diff(&path1, TARGET) < efd::tests::EPS);
-    /// # assert!(curve_diff(&path1_inv, &path) < efd::tests::EPS);
+    /// # assert!(curve_diff(&path1, TARGET, TARGET.len()) < efd::tests::EPS);
+    /// # assert!(curve_diff(&path1_inv, &path, path.len()) < efd::tests::EPS);
     /// ```
     #[must_use]
     pub fn transform<C>(&self, curve: C) -> Vec<T::Coord>

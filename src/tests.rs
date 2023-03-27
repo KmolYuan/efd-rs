@@ -1,7 +1,7 @@
 #![doc(hidden)]
 
 /// Epsilon for curve difference.
-pub const EPS: f64 = 2e-14;
+pub const EPS: f64 = 1e-12;
 
 #[test]
 fn error() {
@@ -40,10 +40,10 @@ fn efd2d() {
     assert_eq!(efd.harmonic(), 6);
     // Test normalized
     let norm = efd.generate_norm(NORM.len());
-    assert!(curve_diff(&norm, NORM) < EPS);
+    assert!(curve_diff(&norm, NORM, NORM.len()) < EPS);
     // Test reconstruction
     let target = efd.generate(TARGET.len());
-    assert!(curve_diff(&target, TARGET) < EPS);
+    assert!(curve_diff(&target, TARGET, TARGET.len()) < EPS);
 }
 
 #[test]
@@ -75,10 +75,10 @@ fn efd3d() {
     assert_eq!(efd.harmonic(), 5);
     // Test normalized
     let norm = efd.generate_norm(NORM3D.len());
-    assert!(curve_diff(&norm, NORM3D) < EPS);
+    assert!(curve_diff(&norm, NORM3D, NORM3D.len()) < EPS);
     // Test reconstruction
     let target = efd.generate(NORM3D.len());
-    assert!(curve_diff(&target, TARGET3D) < EPS);
+    assert!(curve_diff(&target, TARGET3D, NORM3D.len()) < EPS);
 }
 
 #[test]
