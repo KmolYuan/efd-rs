@@ -1,5 +1,5 @@
 use alloc::vec;
-use ndarray::{arr2, Array, Axis, CowArray, Dimension, FixedInitializer};
+use ndarray::{arr2, s, Array, Axis, CowArray, Dimension, FixedInitializer};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
 
@@ -61,8 +61,8 @@ where
             let t = t.as_slice().unwrap();
             (0..b.ncols())
                 .map(|i| {
-                    let ax = a.index_axis(Axis(1), i);
-                    let bx = b.index_axis(Axis(1), i);
+                    let ax = a.slice(s![.., i]);
+                    let bx = b.slice(s![.., i]);
                     let bx = bx.as_standard_layout();
                     let bx = interp::interp_slice(&bt, bx.as_slice().unwrap(), t);
                     (&ax - ndarray::Array1::from(bx)).mapv(pow2)

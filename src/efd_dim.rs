@@ -1,5 +1,5 @@
 use crate::*;
-use alloc::vec;
+use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
 use ndarray::{array, s, Array2, ArrayView1, Axis};
 #[cfg(not(feature = "std"))]
@@ -32,14 +32,15 @@ impl EfdDim for D2 {
         curve: &[<Self::Trans as Trans>::Coord],
         harmonic: usize,
     ) -> (Array2<f64>, Transform<Self::Trans>) {
-        const DIM: usize = T2::DIM * 2;
+        const DIM: usize = T2::DIM;
+        const CDIM: usize = DIM * 2;
         let dxy = diff(ndarray::arr2(curve), Some(Axis(0)));
         let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
         let zt = *t.last().unwrap();
         debug_assert!(zt != 0.);
         let phi = &t * TAU / zt;
-        let mut coeffs = Array2::zeros([harmonic, DIM]);
+        let mut coeffs = Array2::zeros([harmonic, CDIM]);
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let n = i as f64 + 1.;
             let t = 0.5 * zt / (n * n * PI * PI);
@@ -50,7 +51,7 @@ impl EfdDim for D2 {
             let sin_phi_n = (phi_n_back.mapv(f64::sin) - phi_n_front.mapv(f64::sin)) / &dt;
             let s_cos = t * (&dxy * cos_phi_n.insert_axis(Axis(1)));
             let s_sin = t * (&dxy * sin_phi_n.insert_axis(Axis(1)));
-            for i in 0..DIM {
+            for i in 0..CDIM {
                 let j = i / 2;
                 c[i] = if i % 2 == 0 { &s_cos } else { &s_sin }
                     .slice(s![.., j])
@@ -59,13 +60,16 @@ impl EfdDim for D2 {
         }
         let center = {
             let tdt = &t.slice(s![1..]) / &dt;
-            let xi = cumsum(dxy.slice(s![.., 0]), None) - &dxy.slice(s![.., 0]) * &tdt;
             let c = diff(t.mapv(pow2), None) * 0.5 / &dt;
-            let a0 = (&dxy.slice(s![.., 0]) * &c + xi * &dt).sum() / zt;
-            let xi = cumsum(dxy.slice(s![.., 1]), None) - &dxy.slice(s![.., 1]) * &tdt;
-            let c0 = (&dxy.slice(s![.., 1]) * c + xi * dt).sum() / zt;
-            let [x, y] = curve.first().unwrap();
-            [x + a0, y + c0]
+            (0..DIM)
+                .map(|i| {
+                    let xi = cumsum(dxy.slice(s![.., i]), None) - &dxy.slice(s![.., i]) * &tdt;
+                    let a0 = (&dxy.slice(s![.., i]) * &c + xi * &dt).sum() / zt;
+                    curve[0][i] + a0
+                })
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap()
         };
         // Angle of starting point
         let theta = {
@@ -77,7 +81,7 @@ impl EfdDim for D2 {
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let theta = na::Rotation2::new((i + 1) as f64 * -theta);
             let m = theta * na::matrix![c[0], c[2]; c[1], c[3]];
-            for i in 0..DIM {
+            for i in 0..CDIM {
                 c[i] = m[(i % 2, i / 2)];
             }
         }
@@ -95,7 +99,7 @@ impl EfdDim for D2 {
         let psi_inv = psi.inverse();
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = psi_inv * na::matrix![c[0], c[1]; c[2], c[3]];
-            for i in 0..DIM {
+            for i in 0..CDIM {
                 c[i] = m[(i / 2, i % 2)];
             }
         }
@@ -117,13 +121,14 @@ impl EfdDim for D3 {
         curve: &[<Self::Trans as Trans>::Coord],
         harmonic: usize,
     ) -> (Array2<f64>, Transform<Self::Trans>) {
-        const DIM: usize = T3::DIM * 2;
+        const DIM: usize = T3::DIM;
+        const CDIM: usize = DIM * 2;
         let dxyz = diff(ndarray::arr2(curve), Some(Axis(0)));
         let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
         let zt = *t.last().unwrap();
         let phi = &t * TAU / zt;
-        let mut coeffs = Array2::zeros([harmonic, DIM]);
+        let mut coeffs = Array2::zeros([harmonic, CDIM]);
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let n = i as f64 + 1.;
             let t = 0.5 * zt / (n * n * PI * PI);
@@ -134,7 +139,7 @@ impl EfdDim for D3 {
             let sin_phi_n = (phi_n_back.mapv(f64::sin) - phi_n_front.mapv(f64::sin)) / &dt;
             let s_cos = t * (&dxyz * cos_phi_n.insert_axis(Axis(1)));
             let s_sin = t * (&dxyz * sin_phi_n.insert_axis(Axis(1)));
-            for i in 0..DIM {
+            for i in 0..CDIM {
                 c[i] = if i % 2 == 0 { &s_cos } else { &s_sin }
                     .slice(s![.., i / 2])
                     .sum();
@@ -142,15 +147,16 @@ impl EfdDim for D3 {
         }
         let center = {
             let tdt = &t.slice(s![1..]) / &dt;
-            let xi = cumsum(dxyz.slice(s![.., 0]), None) - &dxyz.slice(s![.., 0]) * &tdt;
             let c = diff(t.mapv(pow2), None) * 0.5 / &dt;
-            let a0 = (&dxyz.slice(s![.., 0]) * &c + xi * &dt).sum() / zt;
-            let xi = cumsum(dxyz.slice(s![.., 1]), None) - &dxyz.slice(s![.., 1]) * &tdt;
-            let c0 = (&dxyz.slice(s![.., 1]) * &c + xi * &dt).sum() / zt;
-            let xi = cumsum(dxyz.slice(s![.., 2]), None) - &dxyz.slice(s![.., 2]) * &tdt;
-            let e0 = (&dxyz.slice(s![.., 2]) * &c + xi * &dt).sum() / zt;
-            let [x, y, z] = curve.first().unwrap();
-            [x + a0, y + c0, z + e0]
+            (0..DIM)
+                .map(|i| {
+                    let xi = cumsum(dxyz.slice(s![.., i]), None) - &dxyz.slice(s![.., i]) * &tdt;
+                    let a0 = (&dxyz.slice(s![.., i]) * &c + xi * &dt).sum() / zt;
+                    curve[0][i] + a0
+                })
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap()
         };
         // Angle of starting point
         let theta = {
@@ -165,7 +171,7 @@ impl EfdDim for D3 {
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let theta = na::Rotation2::new((i + 1) as f64 * -theta);
             let m = theta * na::matrix![c[0], c[2], c[4]; c[1], c[3], c[5]];
-            for i in 0..DIM {
+            for i in 0..CDIM {
                 c[i] = m[(i % 2, i / 2)];
             }
         }
@@ -193,7 +199,7 @@ impl EfdDim for D3 {
         let psi_inv = psi.inverse();
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = psi_inv * na::matrix![c[0], c[1]; c[2], c[3]; c[4], c[5]];
-            for i in 0..DIM {
+            for i in 0..CDIM {
                 c[i] = m[(i / 2, i % 2)];
             }
         }
