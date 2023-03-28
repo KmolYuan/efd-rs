@@ -65,9 +65,12 @@ where
                     let bx = b.index_axis(Axis(1), i);
                     let bx = bx.as_standard_layout();
                     let bx = ndarray::arr1(&interp::interp_slice(&bt, bx.as_slice().unwrap(), t));
-                    (&ax - bx).mapv(f64::abs).sum()
+                    (&ax - bx).mapv(pow2)
                 })
-                .sum::<f64>()
+                .reduce(|a, b| a + b)
+                .unwrap()
+                .mapv(f64::sqrt)
+                .sum()
         })
         .min_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap()
