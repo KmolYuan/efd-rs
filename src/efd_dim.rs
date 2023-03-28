@@ -34,8 +34,8 @@ impl EfdDim for D2 {
     ) -> (Array2<f64>, Transform<Self::Trans>) {
         const DIM: usize = T2::DIM;
         const CDIM: usize = DIM * 2;
-        let dxy = diff(ndarray::arr2(curve), Some(Axis(0)));
-        let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
+        let dxyz = diff(ndarray::arr2(curve), Some(Axis(0)));
+        let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
         let zt = *t.last().unwrap();
         debug_assert!(zt != 0.);
@@ -49,8 +49,8 @@ impl EfdDim for D2 {
             let phi_n_back = phi_n.slice(s![1..]);
             let cos_phi_n = (phi_n_back.mapv(f64::cos) - phi_n_front.mapv(f64::cos)) / &dt;
             let sin_phi_n = (phi_n_back.mapv(f64::sin) - phi_n_front.mapv(f64::sin)) / &dt;
-            let s_cos = t * (&dxy * cos_phi_n.insert_axis(Axis(1)));
-            let s_sin = t * (&dxy * sin_phi_n.insert_axis(Axis(1)));
+            let s_cos = t * (&dxyz * cos_phi_n.insert_axis(Axis(1)));
+            let s_sin = t * (&dxyz * sin_phi_n.insert_axis(Axis(1)));
             for i in 0..CDIM {
                 let j = i / 2;
                 c[i] = if i % 2 == 0 { &s_cos } else { &s_sin }
@@ -63,8 +63,8 @@ impl EfdDim for D2 {
             let c = diff(t.mapv(pow2), None) * 0.5 / &dt;
             (0..DIM)
                 .map(|i| {
-                    let xi = cumsum(dxy.slice(s![.., i]), None) - &dxy.slice(s![.., i]) * &tdt;
-                    let a0 = (&dxy.slice(s![.., i]) * &c + xi * &dt).sum() / zt;
+                    let xi = cumsum(dxyz.slice(s![.., i]), None) - &dxyz.slice(s![.., i]) * &tdt;
+                    let a0 = (&dxyz.slice(s![.., i]) * &c + xi * &dt).sum() / zt;
                     curve[0][i] + a0
                 })
                 .collect::<Vec<_>>()

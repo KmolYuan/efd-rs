@@ -1,7 +1,7 @@
 #![doc(hidden)]
 
 /// Epsilon for curve difference.
-pub const EPS: f64 = 1e-12;
+pub const EPS: f64 = 2e-14;
 
 #[test]
 fn error() {

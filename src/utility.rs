@@ -1,4 +1,4 @@
-use alloc::vec;
+use alloc::{vec, vec::Vec};
 use ndarray::{arr2, s, Array, Axis, CowArray, Dimension, FixedInitializer};
 #[cfg(not(feature = "std"))]
 use num_traits::Float as _;
@@ -34,7 +34,8 @@ where
     arr
 }
 
-/// Coordinate difference between two curves using interpolation.
+/// Coordinate difference between two curves using interpolation and
+/// cross-correlation.
 #[must_use]
 pub fn curve_diff<A, B>(a: &[A], b: &[B], res: usize) -> f64
 where
@@ -42,19 +43,33 @@ where
     B: FixedInitializer<Elem = f64> + Clone,
 {
     assert!(res > 0);
-    fn timing(curve: &ndarray::Array2<f64>) -> ndarray::Array1<f64> {
-        let dxy = diff(curve, Some(Axis(0)));
-        let dt = dxy.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
+    fn timing(curve: &ndarray::Array2<f64>) -> (ndarray::Array1<f64>, Vec<f64>) {
+        let dxyz = diff(curve, Some(Axis(0)));
+        let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
         let t = ndarray::concatenate![Axis(0), ndarray::array![0.], cumsum(&dt, None)];
         let zt = *t.last().unwrap();
-        t / zt
+        let center = {
+            let tdt = &t.slice(s![1..]) / &dt;
+            let c = diff(t.mapv(pow2), None) * 0.5 / &dt;
+            (0..curve.ncols())
+                .map(|i| {
+                    let xi = cumsum(dxyz.slice(s![.., i]), None) - &dxyz.slice(s![.., i]) * &tdt;
+                    let a0 = (&dxyz.slice(s![.., i]) * &c + xi * &dt).sum() / zt;
+                    curve[[0, i]] + a0
+                })
+                .collect::<Vec<_>>()
+        };
+        (t / zt, center)
     }
 
     let a = arr2(a);
-    let at = timing(&a);
     let b = arr2(b);
-    let bt = timing(&b).to_vec();
-    (0..res)
+    let (at, ac) = timing(&a);
+    let (bt, bc) = timing(&b);
+    let a = &a - ndarray::Array1::from(ac).insert_axis(Axis(0));
+    let b = &b - ndarray::Array1::from(bc).insert_axis(Axis(0));
+    let bt = bt.to_vec();
+    let err = (0..res)
         .map(|v| v as f64 / res as f64)
         .map(|shift| {
             let t = (&at + shift) % 1.;
@@ -73,5 +88,6 @@ where
                 .sum()
         })
         .min_by(|a, b| a.partial_cmp(b).unwrap())
-        .unwrap()
+        .unwrap();
+    err / res as f64
 }
