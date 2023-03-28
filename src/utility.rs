@@ -64,8 +64,8 @@ where
                     let ax = a.index_axis(Axis(1), i);
                     let bx = b.index_axis(Axis(1), i);
                     let bx = bx.as_standard_layout();
-                    let bx = ndarray::arr1(&interp::interp_slice(&bt, bx.as_slice().unwrap(), t));
-                    (&ax - bx).mapv(pow2)
+                    let bx = interp::interp_slice(&bt, bx.as_slice().unwrap(), t);
+                    (&ax - ndarray::Array1::from(bx)).mapv(pow2)
                 })
                 .reduce(|a, b| a + b)
                 .unwrap()
