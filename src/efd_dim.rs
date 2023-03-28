@@ -17,24 +17,23 @@ pub trait EfdDim {
 
     /// Generate coefficients and transform.
     fn from_curve_harmonic(
-        curve: &[<Self::Trans as Trans>::Coord],
+        curve: &[Coord<Self>],
         harmonic: usize,
     ) -> (Array2<f64>, Transform<Self::Trans>);
 
     /// Transform array slice to coordinate type.
-    fn to_coord(a: ArrayView1<f64>) -> <Self::Trans as Trans>::Coord;
+    fn to_coord(a: ArrayView1<f64>) -> Coord<Self>;
 }
 
 impl EfdDim for D2 {
     type Trans = T2;
 
     fn from_curve_harmonic(
-        curve: &[<Self::Trans as Trans>::Coord],
+        curve: &[Coord<Self>],
         harmonic: usize,
     ) -> (Array2<f64>, Transform<Self::Trans>) {
-        const DIM: usize = T2::DIM;
-        const CDIM: usize = DIM * 2;
-        let (mut coeffs, center) = get_coeff_center(curve, harmonic, DIM);
+        const CDIM: usize = T2::DIM * 2;
+        let (mut coeffs, center) = get_coeff_center(curve, harmonic);
         // Angle of starting point
         let theta = {
             let c = &coeffs;
@@ -73,7 +72,7 @@ impl EfdDim for D2 {
         (coeffs, trans)
     }
 
-    fn to_coord(a: ArrayView1<f64>) -> <Self::Trans as Trans>::Coord {
+    fn to_coord(a: ArrayView1<f64>) -> Coord<Self> {
         [a[0], a[1]]
     }
 }
@@ -82,12 +81,11 @@ impl EfdDim for D3 {
     type Trans = T3;
 
     fn from_curve_harmonic(
-        curve: &[<Self::Trans as Trans>::Coord],
+        curve: &[Coord<Self>],
         harmonic: usize,
     ) -> (Array2<f64>, Transform<Self::Trans>) {
-        const DIM: usize = T3::DIM;
-        const CDIM: usize = DIM * 2;
-        let (mut coeffs, center) = get_coeff_center(curve, harmonic, DIM);
+        const CDIM: usize = T3::DIM * 2;
+        let (mut coeffs, center) = get_coeff_center(curve, harmonic);
         // Angle of starting point
         let theta = {
             let c = &coeffs;
@@ -139,26 +137,24 @@ impl EfdDim for D3 {
         (coeffs, trans)
     }
 
-    fn to_coord(a: ArrayView1<f64>) -> <Self::Trans as Trans>::Coord {
+    fn to_coord(a: ArrayView1<f64>) -> Coord<Self> {
         [a[0], a[1], a[2]]
     }
 }
 
-fn get_coeff_center<C>(curve: &[C], harmonic: usize, dim: usize) -> (Array2<f64>, C)
+fn get_coeff_center<const DIM: usize>(
+    curve: &[[f64; DIM]],
+    harmonic: usize,
+) -> (Array2<f64>, [f64; DIM])
 where
-    C: ndarray::FixedInitializer<Elem = f64>
-        + core::ops::Index<usize, Output = f64>
-        + TryFrom<Vec<f64>>
-        + Clone,
-    <C as TryFrom<Vec<f64>>>::Error: core::fmt::Debug,
+    [f64; DIM]: ndarray::FixedInitializer<Elem = f64>,
 {
-    let cdim = dim * 2;
     let dxyz = diff(ndarray::arr2(curve), Some(Axis(0)));
     let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
     let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
     let zt = *t.last().unwrap();
     let phi = &t * TAU / zt;
-    let mut coeffs = Array2::zeros([harmonic, cdim]);
+    let mut coeffs = Array2::zeros([harmonic, DIM * 2]);
     for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
         let n = i as f64 + 1.;
         let t = 0.5 * zt / (n * n * PI * PI);
@@ -169,7 +165,7 @@ where
         let sin_phi_n = (phi_n_back.mapv(f64::sin) - phi_n_front.mapv(f64::sin)) / &dt;
         let s_cos = t * (&dxyz * cos_phi_n.insert_axis(Axis(1)));
         let s_sin = t * (&dxyz * sin_phi_n.insert_axis(Axis(1)));
-        for i in 0..cdim {
+        for i in 0..DIM * 2 {
             c[i] = if i % 2 == 0 { &s_cos } else { &s_sin }
                 .slice(s![.., i / 2])
                 .sum();
@@ -178,7 +174,7 @@ where
     let center = {
         let tdt = &t.slice(s![1..]) / &dt;
         let c = diff(t.mapv(pow2), None) * 0.5 / &dt;
-        (0..dim)
+        (0..DIM)
             .map(|i| {
                 let xi = cumsum(dxyz.slice(s![.., i]), None) - &dxyz.slice(s![.., i]) * &tdt;
                 curve[0][i] + (&dxyz.slice(s![.., i]) * &c + xi * &dt).sum() / zt
