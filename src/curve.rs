@@ -35,7 +35,16 @@ pub trait Curve<A: Clone>: Sized {
         curve
     }
 
+    /// Remove the last element.
+    #[must_use]
+    fn pop_last(self) -> Vec<A> {
+        let mut curve = self.to_curve();
+        curve.pop();
+        curve
+    }
+
     /// Check if a curve's first and end points are the same.
+    #[must_use]
     fn is_closed(&self) -> bool
     where
         A: PartialEq,
