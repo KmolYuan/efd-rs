@@ -185,15 +185,15 @@ impl<T: Trans> Transform<T> {
     /// It can be used on a not normalized contour `a` transforming to `b`.
     ///
     /// ```
-    /// use efd::{curve_diff, Efd2};
+    /// use efd::{curve_diff, tests::*, Efd2};
     /// # use efd::Curve as _;
-    /// # let path1 = efd::tests::PATH.closed_lin().to_vec();
-    /// # let path2 = efd::tests::PATH.closed_lin().to_vec();
+    /// # let path1 = PATH.closed_lin().to_vec();
+    /// # let path2 = PATH.closed_lin().to_vec();
     ///
     /// let a = Efd2::from_curve(&path1).unwrap();
     /// let b = Efd2::from_curve(&path2).unwrap();
     /// let trans = a.as_trans().to(b.as_trans());
-    /// assert!(curve_diff(&trans.transform(path1), &path2, path2.len()) < efd::tests::EPS);
+    /// assert!(curve_diff(&trans.transform(path1), &path2) < EPS);
     /// ```
     #[must_use]
     pub fn to(&self, rhs: &Self) -> Self {
@@ -203,15 +203,15 @@ impl<T: Trans> Transform<T> {
     /// Merge two transformation matrices.
     ///
     /// ```
-    /// use efd::{curve_diff, Efd2};
+    /// use efd::{curve_diff, tests::*, Efd2};
     /// # use efd::Curve as _;
-    /// # let path1 = efd::tests::PATH.closed_lin().to_vec();
-    /// # let path2 = efd::tests::PATH.closed_lin().to_vec();
+    /// # let path1 = PATH.closed_lin();
+    /// # let path2 = PATH.closed_lin();
     ///
     /// let a = Efd2::from_curve(&path1).unwrap();
     /// let b = Efd2::from_curve(&path2).unwrap();
     /// let trans = b.as_trans() * &a.as_trans().inverse();
-    /// assert!(curve_diff(&trans.transform(path1), &path2, path2.len()) < efd::tests::EPS);
+    /// assert!(curve_diff(&trans.transform(path1), &path2) < EPS);
     /// ```
     #[must_use]
     pub fn apply(&self, rhs: &Self) -> Self {
@@ -221,14 +221,15 @@ impl<T: Trans> Transform<T> {
     /// Inverse the operation of this information.
     ///
     /// ```
-    /// use efd::{curve_diff, Efd2};
-    /// # let path = efd::tests::PATH;
+    /// use efd::{curve_diff, tests::*, Efd2};
+    /// # use efd::Curve as _;
+    /// # let path = PATH.closed_lin();
     ///
-    /// let efd = Efd2::from_curve(path).unwrap();
+    /// let efd = Efd2::from_curve(&path).unwrap();
     /// let path = efd.generate(path.len());
     /// let path_norm = efd.generate_norm(path.len());
     /// let path = efd.as_trans().inverse().transform(path);
-    /// # assert!(curve_diff(&path, &path_norm, path.len()) < efd::tests::EPS);
+    /// # assert!(curve_diff(&path, &path_norm) < EPS);
     /// ```
     #[must_use]
     pub fn inverse(&self) -> Self {
@@ -248,15 +249,15 @@ impl<T: Trans> Transform<T> {
     /// This function rotates first, then translates.
     ///
     /// ```
-    /// # use efd::{tests::*, *};
+    /// use efd::{tests::*, *};
     /// # let target = TARGET;
     /// # let efd = Efd2::from_curve(PATH.closed_lin()).unwrap();
     /// # let path = efd.generate_norm(target.len());
     /// let path1 = efd.as_trans().transform(&path);
     /// # let trans = efd.as_trans();
     /// let path1_inv = trans.inverse().transform(&path1);
-    /// # assert!(curve_diff(&path1, TARGET, TARGET.len()) < efd::tests::EPS);
-    /// # assert!(curve_diff(&path1_inv, &path, path.len()) < efd::tests::EPS);
+    /// # assert!(curve_diff(&path1, TARGET) < EPS);
+    /// # assert!(curve_diff(&path1_inv, &path) < EPS);
     /// ```
     #[must_use]
     pub fn transform<C>(&self, curve: C) -> Vec<T::Coord>

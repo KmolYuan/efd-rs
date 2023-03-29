@@ -35,7 +35,17 @@ where
 /// Coordinate difference between two curves using interpolation and
 /// cross-correlation.
 #[must_use]
-pub fn curve_diff<A, B>(a: &[A], b: &[B], res: usize) -> f64
+pub fn curve_diff<A, B>(a: &[A], b: &[B]) -> f64
+where
+    A: FixedInitializer<Elem = f64> + Clone,
+    B: FixedInitializer<Elem = f64> + Clone,
+{
+    curve_diff_res(a, b, crate::tests::RES)
+}
+
+/// Custom resolution of [`curve_diff`] function.
+#[must_use]
+pub fn curve_diff_res<A, B>(a: &[A], b: &[B], res: usize) -> f64
 where
     A: FixedInitializer<Elem = f64> + Clone,
     B: FixedInitializer<Elem = f64> + Clone,
