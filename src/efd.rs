@@ -2,8 +2,6 @@ use crate::*;
 use alloc::vec::Vec;
 use core::{f64::consts::TAU, marker::PhantomData};
 use ndarray::{s, Array1, Array2, Axis, Slice};
-#[cfg(not(feature = "std"))]
-use num_traits::Float as _;
 
 /// 2D EFD coefficients type.
 pub type Efd2 = Efd<D2>;

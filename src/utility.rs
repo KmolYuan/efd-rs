@@ -1,7 +1,5 @@
 use alloc::{vec, vec::Vec};
 use ndarray::{arr2, s, Array, Axis, CowArray, Dimension, FixedInitializer};
-#[cfg(not(feature = "std"))]
-use num_traits::Float as _;
 
 #[inline(always)]
 pub(crate) fn pow2(x: f64) -> f64 {

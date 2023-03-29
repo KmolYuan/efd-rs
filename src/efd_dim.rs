@@ -2,8 +2,6 @@ use crate::*;
 use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
 use ndarray::{array, s, Array2, ArrayView1, Axis};
-#[cfg(not(feature = "std"))]
-use num_traits::Float as _;
 
 /// 2D EFD dimension type.
 pub type D2 = [f64; 2];
