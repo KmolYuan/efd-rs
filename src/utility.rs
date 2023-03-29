@@ -42,30 +42,11 @@ where
     A: FixedInitializer<Elem = f64> + Clone,
     B: FixedInitializer<Elem = f64> + Clone,
 {
-    assert!(res > 0);
-    fn timing(curve: &ndarray::Array2<f64>) -> (ndarray::Array1<f64>, Vec<f64>) {
-        let dxyz = diff(curve, Some(Axis(0)));
-        let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
-        let t = ndarray::concatenate![Axis(0), ndarray::array![0.], cumsum(&dt, None)];
-        let zt = *t.last().unwrap();
-        let center = {
-            let tdt = &t.slice(s![1..]) / &dt;
-            let c = diff(t.mapv(pow2), None) * 0.5 / &dt;
-            (0..curve.ncols())
-                .map(|i| {
-                    let xi = cumsum(dxyz.slice(s![.., i]), None) - &dxyz.slice(s![.., i]) * &tdt;
-                    let a0 = (&dxyz.slice(s![.., i]) * &c + xi * &dt).sum() / zt;
-                    curve[[0, i]] + a0
-                })
-                .collect::<Vec<_>>()
-        };
-        (t / zt, center)
-    }
-
+    assert!(a.len() >= 2 && b.len() >= 2 && res > 0);
     let a = arr2(a);
     let b = arr2(b);
-    let (at, ac) = timing(&a);
-    let (bt, bc) = timing(&b);
+    let (at, ac) = get_time_center(&a);
+    let (bt, bc) = get_time_center(&b);
     let a = &a - ndarray::Array1::from(ac).insert_axis(Axis(0));
     let b = &b - ndarray::Array1::from(bc).insert_axis(Axis(0));
     let bt = bt.to_vec();
@@ -90,4 +71,23 @@ where
         .min_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap();
     err / res as f64
+}
+
+fn get_time_center(curve: &ndarray::Array2<f64>) -> (ndarray::Array1<f64>, Vec<f64>) {
+    let dxyz = diff(curve, Some(Axis(0)));
+    let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
+    let t = ndarray::concatenate![Axis(0), ndarray::array![0.], cumsum(&dt, None)];
+    let zt = *t.last().unwrap();
+    let center = {
+        let tdt = &t.slice(s![1..]) / &dt;
+        let c = diff(t.mapv(pow2), None) * 0.5 / &dt;
+        (0..curve.ncols())
+            .map(|i| {
+                let xi = cumsum(dxyz.slice(s![.., i]), None) - &dxyz.slice(s![.., i]) * &tdt;
+                let a0 = (&dxyz.slice(s![.., i]) * &c + xi * &dt).sum() / zt;
+                curve[[0, i]] + a0
+            })
+            .collect()
+    };
+    (t / zt, center)
 }
