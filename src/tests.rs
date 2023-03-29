@@ -138,7 +138,7 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
             BLACK.stroke_width(3),
         ))?
         .label("Original")
-        .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLACK.stroke_width(3)));
+        .legend(move |(x, y)| PathElement::new([(x, y), (x + 20, y)], BLACK.stroke_width(3)));
     for (p, color) in [((10., 0.), RED), ((0., 10.), BLUE)] {
         chart.draw_series(LineSeries::new([(0., 0.), p], color.stroke_width(5)))?;
     }
@@ -167,7 +167,7 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         chart
             .draw_series(LineSeries::new(ellipse, RED.stroke_width(3)))?
             .label(&format!("n={}", i + 1))
-            .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], RED.stroke_width(3)));
+            .legend(move |(x, y)| PathElement::new([(x, y), (x + 20, y)], RED.stroke_width(3)));
     }
     Ok(())
 }

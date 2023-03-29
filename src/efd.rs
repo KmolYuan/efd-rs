@@ -279,24 +279,16 @@ where
     D: EfdDim,
     F: Fn(&Array2<f64>, &Array2<f64>) -> f64,
 {
-    use core::cmp::Ordering;
+    use core::cmp::Ordering::*;
     match a.harmonic().cmp(&b.harmonic()) {
-        Ordering::Equal => f(&a.coeffs, &b.coeffs),
-        Ordering::Greater => {
-            let b = ndarray::concatenate![
-                Axis(0),
-                b.coeffs.view(),
-                Array2::zeros([a.harmonic() - b.harmonic(), 4]).view()
-            ];
-            f(&a.coeffs, &b)
+        Equal => f(&a.coeffs, &b.coeffs),
+        Greater => {
+            let zeros = Array2::zeros([a.harmonic() - b.harmonic(), a.coeffs.ncols()]);
+            f(&a.coeffs, &ndarray::concatenate![Axis(0), b.coeffs, zeros])
         }
-        Ordering::Less => {
-            let a = ndarray::concatenate![
-                Axis(0),
-                a.coeffs.view(),
-                Array2::zeros([b.harmonic() - a.harmonic(), 4]).view()
-            ];
-            f(&a, &b.coeffs)
+        Less => {
+            let zeros = Array2::zeros([b.harmonic() - a.harmonic(), a.coeffs.ncols()]);
+            f(&ndarray::concatenate![Axis(0), a.coeffs, zeros], &b.coeffs)
         }
     }
 }
