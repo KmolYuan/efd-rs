@@ -32,20 +32,39 @@ where
     arr
 }
 
-/// Coordinate difference between two curves using interpolation and
-/// cross-correlation.
-#[must_use]
-pub fn curve_diff<A, B>(a: &[A], b: &[B]) -> f64
-where
-    A: FixedInitializer<Elem = f64> + Clone,
-    B: FixedInitializer<Elem = f64> + Clone,
-{
-    curve_diff_res(a, b, crate::tests::RES)
+macro_rules! impl_curve_diff {
+    ($($(#[$meta:meta])+ fn $name:ident($($arg:ident:$ty:ty),*) { ($($expr:expr),+) })+) => {$(
+        $(#[$meta])+
+        #[must_use]
+        pub fn $name<A, B>(a: &[A], b: &[B], $($arg:$ty),*) -> f64
+        where
+            A: FixedInitializer<Elem = f64> + Clone,
+            B: FixedInitializer<Elem = f64> + Clone,
+        {
+            curve_diff_res_norm(a, b, $($expr),+)
+        }
+    )+};
 }
 
-/// Custom resolution of [`curve_diff`] function.
-#[must_use]
-pub fn curve_diff_res<A, B>(a: &[A], b: &[B], res: usize) -> f64
+impl_curve_diff! {
+    /// Curve difference between two curves using interpolation.
+    ///
+    /// Two curves must be periodic.
+    fn curve_diff() { (crate::tests::RES, true) }
+
+    /// Custom resolution of [`curve_diff`] function.
+    fn curve_diff_res(res: usize) { (res, true) }
+
+    /// Coordinate difference between two curves using interpolation.
+    ///
+    /// The fist curve is a part of the second curve.
+    fn partial_curve_diff() { (crate::tests::RES, false) }
+
+    /// Custom resolution of [`partial_curve_diff`] function.
+    fn partial_curve_diff_res(res: usize) { (res, false) }
+}
+
+fn curve_diff_res_norm<A, B>(a: &[A], b: &[B], res: usize, norm: bool) -> f64
 where
     A: FixedInitializer<Elem = f64> + Clone,
     B: FixedInitializer<Elem = f64> + Clone,
@@ -53,15 +72,15 @@ where
     assert!(a.len() >= 2 && b.len() >= 2 && res > 0);
     let a = arr2(a);
     let b = arr2(b);
-    let (at, ac) = get_time_center(&a);
-    let (bt, bc) = get_time_center(&b);
+    let (at, ac) = get_time_center(&a, norm);
+    let (bt, bc) = get_time_center(&b, norm);
     let a = &a - ndarray::Array1::from(ac).insert_axis(Axis(0));
     let b = &b - ndarray::Array1::from(bc).insert_axis(Axis(0));
     let bt = bt.to_vec();
+    let bzt = if norm { 1. } else { *bt.last().unwrap() };
     let err = (0..res)
-        .map(|v| v as f64 / res as f64)
-        .map(|shift| {
-            let t = (&at + shift) % 1.;
+        .map(|v| (&at + v as f64 / res as f64) % bzt)
+        .map(|t| {
             let t = t.as_slice().unwrap();
             (0..b.ncols())
                 .map(|i| {
@@ -81,7 +100,7 @@ where
     err / res as f64
 }
 
-fn get_time_center(curve: &ndarray::Array2<f64>) -> (ndarray::Array1<f64>, Vec<f64>) {
+fn get_time_center(curve: &ndarray::Array2<f64>, norm: bool) -> (ndarray::Array1<f64>, Vec<f64>) {
     let dxyz = diff(curve, Some(Axis(0)));
     let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
     let t = ndarray::concatenate![Axis(0), ndarray::array![0.], cumsum(&dt, None)];
@@ -97,5 +116,5 @@ fn get_time_center(curve: &ndarray::Array2<f64>) -> (ndarray::Array1<f64>, Vec<f
             })
             .collect()
     };
-    (t / zt, center)
+    (if norm { t / zt } else { t }, center)
 }
