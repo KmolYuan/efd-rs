@@ -1,4 +1,4 @@
-use alloc::{vec, vec::Vec};
+use alloc::vec;
 use ndarray::{arr2, s, Array, Axis, CowArray, Dimension, FixedInitializer};
 
 #[inline(always)]
@@ -57,7 +57,7 @@ impl_curve_diff! {
 
     /// Coordinate difference between two curves using interpolation.
     ///
-    /// The fist curve is a part of the second curve.
+    /// The first curve is a part of the second curve, the second curve is periodic.
     fn partial_curve_diff() { (crate::tests::RES, false) }
 
     /// Custom resolution of [`partial_curve_diff`] function.
@@ -72,11 +72,8 @@ where
     assert!(a.len() >= 2 && b.len() >= 2 && res > 0);
     let a = arr2(a);
     let b = arr2(b);
-    let (at, ac) = get_time_center(&a, norm);
-    let (bt, bc) = get_time_center(&b, norm);
-    let a = &a - ndarray::Array1::from(ac).insert_axis(Axis(0));
-    let b = &b - ndarray::Array1::from(bc).insert_axis(Axis(0));
-    let bt = bt.to_vec();
+    let at = get_time(&a, norm);
+    let bt = get_time(&b, norm).to_vec();
     let bzt = if norm { 1. } else { *bt.last().unwrap() };
     let err = (0..res)
         .map(|v| (&at + v as f64 / res as f64) % bzt)
@@ -97,24 +94,17 @@ where
         })
         .min_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap();
-    err / res as f64
+    err / at.len() as f64
 }
 
-fn get_time_center(curve: &ndarray::Array2<f64>, norm: bool) -> (ndarray::Array1<f64>, Vec<f64>) {
+fn get_time(curve: &ndarray::Array2<f64>, norm: bool) -> ndarray::Array1<f64> {
     let dxyz = diff(curve, Some(Axis(0)));
     let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
     let t = ndarray::concatenate![Axis(0), ndarray::array![0.], cumsum(&dt, None)];
-    let zt = *t.last().unwrap();
-    let center = {
-        let tdt = &t.slice(s![1..]) / &dt;
-        let c = diff(t.mapv(pow2), None) * 0.5 / &dt;
-        (0..curve.ncols())
-            .map(|i| {
-                let xi = cumsum(dxyz.slice(s![.., i]), None) - &dxyz.slice(s![.., i]) * &tdt;
-                let a0 = (&dxyz.slice(s![.., i]) * &c + xi * &dt).sum() / zt;
-                curve[[0, i]] + a0
-            })
-            .collect()
-    };
-    (if norm { t / zt } else { t }, center)
+    if norm {
+        let zt = *t.last().unwrap();
+        t / zt
+    } else {
+        t
+    }
 }

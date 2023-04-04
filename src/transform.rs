@@ -187,8 +187,8 @@ impl<T: Trans> Transform<T> {
     /// ```
     /// use efd::{curve_diff, tests::*, Efd2};
     /// # use efd::Curve as _;
-    /// # let path1 = PATH.closed_lin().to_vec();
-    /// # let path2 = PATH.closed_lin().to_vec();
+    /// # let path1 = PATH.closed_lin();
+    /// # let path2 = PATH.closed_lin();
     ///
     /// let a = Efd2::from_curve(&path1).unwrap();
     /// let b = Efd2::from_curve(&path2).unwrap();
