@@ -74,7 +74,7 @@ where
     let b = arr2(b);
     let at = get_time(&a, norm);
     let bt = get_time(&b, norm).to_vec();
-    let bzt = if norm { 1. } else { *bt.last().unwrap() };
+    let bzt = *bt.last().unwrap();
     let err = (0..res)
         .map(|v| (&at + v as f64 / res as f64) % bzt)
         .map(|t| {
@@ -94,7 +94,7 @@ where
         })
         .min_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap();
-    err / at.len() as f64
+    err / bzt / at.len() as f64
 }
 
 fn get_time(curve: &ndarray::Array2<f64>, norm: bool) -> ndarray::Array1<f64> {
