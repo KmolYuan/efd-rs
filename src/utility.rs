@@ -94,7 +94,7 @@ where
         })
         .min_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap();
-    err / bzt / at.len() as f64
+    err / at.len() as f64
 }
 
 fn get_time(curve: &ndarray::Array2<f64>, norm: bool) -> ndarray::Array1<f64> {
