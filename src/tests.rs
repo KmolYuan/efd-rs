@@ -133,19 +133,12 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         .build_cartesian_2d(x_min..x_max, y_min..y_max)?;
     let p0 = path[0];
     chart.draw_series([Circle::new((p0[0], p0[1]), 3, BLACK.filled())])?;
-    chart
-        .draw_series(LineSeries::new(
-            path.into_iter().map(|[x, y]| (x, y)),
-            BLACK.stroke_width(3),
-        ))?
-        .label("Original")
-        .legend(move |(x, y)| PathElement::new([(x, y), (x + 20, y)], BLACK.stroke_width(3)));
     for (p, color) in [((10., 0.), RED), ((0., 10.), BLUE)] {
-        chart.draw_series(LineSeries::new([(0., 0.), p], color.stroke_width(5)))?;
+        chart.draw_series(LineSeries::new([(0., 0.), p], color.stroke_width(10)))?;
     }
     let trans0 = efd.as_trans();
     let mut c0 = [0.; 2];
-    for (i, c) in efd.coeffs().axis_iter(Axis(0)).enumerate() {
+    for c in efd.coeffs().axis_iter(Axis(0)) {
         let m = na::matrix![c[0], c[1]; c[2], c[3]];
         let f = |t: f64| {
             let v = m * na::matrix![t.cos(); t.sin()];
@@ -163,13 +156,14 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         let p2 = c0;
         let [x1, y1] = trans0.transform_pt(&p1);
         let [x2, y2] = trans0.transform_pt(&p2);
-        chart.draw_series([Circle::new((x2, y2), 3, RED.filled())])?;
-        chart.draw_series(LineSeries::new([(x1, y1), (x2, y2)], RED))?;
-        chart
-            .draw_series(LineSeries::new(ellipse, RED.stroke_width(3)))?
-            .label(&format!("n={}", i + 1))
-            .legend(move |(x, y)| PathElement::new([(x, y), (x + 20, y)], RED.stroke_width(3)));
+        chart.draw_series([Circle::new((x2, y2), 5, RED.filled())])?;
+        chart.draw_series(LineSeries::new([(x1, y1), (x2, y2)], RED.stroke_width(5)))?;
+        chart.draw_series(LineSeries::new(ellipse, RED.stroke_width(7)))?;
     }
+    chart.draw_series(LineSeries::new(
+        path.into_iter().map(|[x, y]| (x, y)),
+        BLACK.stroke_width(10),
+    ))?;
     Ok(())
 }
 
