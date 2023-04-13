@@ -14,7 +14,7 @@ pub trait Trans {
     /// Dimension hint.
     const DIM: usize;
     /// Coordinate/Translation type.
-    type Coord: Clone + 'static;
+    type Coord: Clone + PartialEq + 'static;
     /// Rotation angle type.
     type Rot: Clone + 'static;
     /// Scaling factor type.
