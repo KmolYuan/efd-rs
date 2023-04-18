@@ -55,9 +55,9 @@ impl EfdDim for D2 {
         // Case in 2D are equivalent to:
         //
         // let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], 0.).normalize();
-        // na::Rotation2::new(u.dot(&na::Vector3::x()))
-        let psi = na::Rotation2::new(coeffs[[0, 2]].atan2(coeffs[[0, 0]]));
-        let psi_inv = psi.inverse();
+        // na::UnitComplex::new(u.dot(&na::Vector3::x()))
+        let psi = na::UnitComplex::new(coeffs[[0, 2]].atan2(coeffs[[0, 0]]));
+        let psi_inv = psi.inverse().to_rotation_matrix();
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = psi_inv * na::matrix![c[0], c[1]; c[2], c[3]];
             for i in 0..CDIM {
@@ -66,7 +66,7 @@ impl EfdDim for D2 {
         }
         let scale = coeffs[[0, 0]].hypot(coeffs[[0, 2]]);
         coeffs /= scale;
-        let trans = Transform::new(center, psi.into(), scale);
+        let trans = Transform::new(center, psi, scale);
         (coeffs, trans)
     }
 
@@ -113,16 +113,16 @@ impl EfdDim for D3 {
             let rot1 = {
                 let axis = u.cross(&na::Vector3::x());
                 let angle = u.dot(&na::Vector3::x());
-                na::Rotation3::new(axis * angle)
+                na::UnitQuaternion::new(axis * angle)
             };
             let rot2 = {
                 let v = rot1 * v;
                 let angle = v.z.atan2(v.y);
-                na::Rotation3::new(na::Vector3::x() * angle)
+                na::UnitQuaternion::new(na::Vector3::x() * angle)
             };
             rot2 * rot1
         };
-        let psi_inv = psi.inverse();
+        let psi_inv = psi.inverse().to_rotation_matrix();
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = psi_inv * na::matrix![c[0], c[1]; c[2], c[3]; c[4], c[5]];
             for i in 0..CDIM {
@@ -131,7 +131,7 @@ impl EfdDim for D3 {
         }
         let scale = (pow2(coeffs[[0, 0]]) + pow2(coeffs[[0, 2]]) + pow2(coeffs[[0, 4]])).sqrt();
         coeffs /= scale;
-        let trans = Transform::new(center, psi.into(), scale);
+        let trans = Transform::new(center, psi, scale);
         (coeffs, trans)
     }
 
