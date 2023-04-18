@@ -55,7 +55,7 @@ impl EfdDim for D2 {
         // Case in 2D are equivalent to:
         //
         // let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], 0.).normalize();
-        // na::UnitComplex::new(u.dot(&na::Vector3::x()))
+        // na::UnitComplex::new(u.dot(&na::Vector3::x()).acos())
         let psi = na::UnitComplex::new(coeffs[[0, 2]].atan2(coeffs[[0, 0]]));
         let psi_inv = psi.inverse().to_rotation_matrix();
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
@@ -108,11 +108,11 @@ impl EfdDim for D3 {
         }
         // Angle of semi-major axis
         let psi = {
-            let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], coeffs[[0, 4]]).normalize();
-            let v = na::Vector3::new(coeffs[[0, 1]], coeffs[[0, 3]], coeffs[[0, 5]]).normalize();
+            let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], coeffs[[0, 4]]);
+            let v = na::Vector3::new(coeffs[[0, 1]], coeffs[[0, 3]], coeffs[[0, 5]]);
             let rot1 = {
-                let axis = u.cross(&na::Vector3::x());
-                let angle = u.dot(&na::Vector3::x());
+                let axis = u.cross(&na::Vector3::x()).normalize();
+                let angle = u.normalize().dot(&na::Vector3::x()).acos();
                 na::UnitQuaternion::new(axis * angle)
             };
             let rot2 = {
