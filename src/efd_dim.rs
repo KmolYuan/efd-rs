@@ -108,21 +108,11 @@ impl EfdDim for D3 {
         }
         // Angle of semi-major axis
         let psi = {
-            let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], coeffs[[0, 4]]);
-            let v = na::Vector3::new(coeffs[[0, 1]], coeffs[[0, 3]], coeffs[[0, 5]]);
-            let rot1 = {
-                let axis = u.cross(&na::Vector3::x()).normalize();
-                let angle = u.normalize().dot(&na::Vector3::x()).acos();
-                na::UnitQuaternion::new(axis * angle)
-            };
-            let rot2 = {
-                let v = rot1 * v;
-                let angle = v.z.atan2(v.y);
-                na::UnitQuaternion::new(na::Vector3::x() * angle)
-            };
-            rot2 * rot1
+            let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], coeffs[[0, 4]]).normalize();
+            let v = na::Vector3::new(coeffs[[0, 1]], coeffs[[0, 3]], coeffs[[0, 5]]).normalize();
+            na::Rotation3::from_basis_unchecked(&[u, v, u.cross(&v)])
         };
-        let psi_inv = psi.inverse().to_rotation_matrix();
+        let psi_inv = psi.inverse();
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = psi_inv * na::matrix![c[0], c[1]; c[2], c[3]; c[4], c[5]];
             for i in 0..CDIM {
@@ -131,7 +121,7 @@ impl EfdDim for D3 {
         }
         let scale = (pow2(coeffs[[0, 0]]) + pow2(coeffs[[0, 2]]) + pow2(coeffs[[0, 4]])).sqrt();
         coeffs /= scale;
-        let trans = Transform::new(center, psi, scale);
+        let trans = Transform::new(center, psi.into(), scale);
         (coeffs, trans)
     }
 
