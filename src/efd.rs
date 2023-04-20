@@ -41,40 +41,17 @@ impl<D: EfdDim> Efd<D> {
             .ok_or_else(EfdError::new)
     }
 
-    /// Apply Nyquist Frequency on Fourier power analysis with a custom
-    /// threshold value (default to 99.99%).
-    ///
-    /// This method returns the minimum harmonic number to keep the shape
-    /// features.
-    ///
-    /// The threshold must in [0, 1). This function returns `None` if the curve
-    /// length is less than 1.
-    ///
-    /// ```
-    /// # let curve = efd::tests::PATH;
-    /// let harmonic = efd::Efd2::gate(curve, None).unwrap();
-    /// # assert_eq!(harmonic, 6);
-    /// ```
-    #[must_use]
-    pub fn gate<C, T>(curve: C, threshold: T) -> Option<usize>
-    where
-        C: Curve<Coord<D>>,
-        Option<f64>: From<T>,
-    {
-        Self::from_curve_gate(curve, threshold).map(|efd| efd.harmonic())
-    }
-
     /// Calculate EFD coefficients from an existing discrete points.
     ///
     /// **The curve must be closed. (first == last)**
     ///
     /// Return none if the curve length is less than 1.
     #[must_use]
-    pub fn from_curve<C>(curve: C) -> Option<Self>
+    pub fn from_curve<C>(curve: C, is_open: bool) -> Option<Self>
     where
         C: Curve<Coord<D>>,
     {
-        Self::from_curve_gate(curve, None)
+        Self::from_curve_gate(curve, is_open, None)
     }
 
     /// Calculate EFD coefficients from an existing discrete points and Fourier
@@ -84,7 +61,7 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// Return none if the curve length is less than 1.
     #[must_use]
-    pub fn from_curve_gate<C, T>(curve: C, threshold: T) -> Option<Self>
+    pub fn from_curve_gate<C, T>(curve: C, is_open: bool, threshold: T) -> Option<Self>
     where
         C: Curve<Coord<D>>,
         Option<f64>: From<T>,
@@ -96,7 +73,7 @@ impl<D: EfdDim> Efd<D> {
         let threshold = Option::from(threshold).unwrap_or(0.9999);
         // Nyquist Frequency
         let harmonic = curve.len() / 2;
-        let (mut coeffs, trans) = D::from_curve_harmonic(curve, harmonic);
+        let (mut coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
         let lut = cumsum(coeffs.mapv(pow2), None).sum_axis(Axis(1));
         let total_power = lut.last().unwrap();
         let harmonic = lut
@@ -121,7 +98,7 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// See also [`closed_curve`].
     #[must_use]
-    pub fn from_curve_harmonic<C, H>(curve: C, harmonic: H) -> Option<Self>
+    pub fn from_curve_harmonic<C, H>(curve: C, is_open: bool, harmonic: H) -> Option<Self>
     where
         C: Curve<Coord<D>>,
         Option<usize>: From<H>,
@@ -131,11 +108,11 @@ impl<D: EfdDim> Efd<D> {
             if curve.len() < 2 {
                 None
             } else {
-                let (coeffs, trans) = D::from_curve_harmonic(curve, harmonic);
+                let (coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
                 Some(Self { coeffs, trans, _dim: PhantomData })
             }
         } else {
-            Self::from_curve(curve)
+            Self::from_curve(curve, is_open)
         }
     }
 

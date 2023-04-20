@@ -21,7 +21,7 @@ fn efd2d() {
     use crate::*;
     use alloc::vec::Vec;
     use approx::assert_abs_diff_eq;
-    let efd = Efd2::from_curve(PATH.closed_lin()).unwrap();
+    let efd = Efd2::from_curve(PATH, false).unwrap();
     // Test starting point
     let path = PATH
         .iter()
@@ -30,7 +30,7 @@ fn efd2d() {
         .take(PATH.len())
         .copied()
         .collect::<Vec<_>>();
-    let efd_half = Efd2::from_curve(path.closed_lin()).unwrap();
+    let efd_half = Efd2::from_curve(path, false).unwrap();
     assert!(efd.l1_norm(&efd_half) < EPS);
     // Test transformation
     let trans = efd.as_trans();
@@ -41,10 +41,10 @@ fn efd2d() {
     assert_eq!(efd.harmonic(), 6);
     // Test normalized
     let norm = efd.generate_norm(NORM.len());
-    assert!(curve_diff(&norm.closed_lin(), &NORM.closed_lin()) < EPS);
+    assert!(curve_diff(&norm, NORM) < EPS);
     // Test reconstruction
     let target = efd.generate(TARGET.len());
-    assert!(curve_diff(&target.closed_lin(), &TARGET.closed_lin()) < EPS);
+    assert!(curve_diff(&target, TARGET) < EPS);
 }
 
 #[test]
@@ -52,7 +52,7 @@ fn efd3d() {
     use crate::*;
     use alloc::vec::Vec;
     use approx::assert_abs_diff_eq;
-    let efd = Efd3::from_curve(PATH3D.closed_lin()).unwrap();
+    let efd = Efd3::from_curve(PATH3D, false).unwrap();
     // Test starting point
     let path = PATH3D
         .iter()
@@ -61,7 +61,7 @@ fn efd3d() {
         .take(PATH3D.len())
         .copied()
         .collect::<Vec<_>>();
-    let efd_half = Efd3::from_curve(path.closed_lin()).unwrap();
+    let efd_half = Efd3::from_curve(path, false).unwrap();
     assert!(efd.l1_norm(&efd_half) < EPS);
     // Test transformation
     let trans = efd.as_trans();
@@ -76,10 +76,10 @@ fn efd3d() {
     assert_eq!(efd.harmonic(), 5);
     // Test normalized
     let norm = efd.generate_norm(NORM3D.len());
-    assert!(curve_diff(&norm.closed_lin(), &NORM3D.closed_lin()) < EPS);
+    assert!(curve_diff(&norm, NORM3D) < EPS);
     // Test reconstruction
     let target = efd.generate(NORM3D.len());
-    assert!(curve_diff(&target.closed_lin(), &TARGET3D.closed_lin()) < EPS);
+    assert!(curve_diff(&target, TARGET3D) < EPS);
 }
 
 #[test]

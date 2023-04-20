@@ -37,7 +37,6 @@ let curve = vec![
     [3., 3.],
     [2., 2.],
     [1., 1.],
-    [0., 0.],
 ];
-let described_curve = efd::Efd2::from_curve(curve).unwrap().generate(20);
+let described_curve = efd::Efd2::from_curve(curve, false).unwrap().generate(20);
 ```

@@ -1,5 +1,6 @@
+use crate::Curve as _;
 use alloc::vec;
-use ndarray::{arr2, s, Array, Axis, CowArray, Dimension, FixedInitializer};
+use ndarray::{s, Array, Array2, Axis, CowArray, Dimension, FixedInitializer};
 
 #[inline(always)]
 pub(crate) fn pow2(x: f64) -> f64 {
@@ -70,8 +71,8 @@ where
     B: FixedInitializer<Elem = f64> + Clone,
 {
     assert!(a.len() >= 2 && b.len() >= 2 && res > 0);
-    let a = arr2(a);
-    let b = arr2(b);
+    let a = Array2::from(a.closed_lin());
+    let b = Array2::from(b.closed_lin());
     let at = get_time(&a, norm);
     let bt = get_time(&b, norm).to_vec();
     let bzt = *bt.last().unwrap();

@@ -187,13 +187,13 @@ impl<T: Trans> Transform<T> {
     /// ```
     /// use efd::{curve_diff, tests::*, Efd2};
     /// # use efd::Curve as _;
-    /// # let path1 = PATH.closed_lin();
-    /// # let path2 = PATH.closed_lin();
+    /// # let path1 = PATH;
+    /// # let path2 = PATH;
     ///
-    /// let a = Efd2::from_curve(&path1).unwrap();
-    /// let b = Efd2::from_curve(&path2).unwrap();
+    /// let a = Efd2::from_curve(path1, false).unwrap();
+    /// let b = Efd2::from_curve(path2, false).unwrap();
     /// let trans = a.as_trans().to(b.as_trans());
-    /// assert!(curve_diff(&trans.transform(path1), &path2) < EPS);
+    /// assert!(curve_diff(&trans.transform(path1), path2) < EPS);
     /// ```
     #[must_use]
     pub fn to(&self, rhs: &Self) -> Self {
@@ -202,16 +202,18 @@ impl<T: Trans> Transform<T> {
 
     /// Merge two transformation matrices.
     ///
+    /// Same as `rhs * self`.
+    ///
     /// ```
     /// use efd::{curve_diff, tests::*, Efd2};
     /// # use efd::Curve as _;
-    /// # let path1 = PATH.closed_lin();
-    /// # let path2 = PATH.closed_lin();
+    /// # let path1 = PATH;
+    /// # let path2 = PATH;
     ///
-    /// let a = Efd2::from_curve(&path1).unwrap();
-    /// let b = Efd2::from_curve(&path2).unwrap();
-    /// let trans = b.as_trans() * &a.as_trans().inverse();
-    /// assert!(curve_diff(&trans.transform(path1), &path2) < EPS);
+    /// let a = Efd2::from_curve(path1, false).unwrap();
+    /// let b = Efd2::from_curve(path2, false).unwrap();
+    /// let trans = b.as_trans() * a.as_trans().inverse();
+    /// assert!(dbg!(curve_diff(&trans.transform(path1), path2)) < EPS);
     /// ```
     #[must_use]
     pub fn apply(&self, rhs: &Self) -> Self {
@@ -223,9 +225,9 @@ impl<T: Trans> Transform<T> {
     /// ```
     /// use efd::{curve_diff, tests::*, Efd2};
     /// # use efd::Curve as _;
-    /// # let path = PATH.closed_lin();
+    /// # let path = PATH;
     ///
-    /// let efd = Efd2::from_curve(&path).unwrap();
+    /// let efd = Efd2::from_curve(path, false).unwrap();
     /// let path = efd.generate(path.len());
     /// let path_norm = efd.generate_norm(path.len());
     /// let path = efd.as_trans().inverse().transform(path);
@@ -251,7 +253,7 @@ impl<T: Trans> Transform<T> {
     /// ```
     /// use efd::{tests::*, *};
     /// # let target = TARGET;
-    /// # let efd = Efd2::from_curve(PATH.closed_lin()).unwrap();
+    /// # let efd = Efd2::from_curve(PATH, false).unwrap();
     /// # let path = efd.generate_norm(target.len());
     /// let path1 = efd.as_trans().transform(&path);
     /// # let trans = efd.as_trans();

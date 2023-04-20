@@ -17,6 +17,7 @@ pub trait EfdDim {
     fn from_curve_harmonic(
         curve: &[Coord<Self>],
         harmonic: usize,
+        is_open: bool,
     ) -> (Array2<f64>, Transform<Self::Trans>);
 
     /// Transform array slice to coordinate type.
@@ -29,9 +30,10 @@ impl EfdDim for D2 {
     fn from_curve_harmonic(
         curve: &[Coord<Self>],
         harmonic: usize,
+        is_open: bool,
     ) -> (Array2<f64>, Transform<Self::Trans>) {
         const CDIM: usize = T2::DIM * 2;
-        let (mut coeffs, center) = get_coeff_center(curve, harmonic);
+        let (mut coeffs, center) = get_coeff_center(curve, harmonic, is_open);
         // Angle of starting point
         let theta = {
             let c = &coeffs;
@@ -81,9 +83,10 @@ impl EfdDim for D3 {
     fn from_curve_harmonic(
         curve: &[Coord<Self>],
         harmonic: usize,
+        is_open: bool,
     ) -> (Array2<f64>, Transform<Self::Trans>) {
         const CDIM: usize = T3::DIM * 2;
-        let (mut coeffs, center) = get_coeff_center(curve, harmonic);
+        let (mut coeffs, center) = get_coeff_center(curve, harmonic, is_open);
         // Angle of starting point
         let theta = {
             let c = &coeffs;
@@ -143,14 +146,20 @@ impl EfdDim for D3 {
 fn get_coeff_center<const DIM: usize>(
     curve: &[[f64; DIM]],
     harmonic: usize,
+    is_open: bool,
 ) -> (Array2<f64>, [f64; DIM])
 where
     [f64; DIM]: ndarray::FixedInitializer<Elem = f64>,
 {
-    let dxyz = diff(ndarray::arr2(curve), Some(Axis(0)));
+    let curve_arr = if is_open {
+        ndarray::arr2(curve)
+    } else {
+        Array2::from(curve.closed_lin())
+    };
+    let dxyz = diff(curve_arr, Some(Axis(0)));
     let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
     let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
-    let zt = *t.last().unwrap();
+    let zt = *t.last().unwrap() * if is_open { 2. } else { 1. };
     let phi = &t * TAU / zt;
     let mut coeffs = Array2::zeros([harmonic, DIM * 2]);
     for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
@@ -164,9 +173,17 @@ where
         let s_cos = t * (&dxyz * cos_phi_n.insert_axis(Axis(1)));
         let s_sin = t * (&dxyz * sin_phi_n.insert_axis(Axis(1)));
         for i in 0..DIM * 2 {
-            c[i] = if i % 2 == 0 { &s_cos } else { &s_sin }
-                .slice(s![.., i / 2])
-                .sum();
+            if is_open {
+                c[i] = if i % 2 == 0 {
+                    s_cos.slice(s![.., i / 2]).sum() * 2.
+                } else {
+                    0.
+                };
+            } else {
+                c[i] = if i % 2 == 0 { &s_cos } else { &s_sin }
+                    .slice(s![.., i / 2])
+                    .sum();
+            }
         }
     }
     let center = {
@@ -175,7 +192,9 @@ where
         (0..DIM)
             .map(|i| {
                 let xi = cumsum(dxyz.slice(s![.., i]), None) - &dxyz.slice(s![.., i]) * &tdt;
-                curve[0][i] + (&dxyz.slice(s![.., i]) * &c + xi * &dt).sum() / zt
+                curve[0][i]
+                    + (&dxyz.slice(s![.., i]) * &c + xi * &dt).sum() / zt
+                        * if is_open { 2. } else { 1. }
             })
             .collect::<Vec<_>>()
             .try_into()
