@@ -46,8 +46,13 @@ impl<D: EfdDim> Efd<D> {
     /// **The curve must be closed. (first == last)**
     ///
     /// Return none if the curve length is less than 1.
+    ///
+    /// # Panics
+    ///
+    /// This function check the lengths only. Please use [`valid_curve()`] to
+    /// verify the curve if there has NaN input.
     #[must_use]
-    pub fn from_curve<C>(curve: C, is_open: bool) -> Option<Self>
+    pub fn from_curve<C>(curve: C, is_open: bool) -> Self
     where
         C: Curve<Coord<D>>,
     {
@@ -60,15 +65,20 @@ impl<D: EfdDim> Efd<D> {
     /// **The curve must be closed. (first == last)**
     ///
     /// Return none if the curve length is less than 1.
+    ///
+    /// # Panics
+    ///
+    /// This function check the lengths only. Please use [`valid_curve()`] to
+    /// verify the curve if there has NaN input.
     #[must_use]
-    pub fn from_curve_gate<C, T>(curve: C, is_open: bool, threshold: T) -> Option<Self>
+    pub fn from_curve_gate<C, T>(curve: C, is_open: bool, threshold: T) -> Self
     where
         C: Curve<Coord<D>>,
         Option<f64>: From<T>,
     {
         let curve = curve.as_curve();
         if curve.len() < 2 {
-            return None;
+            panic!("Invalid curve! Please use `efd::valid_curve()` to verify.");
         }
         let threshold = Option::from(threshold).unwrap_or(0.9999);
         // Nyquist Frequency
@@ -83,7 +93,7 @@ impl<D: EfdDim> Efd<D> {
             .map(|(i, _)| i + 1)
             .unwrap_or(coeffs.nrows());
         coeffs.slice_axis_inplace(Axis(0), Slice::from(..harmonic));
-        Some(Self { coeffs, trans, _dim: PhantomData })
+        Self { coeffs, trans, _dim: PhantomData }
     }
 
     /// Calculate EFD coefficients from a series of existing discrete points.
@@ -96,9 +106,12 @@ impl<D: EfdDim> Efd<D> {
     /// If the harmonic number is not given, it will be calculated with
     /// [`Self::gate()`] function.
     ///
-    /// See also [`closed_curve`].
+    /// # Panics
+    ///
+    /// This function check the lengths only. Please use [`valid_curve()`] to
+    /// verify the curve if there has NaN input.
     #[must_use]
-    pub fn from_curve_harmonic<C, H>(curve: C, is_open: bool, harmonic: H) -> Option<Self>
+    pub fn from_curve_harmonic<C, H>(curve: C, is_open: bool, harmonic: H) -> Self
     where
         C: Curve<Coord<D>>,
         Option<usize>: From<H>,
@@ -106,10 +119,10 @@ impl<D: EfdDim> Efd<D> {
         if let Some(harmonic) = Option::from(harmonic) {
             let curve = curve.as_curve();
             if curve.len() < 2 {
-                None
+                panic!("Invalid curve! Please use `efd::valid_curve()` to verify.");
             } else {
                 let (coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
-                Some(Self { coeffs, trans, _dim: PhantomData })
+                Self { coeffs, trans, _dim: PhantomData }
             }
         } else {
             Self::from_curve(curve, is_open)

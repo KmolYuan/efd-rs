@@ -1,4 +1,4 @@
-use crate::Curve as _;
+use crate::Curve;
 use alloc::vec;
 use ndarray::{s, Array, Array2, Axis, CowArray, Dimension, FixedInitializer};
 
@@ -31,6 +31,15 @@ where
         next
     });
     arr
+}
+
+/// Check if the curve is valid.
+pub fn valid_curve<C, const DIM: usize>(curve: C) -> Option<C>
+where
+    C: Curve<[f64; DIM]>,
+{
+    let c_ref = curve.as_curve();
+    (c_ref.len() > 1 && !c_ref.iter().flatten().any(|x| x.is_infinite())).then_some(curve)
 }
 
 macro_rules! impl_curve_diff {

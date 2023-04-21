@@ -21,7 +21,7 @@ fn efd2d() {
     use crate::*;
     use alloc::vec::Vec;
     use approx::assert_abs_diff_eq;
-    let efd = Efd2::from_curve(PATH, false).unwrap();
+    let efd = Efd2::from_curve(PATH, false);
     // Test starting point
     let path = PATH
         .iter()
@@ -30,7 +30,7 @@ fn efd2d() {
         .take(PATH.len())
         .copied()
         .collect::<Vec<_>>();
-    let efd_half = Efd2::from_curve(path, false).unwrap();
+    let efd_half = Efd2::from_curve(path, false);
     assert!(efd.l1_norm(&efd_half) < EPS);
     // Test transformation
     let trans = efd.as_trans();
@@ -52,7 +52,7 @@ fn efd3d() {
     use crate::*;
     use alloc::vec::Vec;
     use approx::assert_abs_diff_eq;
-    let efd = Efd3::from_curve(PATH3D, false).unwrap();
+    let efd = Efd3::from_curve(PATH3D, false);
     // Test starting point
     let path = PATH3D
         .iter()
@@ -61,7 +61,7 @@ fn efd3d() {
         .take(PATH3D.len())
         .copied()
         .collect::<Vec<_>>();
-    let efd_half = Efd3::from_curve(path, false).unwrap();
+    let efd_half = Efd3::from_curve(path, false);
     assert!(efd.l1_norm(&efd_half) < EPS);
     // Test transformation
     let trans = efd.as_trans();

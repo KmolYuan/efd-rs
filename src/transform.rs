@@ -190,8 +190,8 @@ impl<T: Trans> Transform<T> {
     /// # let path1 = PATH;
     /// # let path2 = PATH;
     ///
-    /// let a = Efd2::from_curve(path1, false).unwrap();
-    /// let b = Efd2::from_curve(path2, false).unwrap();
+    /// let a = Efd2::from_curve(path1, false);
+    /// let b = Efd2::from_curve(path2, false);
     /// let trans = a.as_trans().to(b.as_trans());
     /// assert!(curve_diff(&trans.transform(path1), path2) < EPS);
     /// ```
@@ -210,8 +210,8 @@ impl<T: Trans> Transform<T> {
     /// # let path1 = PATH;
     /// # let path2 = PATH;
     ///
-    /// let a = Efd2::from_curve(path1, false).unwrap();
-    /// let b = Efd2::from_curve(path2, false).unwrap();
+    /// let a = Efd2::from_curve(path1, false);
+    /// let b = Efd2::from_curve(path2, false);
     /// let trans = b.as_trans() * a.as_trans().inverse();
     /// assert!(dbg!(curve_diff(&trans.transform(path1), path2)) < EPS);
     /// ```
@@ -227,7 +227,7 @@ impl<T: Trans> Transform<T> {
     /// # use efd::Curve as _;
     /// # let path = PATH;
     ///
-    /// let efd = Efd2::from_curve(path, false).unwrap();
+    /// let efd = Efd2::from_curve(path, false);
     /// let path = efd.generate(path.len());
     /// let path_norm = efd.generate_norm(path.len());
     /// let path = efd.as_trans().inverse().transform(path);
@@ -253,7 +253,7 @@ impl<T: Trans> Transform<T> {
     /// ```
     /// use efd::{tests::*, *};
     /// # let target = TARGET;
-    /// # let efd = Efd2::from_curve(PATH, false).unwrap();
+    /// # let efd = Efd2::from_curve(PATH, false);
     /// # let path = efd.generate_norm(target.len());
     /// let path1 = efd.as_trans().transform(&path);
     /// # let trans = efd.as_trans();
