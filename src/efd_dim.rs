@@ -150,26 +150,28 @@ where
     let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
     let t = ndarray::concatenate![Axis(0), array![0.], cumsum(&dt, None)];
     let zt = *t.last().unwrap() * if is_open { 2. } else { 1. };
+    let scalar = zt / (PI * PI) * if is_open { 1. } else { 0.5 };
     let phi = &t * TAU / zt;
     let mut coeffs = Array2::zeros([harmonic, DIM * 2]);
     for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
         let n = i as f64 + 1.;
-        let t = 0.5 * zt / (n * n * PI * PI);
         let phi_n = &phi * n;
         let phi_n_front = phi_n.slice(s![..-1]);
         let phi_n_back = phi_n.slice(s![1..]);
+        let scalar = scalar / (n * n);
         let cos_phi_n = (phi_n_back.mapv(f64::cos) - phi_n_front.mapv(f64::cos)) / &dt;
-        let sin_phi_n = (phi_n_back.mapv(f64::sin) - phi_n_front.mapv(f64::sin)) / &dt;
-        let s_cos = t * (&dxyz * cos_phi_n.insert_axis(Axis(1)));
-        let s_sin = t * (&dxyz * sin_phi_n.insert_axis(Axis(1)));
-        for i in 0..DIM * 2 {
-            if is_open {
-                c[i] = if i % 2 == 0 {
-                    s_cos.slice(s![.., i / 2]).sum() * 2.
-                } else {
-                    0.
+        let s_cos = scalar * (&dxyz * cos_phi_n.insert_axis(Axis(1)));
+        if is_open {
+            for i in 0..DIM * 2 {
+                c[i] = match i % 2 {
+                    0 => s_cos.slice(s![.., i / 2]).sum(),
+                    _ => 0.,
                 };
-            } else {
+            }
+        } else {
+            let sin_phi_n = (phi_n_back.mapv(f64::sin) - phi_n_front.mapv(f64::sin)) / &dt;
+            let s_sin = scalar * (&dxyz * sin_phi_n.insert_axis(Axis(1)));
+            for i in 0..DIM * 2 {
                 c[i] = if i % 2 == 0 { &s_cos } else { &s_sin }
                     .slice(s![.., i / 2])
                     .sum();
