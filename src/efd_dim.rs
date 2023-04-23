@@ -162,11 +162,8 @@ where
         let cos_phi_n = (phi_n_back.mapv(f64::cos) - phi_n_front.mapv(f64::cos)) / &dt;
         let s_cos = scalar * (&dxyz * cos_phi_n.insert_axis(Axis(1)));
         if is_open {
-            for i in 0..DIM * 2 {
-                c[i] = match i % 2 {
-                    0 => s_cos.slice(s![.., i / 2]).sum(),
-                    _ => 0.,
-                };
+            for i in 0..DIM {
+                c[i * 2] = s_cos.slice(s![.., i]).sum();
             }
         } else {
             let sin_phi_n = (phi_n_back.mapv(f64::sin) - phi_n_front.mapv(f64::sin)) / &dt;
