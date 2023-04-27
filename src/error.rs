@@ -9,7 +9,7 @@ pub struct EfdError<D: EfdDim> {
 }
 
 impl<D: EfdDim> EfdError<D> {
-    pub(crate) fn new() -> Self {
+    pub(crate) const fn new() -> Self {
         Self { _marker: PhantomData }
     }
 }

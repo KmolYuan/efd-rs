@@ -40,23 +40,20 @@ impl<D: EfdDim> Efd<D> {
     /// The dimension is [`<<D as EfdDim>::Trans as Trans>::DIM`](Trans::DIM).
     pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, EfdError<D>> {
         (coeffs.nrows() > 0 && coeffs.ncols() == D::Trans::DIM * 2)
-            .then(|| Self {
+            .then_some(Self {
                 coeffs,
                 trans: Transform::identity(),
                 _dim: PhantomData,
             })
-            .ok_or_else(EfdError::new)
+            .ok_or(EfdError::new())
     }
 
     /// Calculate EFD coefficients from an existing discrete points.
     ///
-    /// **The curve must be closed. (first == last)**
+    /// # Panic
     ///
-    /// Return none if the curve length is less than 1.
-    ///
-    /// # Panics
-    ///
-    /// This function check the lengths only. Please use [`valid_curve()`] to
+    /// Panic if the curve length is not greater than 1 in debug mode. This
+    /// function check the lengths only. Please use [`valid_curve()`] to
     /// verify the curve if there has NaN input.
     #[must_use]
     pub fn from_curve<C>(curve: C, is_open: bool) -> Self
@@ -69,14 +66,15 @@ impl<D: EfdDim> Efd<D> {
     /// Calculate EFD coefficients from an existing discrete points and Fourier
     /// power threshold.
     ///
-    /// **The curve must be closed. (first == last)**
+    /// If the threshold is not given, it will be calculated with Fourier power
+    /// analysis.
     ///
-    /// Return none if the curve length is less than 1.
+    /// # Panic
     ///
-    /// # Panics
-    ///
-    /// This function check the lengths only. Please use [`valid_curve()`] to
-    /// verify the curve if there has NaN input.
+    /// Panic if the `threshold` is not in `0.0..1.0` or the curve length is not
+    /// greater than 1 in debug mode. This function check the lengths only.
+    /// Please use [`valid_curve()`] to verify the curve if there has NaN
+    /// input.
     #[must_use]
     pub fn from_curve_gate<C, T>(curve: C, is_open: bool, threshold: T) -> Self
     where
@@ -88,35 +86,35 @@ impl<D: EfdDim> Efd<D> {
             panic!("Invalid curve! Please use `efd::valid_curve()` to verify.");
         }
         let threshold = Option::from(threshold).unwrap_or(0.9999);
+        debug_assert!(
+            (0.0..1.0).contains(&threshold),
+            "threshold must in 0.0..1.0"
+        );
         // Nyquist Frequency
         let harmonic = curve.len() / 2;
         let (mut coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
         let lut = cumsum(coeffs.mapv(pow2), None).sum_axis(Axis(1));
         let total_power = lut.last().unwrap();
-        let harmonic = lut
+        let (harmonic, _) = lut
             .iter()
             .enumerate()
             .find(|(_, power)| *power / total_power >= threshold)
-            .map(|(i, _)| i + 1)
-            .unwrap_or(coeffs.nrows());
-        coeffs.slice_axis_inplace(Axis(0), Slice::from(..harmonic));
+            .unwrap();
+        coeffs.slice_axis_inplace(Axis(0), Slice::from(..=harmonic));
         Self { coeffs, trans, _dim: PhantomData }
     }
 
     /// Calculate EFD coefficients from a series of existing discrete points.
     ///
-    /// **The curve must be closed. (first == last)**
-    ///
-    /// Return none if harmonic number is zero or the curve is less than
-    /// two points.
-    ///
     /// If the harmonic number is not given, it will be calculated with Fourier
     /// power analysis.
     ///
-    /// # Panics
+    /// # Panic
     ///
-    /// This function check the lengths only. Please use [`valid_curve()`] to
-    /// verify the curve if there has NaN input.
+    /// Panic if the specific harmonic is zero or the curve length is not
+    /// greater than 1 in debug mode. This function check the lengths only.
+    /// Please use [`valid_curve()`] to verify the curve if there has NaN
+    /// input.
     #[must_use]
     pub fn from_curve_harmonic<C, H>(curve: C, is_open: bool, harmonic: H) -> Self
     where
@@ -124,6 +122,7 @@ impl<D: EfdDim> Efd<D> {
         Option<usize>: From<H>,
     {
         if let Some(harmonic) = Option::from(harmonic) {
+            debug_assert!(harmonic != 0, "harmonic must not be 0");
             let curve = curve.as_curve();
             if curve.len() < 2 {
                 panic!("Invalid curve! Please use `efd::valid_curve()` to verify.");
@@ -174,9 +173,8 @@ impl<D: EfdDim> Efd<D> {
 
     /// Square error.
     ///
-    /// # Panics
-    ///
-    /// When the harmonic number is different.
+    /// The coefficients will paded automatically if harmonic number is
+    /// different.
     #[must_use]
     pub fn square_err(&self, rhs: &Self) -> f64 {
         padding(self, rhs, |a, b| (a - b).mapv(pow2).sum())
@@ -184,9 +182,8 @@ impl<D: EfdDim> Efd<D> {
 
     /// L1 norm error, aka Manhattan distance.
     ///
-    /// # Panics
-    ///
-    /// When the harmonic number is different.
+    /// The coefficients will paded automatically if harmonic number is
+    /// different.
     #[must_use]
     pub fn l1_norm(&self, rhs: &Self) -> f64 {
         padding(self, rhs, |a, b| (a - b).mapv(f64::abs).sum())
@@ -194,9 +191,8 @@ impl<D: EfdDim> Efd<D> {
 
     /// L2 norm error, aka Euclidean distance.
     ///
-    /// # Panics
-    ///
-    /// When the harmonic number is different.
+    /// The coefficients will paded automatically if harmonic number is
+    /// different.
     #[must_use]
     pub fn l2_norm(&self, rhs: &Self) -> f64 {
         padding(self, rhs, |a, b| (a - b).mapv(pow2).sum().sqrt())
@@ -204,9 +200,8 @@ impl<D: EfdDim> Efd<D> {
 
     /// Lp norm error, slower than [`Self::l1_norm()`] and [`Self::l2_norm()`].
     ///
-    /// # Panics
-    ///
-    /// When the harmonic number is different.
+    /// The coefficients will paded automatically if harmonic number is
+    /// different.
     #[must_use]
     pub fn lp_norm(&self, rhs: &Self, p: i32) -> f64 {
         padding(self, rhs, |a, b| {
@@ -215,10 +210,9 @@ impl<D: EfdDim> Efd<D> {
     }
 
     /// Reverse the order of described curve then return a mutable reference.
-    pub fn reverse(&mut self) -> &mut Self {
+    pub fn reverse_inplace(&mut self) {
         let mut s = self.coeffs.slice_mut(s![.., 1..;2]);
         s *= -1.;
-        self
     }
 
     /// Consume and return a reversed version of the coefficients. This method
@@ -227,7 +221,7 @@ impl<D: EfdDim> Efd<D> {
     /// Please clone the object if you want to do self-comparison.
     #[must_use]
     pub fn reversed(mut self) -> Self {
-        self.reverse();
+        self.reverse_inplace();
         self
     }
 
