@@ -27,7 +27,7 @@ This is an unofficial implementation.
 }
 ```
 
-Example of re-describing a new curve:
+Example of re-describing a new closed curve:
 
 ```rust
 let curve = vec![
@@ -37,7 +37,7 @@ let curve = vec![
     [3., 3.],
     [2., 2.],
     [1., 1.],
-    [0., 0.],
 ];
-let described_curve = efd::Efd2::from_curve(curve).unwrap().generate(20);
+assert!(efd::valid_curve(&curve).is_some());
+let described_curve = efd::Efd2::from_curve(curve, false).generate(20);
 ```

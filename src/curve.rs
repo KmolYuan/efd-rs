@@ -24,17 +24,6 @@ pub trait Curve<A: Clone>: Sized {
         c
     }
 
-    /// Close the open curve with its direction-inverted part.
-    ///
-    /// Panic with empty curve.
-    #[must_use]
-    fn closed_rev(self) -> Vec<A> {
-        let mut curve = self.to_curve();
-        let curve2 = curve.iter().rev().skip(1).cloned().collect::<Vec<_>>();
-        curve.extend(curve2);
-        curve
-    }
-
     /// Remove the last element.
     #[must_use]
     fn pop_last(self) -> Vec<A> {

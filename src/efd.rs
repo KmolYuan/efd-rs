@@ -1,6 +1,9 @@
 use crate::*;
 use alloc::vec::Vec;
-use core::{f64::consts::TAU, marker::PhantomData};
+use core::{
+    f64::consts::{PI, TAU},
+    marker::PhantomData,
+};
 use ndarray::{s, Array1, Array2, Axis, Slice};
 
 /// 2D EFD coefficients type.
@@ -30,7 +33,11 @@ pub struct Efd<D: EfdDim> {
 }
 
 impl<D: EfdDim> Efd<D> {
-    /// Create object from a nx4 array with boundary check.
+    /// Create object from a 2D array with boundary check.
+    ///
+    /// The array size is (harmonic) x (dimension x 2).
+    ///
+    /// The dimension is [`<<D as EfdDim>::Trans as Trans>::DIM`](Trans::DIM).
     pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, EfdError<D>> {
         (coeffs.nrows() > 0 && coeffs.ncols() == D::Trans::DIM * 2)
             .then(|| Self {
@@ -41,62 +48,49 @@ impl<D: EfdDim> Efd<D> {
             .ok_or_else(EfdError::new)
     }
 
-    /// Apply Nyquist Frequency on Fourier power analysis with a custom
-    /// threshold value (default to 99.99%).
-    ///
-    /// This method returns the minimum harmonic number to keep the shape
-    /// features.
-    ///
-    /// The threshold must in [0, 1). This function returns `None` if the curve
-    /// length is less than 1.
-    ///
-    /// ```
-    /// # let curve = efd::tests::PATH;
-    /// let harmonic = efd::Efd2::gate(curve, None).unwrap();
-    /// # assert_eq!(harmonic, 6);
-    /// ```
-    #[must_use]
-    pub fn gate<C, T>(curve: C, threshold: T) -> Option<usize>
-    where
-        C: Curve<Coord<D>>,
-        Option<f64>: From<T>,
-    {
-        Self::from_curve_gate(curve, threshold).map(|efd| efd.harmonic())
-    }
-
     /// Calculate EFD coefficients from an existing discrete points.
     ///
     /// **The curve must be closed. (first == last)**
     ///
     /// Return none if the curve length is less than 1.
+    ///
+    /// # Panics
+    ///
+    /// This function check the lengths only. Please use [`valid_curve()`] to
+    /// verify the curve if there has NaN input.
     #[must_use]
-    pub fn from_curve<C>(curve: C) -> Option<Self>
+    pub fn from_curve<C>(curve: C, is_open: bool) -> Self
     where
         C: Curve<Coord<D>>,
     {
-        Self::from_curve_gate(curve, None)
+        Self::from_curve_gate(curve, is_open, None)
     }
 
     /// Calculate EFD coefficients from an existing discrete points and Fourier
-    /// power gate.
+    /// power threshold.
     ///
     /// **The curve must be closed. (first == last)**
     ///
     /// Return none if the curve length is less than 1.
+    ///
+    /// # Panics
+    ///
+    /// This function check the lengths only. Please use [`valid_curve()`] to
+    /// verify the curve if there has NaN input.
     #[must_use]
-    pub fn from_curve_gate<C, T>(curve: C, threshold: T) -> Option<Self>
+    pub fn from_curve_gate<C, T>(curve: C, is_open: bool, threshold: T) -> Self
     where
         C: Curve<Coord<D>>,
         Option<f64>: From<T>,
     {
         let curve = curve.as_curve();
         if curve.len() < 2 {
-            return None;
+            panic!("Invalid curve! Please use `efd::valid_curve()` to verify.");
         }
         let threshold = Option::from(threshold).unwrap_or(0.9999);
         // Nyquist Frequency
         let harmonic = curve.len() / 2;
-        let (mut coeffs, trans) = D::from_curve_harmonic(curve, harmonic);
+        let (mut coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
         let lut = cumsum(coeffs.mapv(pow2), None).sum_axis(Axis(1));
         let total_power = lut.last().unwrap();
         let harmonic = lut
@@ -106,7 +100,7 @@ impl<D: EfdDim> Efd<D> {
             .map(|(i, _)| i + 1)
             .unwrap_or(coeffs.nrows());
         coeffs.slice_axis_inplace(Axis(0), Slice::from(..harmonic));
-        Some(Self { coeffs, trans, _dim: PhantomData })
+        Self { coeffs, trans, _dim: PhantomData }
     }
 
     /// Calculate EFD coefficients from a series of existing discrete points.
@@ -116,12 +110,15 @@ impl<D: EfdDim> Efd<D> {
     /// Return none if harmonic number is zero or the curve is less than
     /// two points.
     ///
-    /// If the harmonic number is not given, it will be calculated with
-    /// [`Self::gate()`] function.
+    /// If the harmonic number is not given, it will be calculated with Fourier
+    /// power analysis.
     ///
-    /// See also [`closed_curve`].
+    /// # Panics
+    ///
+    /// This function check the lengths only. Please use [`valid_curve()`] to
+    /// verify the curve if there has NaN input.
     #[must_use]
-    pub fn from_curve_harmonic<C, H>(curve: C, harmonic: H) -> Option<Self>
+    pub fn from_curve_harmonic<C, H>(curve: C, is_open: bool, harmonic: H) -> Self
     where
         C: Curve<Coord<D>>,
         Option<usize>: From<H>,
@@ -129,13 +126,13 @@ impl<D: EfdDim> Efd<D> {
         if let Some(harmonic) = Option::from(harmonic) {
             let curve = curve.as_curve();
             if curve.len() < 2 {
-                None
+                panic!("Invalid curve! Please use `efd::valid_curve()` to verify.");
             } else {
-                let (coeffs, trans) = D::from_curve_harmonic(curve, harmonic);
-                Some(Self { coeffs, trans, _dim: PhantomData })
+                let (coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
+                Self { coeffs, trans, _dim: PhantomData }
             }
         } else {
-            Self::from_curve(curve)
+            Self::from_curve(curve, is_open)
         }
     }
 
@@ -234,15 +231,69 @@ impl<D: EfdDim> Efd<D> {
         self
     }
 
-    /// Generate the normalized curve **without** transformation.
+    /// Generate the described curve. (`theta=TAU`)
     ///
-    /// The number of the points `n` must larger than 3.
+    /// # Panic
+    ///
+    /// The number of the points `n` must larger than 1.
+    ///
+    /// # See Also
+    ///
+    /// [`Efd::generate_half()`], [`Efd::generate_in()`],
+    /// [`Efd::generate_norm_in()`]
     #[must_use]
-    pub fn generate_norm(&self, n: usize) -> Vec<Coord<D>> {
+    pub fn generate(&self, n: usize) -> Vec<Coord<D>> {
+        self.generate_in(n, TAU)
+    }
+
+    /// Generate a half of the described curve. (`theta=PI`)
+    ///
+    /// # Panic
+    ///
+    /// The number of the points `n` must larger than 1.
+    ///
+    /// # See Also
+    ///
+    /// [`Efd::generate()`], [`Efd::generate_in()`], [`Efd::generate_norm_in()`]
+    #[must_use]
+    pub fn generate_half(&self, n: usize) -> Vec<Coord<D>> {
+        self.generate_in(n, PI)
+    }
+
+    /// Generate the described curve in a specific angle `theta` (`0..=TAU`).
+    ///
+    /// # Panic
+    ///
+    /// The number of the points `n` must larger than 1.
+    ///
+    /// # See Also
+    ///
+    /// [`Efd::generate_half()`], [`Efd::generate_in()`],
+    /// [`Efd::generate_norm_in()`]
+    #[must_use]
+    pub fn generate_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
+        let mut curve = self.generate_norm_in(n, theta);
+        self.trans.transform_inplace(&mut curve);
+        curve
+    }
+
+    /// Generate a normalized curve in a specific angle `theta` (`0..=TAU`).
+    ///
+    /// Normalized curve is **without** transformation.
+    ///
+    /// # Panic
+    ///
+    /// The number of the points `n` must larger than 1.
+    ///
+    /// # See Also
+    ///
+    /// [`Efd::generate()`], [`Efd::generate_half()`], [`Efd::generate_in()`]
+    #[must_use]
+    pub fn generate_norm_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
         assert!(n > 1, "n ({n}) must larger than 1");
         let mut t = Array1::from_elem(n, 1. / (n - 1) as f64);
         t[0] = 0.;
-        let t = cumsum(t, None) * TAU;
+        let t = cumsum(t, None) * theta;
         self.coeffs
             .axis_iter(Axis(0))
             .enumerate()
@@ -261,14 +312,6 @@ impl<D: EfdDim> Efd<D> {
             .axis_iter(Axis(0))
             .map(D::to_coord)
             .collect()
-    }
-
-    /// Generate the described curve from the coefficients.
-    ///
-    /// The number of the points `n` must given.
-    #[must_use]
-    pub fn generate(&self, n: usize) -> Vec<Coord<D>> {
-        self.trans.transform(&self.generate_norm(n))
     }
 }
 

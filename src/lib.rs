@@ -1,24 +1,4 @@
-//! This crate implements 2D/3D Elliptical Fourier Descriptor (EFD) and its
-//! related functions.
-//!
-//! This crate support both `Vec<[f64; D]>` and `&[[f64; D]]` as input type via
-//! `Cow<[[f64; D]]>` ([`CowCurve`]), and the first coordinate must be close to
-//! the last with [`closed_curve()`].
-//!
-//! ```
-//! let curve = vec![
-//!     [0., 0.],
-//!     [1., 1.],
-//!     [2., 2.],
-//!     [3., 3.],
-//!     [2., 2.],
-//!     [1., 1.],
-//!     [0., 0.],
-//! ];
-//! let described_curve = efd::Efd2::from_curve(curve).unwrap().generate(20);
-//! # assert_eq!(described_curve.len(), 20);
-//! ```
-//!
+#![doc = include_str!("../README.md")]
 //! # Features
 //!
 //! This crate support no-std solution via using "libm", a crate provide
