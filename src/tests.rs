@@ -1,4 +1,6 @@
 #![doc(hidden)]
+#[cfg(test)]
+use core::f64::consts::TAU;
 
 /// Epsilon for curve difference.
 pub const EPS: f64 = 1.6e-14;
@@ -40,7 +42,7 @@ fn efd2d() {
     assert_abs_diff_eq!(trans.scale(), 48.16765830752243);
     assert_eq!(efd.harmonic(), 6);
     // Test normalized
-    let norm = efd.generate_norm(NORM.len());
+    let norm = efd.generate_norm_in(NORM.len(), TAU);
     assert!(curve_diff(&norm, NORM) < EPS);
     // Test reconstruction
     let target = efd.generate(TARGET.len());
@@ -72,7 +74,7 @@ fn efd3d() {
     assert_abs_diff_eq!(trans.scale(), 0.5629099155595344);
     assert_eq!(efd.harmonic(), 5);
     // Test normalized
-    let norm = efd.generate_norm(NORM3D.len());
+    let norm = efd.generate_norm_in(NORM3D.len(), TAU);
     assert!(curve_diff(&norm, NORM3D) < EPS);
     // Test reconstruction
     let target = efd.generate(NORM3D.len());

@@ -1,6 +1,9 @@
 use crate::*;
 use alloc::vec::Vec;
-use core::{f64::consts::TAU, marker::PhantomData};
+use core::{
+    f64::consts::{PI, TAU},
+    marker::PhantomData,
+};
 use ndarray::{s, Array1, Array2, Axis, Slice};
 
 /// 2D EFD coefficients type.
@@ -30,7 +33,11 @@ pub struct Efd<D: EfdDim> {
 }
 
 impl<D: EfdDim> Efd<D> {
-    /// Create object from a nx4 array with boundary check.
+    /// Create object from a 2D array with boundary check.
+    ///
+    /// The array size is (harmonic) x (dimension x 2).
+    ///
+    /// The dimension is [`<<D as EfdDim>::Trans as Trans>::DIM`](Trans::DIM).
     pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, EfdError<D>> {
         (coeffs.nrows() > 0 && coeffs.ncols() == D::Trans::DIM * 2)
             .then(|| Self {
@@ -60,7 +67,7 @@ impl<D: EfdDim> Efd<D> {
     }
 
     /// Calculate EFD coefficients from an existing discrete points and Fourier
-    /// power gate.
+    /// power threshold.
     ///
     /// **The curve must be closed. (first == last)**
     ///
@@ -103,8 +110,8 @@ impl<D: EfdDim> Efd<D> {
     /// Return none if harmonic number is zero or the curve is less than
     /// two points.
     ///
-    /// If the harmonic number is not given, it will be calculated with
-    /// [`Self::gate()`] function.
+    /// If the harmonic number is not given, it will be calculated with Fourier
+    /// power analysis.
     ///
     /// # Panics
     ///
@@ -224,15 +231,69 @@ impl<D: EfdDim> Efd<D> {
         self
     }
 
-    /// Generate the normalized curve **without** transformation.
+    /// Generate the described curve. (`theta=TAU`)
     ///
-    /// The number of the points `n` must larger than 3.
+    /// # Panic
+    ///
+    /// The number of the points `n` must larger than 1.
+    ///
+    /// # See Also
+    ///
+    /// [`Efd::generate_half()`], [`Efd::generate_in()`],
+    /// [`Efd::generate_norm_in()`]
     #[must_use]
-    pub fn generate_norm(&self, n: usize) -> Vec<Coord<D>> {
+    pub fn generate(&self, n: usize) -> Vec<Coord<D>> {
+        self.generate_in(n, TAU)
+    }
+
+    /// Generate a half of the described curve. (`theta=PI`)
+    ///
+    /// # Panic
+    ///
+    /// The number of the points `n` must larger than 1.
+    ///
+    /// # See Also
+    ///
+    /// [`Efd::generate()`], [`Efd::generate_in()`], [`Efd::generate_norm_in()`]
+    #[must_use]
+    pub fn generate_half(&self, n: usize) -> Vec<Coord<D>> {
+        self.generate_in(n, PI)
+    }
+
+    /// Generate the described curve in a specific angle `theta` (`0..=TAU`).
+    ///
+    /// # Panic
+    ///
+    /// The number of the points `n` must larger than 1.
+    ///
+    /// # See Also
+    ///
+    /// [`Efd::generate_half()`], [`Efd::generate_in()`],
+    /// [`Efd::generate_norm_in()`]
+    #[must_use]
+    pub fn generate_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
+        let mut curve = self.generate_norm_in(n, theta);
+        self.trans.transform_inplace(&mut curve);
+        curve
+    }
+
+    /// Generate a normalized curve in a specific angle `theta` (`0..=TAU`).
+    ///
+    /// Normalized curve is **without** transformation.
+    ///
+    /// # Panic
+    ///
+    /// The number of the points `n` must larger than 1.
+    ///
+    /// # See Also
+    ///
+    /// [`Efd::generate()`], [`Efd::generate_half()`], [`Efd::generate_in()`]
+    #[must_use]
+    pub fn generate_norm_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
         assert!(n > 1, "n ({n}) must larger than 1");
         let mut t = Array1::from_elem(n, 1. / (n - 1) as f64);
         t[0] = 0.;
-        let t = cumsum(t, None) * TAU;
+        let t = cumsum(t, None) * theta;
         self.coeffs
             .axis_iter(Axis(0))
             .enumerate()
@@ -251,14 +312,6 @@ impl<D: EfdDim> Efd<D> {
             .axis_iter(Axis(0))
             .map(D::to_coord)
             .collect()
-    }
-
-    /// Generate the described curve from the coefficients.
-    ///
-    /// The number of the points `n` must given.
-    #[must_use]
-    pub fn generate(&self, n: usize) -> Vec<Coord<D>> {
-        self.trans.transform(&self.generate_norm(n))
     }
 }
 

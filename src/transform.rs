@@ -11,7 +11,7 @@ pub type Transform3 = Transform<T3>;
 
 /// A trait used in inner type of [`Transform`].
 pub trait Trans {
-    /// Dimension hint.
+    /// Dimension hint. It might be 2 or 3.
     const DIM: usize;
     /// Coordinate/Translation type.
     type Coord: Clone + PartialEq + 'static;
@@ -229,7 +229,7 @@ impl<T: Trans> Transform<T> {
     ///
     /// let efd = Efd2::from_curve(path, false);
     /// let path = efd.generate(path.len());
-    /// let path_norm = efd.generate_norm(path.len());
+    /// let path_norm = efd.generate_norm_in(path.len(), std::f64::consts::TAU);
     /// let path = efd.as_trans().inverse().transform(path);
     /// # assert!(curve_diff(&path, &path_norm) < EPS);
     /// ```
@@ -254,7 +254,7 @@ impl<T: Trans> Transform<T> {
     /// use efd::{tests::*, *};
     /// # let target = TARGET;
     /// # let efd = Efd2::from_curve(PATH, false);
-    /// # let path = efd.generate_norm(target.len());
+    /// # let path = efd.generate_norm_in(target.len(), std::f64::consts::TAU);
     /// let path1 = efd.as_trans().transform(&path);
     /// # let trans = efd.as_trans();
     /// let path1_inv = trans.inverse().transform(&path1);
