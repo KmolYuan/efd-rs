@@ -32,7 +32,6 @@ impl EfdDim for D2 {
         harmonic: usize,
         is_open: bool,
     ) -> (Array2<f64>, Transform<Self::Trans>) {
-        const CDIM: usize = T2::DIM * 2;
         let (mut coeffs, center) = get_coeff_center(curve, harmonic, is_open);
         // Angle of starting point
         let theta = {
@@ -44,9 +43,7 @@ impl EfdDim for D2 {
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let theta = na::Rotation2::new((i + 1) as f64 * -theta);
             let m = theta * na::matrix![c[0], c[2]; c[1], c[3]];
-            for i in 0..CDIM {
-                c[i] = m[(i % 2, i / 2)];
-            }
+            m.iter().zip(&mut c).for_each(|(m, c)| *c = *m);
         }
         // Normalize coefficients sign
         if harmonic > 1 && coeffs[[0, 0]] * coeffs[[1, 0]] < 0. {
@@ -62,9 +59,7 @@ impl EfdDim for D2 {
         let psi_inv = psi.inverse().to_rotation_matrix();
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = psi_inv * na::matrix![c[0], c[1]; c[2], c[3]];
-            for i in 0..CDIM {
-                c[i] = m[(i / 2, i % 2)];
-            }
+            m.transpose().iter().zip(&mut c).for_each(|(m, c)| *c = *m);
         }
         let scale = coeffs[[0, 0]].hypot(coeffs[[0, 2]]);
         coeffs /= scale;
@@ -85,7 +80,6 @@ impl EfdDim for D3 {
         harmonic: usize,
         is_open: bool,
     ) -> (Array2<f64>, Transform<Self::Trans>) {
-        const CDIM: usize = T3::DIM * 2;
         let (mut coeffs, center) = get_coeff_center(curve, harmonic, is_open);
         // Angle of starting point
         let theta = {
@@ -100,9 +94,7 @@ impl EfdDim for D3 {
         for (i, mut c) in coeffs.axis_iter_mut(Axis(0)).enumerate() {
             let theta = na::Rotation2::new((i + 1) as f64 * -theta);
             let m = theta * na::matrix![c[0], c[2], c[4]; c[1], c[3], c[5]];
-            for i in 0..CDIM {
-                c[i] = m[(i % 2, i / 2)];
-            }
+            m.iter().zip(&mut c).for_each(|(m, c)| *c = *m);
         }
         // Normalize coefficients sign
         if harmonic > 1 && coeffs[[0, 0]] * coeffs[[1, 0]] < 0. {
@@ -118,9 +110,7 @@ impl EfdDim for D3 {
         let psi_inv = psi.inverse();
         for mut c in coeffs.axis_iter_mut(Axis(0)) {
             let m = psi_inv * na::matrix![c[0], c[1]; c[2], c[3]; c[4], c[5]];
-            for i in 0..CDIM {
-                c[i] = m[(i / 2, i % 2)];
-            }
+            m.transpose().iter().zip(&mut c).for_each(|(m, c)| *c = *m);
         }
         let scale = (pow2(coeffs[[0, 0]]) + pow2(coeffs[[0, 2]]) + pow2(coeffs[[0, 4]])).sqrt();
         coeffs /= scale;
