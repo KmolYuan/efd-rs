@@ -1,5 +1,4 @@
 use crate::*;
-use alloc::vec::Vec;
 use core::f64::consts::{PI, TAU};
 
 /// 2D EFD dimension type.
@@ -173,19 +172,15 @@ fn get_coeff_center<D: na::DimName, const DIM: usize>(
                 .for_each(|(d, c)| *c = (scalar * d.component_mul(&sin_phi)).sum());
         }
     }
-    let center = {
-        let tdt = t.rows_range(1..).component_div(&dt);
-        let c = 0.5 * diff(t.map(pow2)).component_div(&dt);
-        dxyz.column_iter()
-            .zip(curve[0])
-            .map(|(dxyz, oxyz)| {
-                let xi = cumsum(dxyz) - dxyz.component_mul(&tdt);
-                oxyz + (dxyz.component_mul(&c) + xi.component_mul(&dt)).sum() / zt
-                    * if is_open { 2. } else { 1. }
-            })
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap()
-    };
+    let tdt = t.rows_range(1..).component_div(&dt);
+    let c = 0.5 * diff(t.map(pow2)).component_div(&dt);
+    let mut center = curve[0];
+    dxyz.column_iter()
+        .zip(&mut center)
+        .for_each(|(dxyz, oxyz)| {
+            let xi = cumsum(dxyz) - dxyz.component_mul(&tdt);
+            *oxyz += (dxyz.component_mul(&c) + xi.component_mul(&dt)).sum() / zt
+                * if is_open { 2. } else { 1. };
+        });
     (coeffs, center)
 }
