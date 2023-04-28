@@ -3,9 +3,9 @@ use alloc::vec::Vec;
 use core::f64::consts::{PI, TAU};
 
 /// 2D EFD dimension type.
-pub type D2 = [f64; 2];
+pub enum D2 {}
 /// 3D EFD dimension type.
-pub type D3 = [f64; 3];
+pub enum D3 {}
 /// 2D Coefficient type.
 pub type Coeff2 = Coeff<D2>;
 /// 3D Coefficient type.
