@@ -9,12 +9,11 @@
 extern crate alloc;
 pub extern crate nalgebra as na;
 
-pub use crate::{curve::*, efd::*, efd_dim::*, error::*, transform::*, utility::*};
+pub use crate::{curve::*, efd::*, efd_dim::*, transform::*, utility::*};
 
 mod curve;
 mod efd;
 mod efd_dim;
-mod error;
 pub mod tests;
 mod transform;
 mod utility;

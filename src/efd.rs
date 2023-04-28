@@ -31,12 +31,11 @@ impl<D: EfdDim> Efd<D> {
     /// Create object from a 2D array with boundary check.
     ///
     /// The array size is (harmonic) x (dimension x 2).
-    ///
     /// The dimension is [`<<D as EfdDim>::Trans as Trans>::DIM`](Trans::DIM).
-    pub fn try_from_coeffs(coeffs: Coeff<D>) -> Result<Self, EfdError<D>> {
-        (coeffs.nrows() > 0)
-            .then_some(Self { coeffs, trans: Transform::identity() })
-            .ok_or(EfdError::new())
+    ///
+    /// Return none if harmonic is zero.
+    pub fn try_from_coeffs(coeffs: Coeff<D>) -> Option<Self> {
+        (coeffs.nrows() != 0).then_some(Self { coeffs, trans: Transform::identity() })
     }
 
     /// Calculate EFD coefficients from an existing discrete points.
@@ -288,10 +287,11 @@ impl<D: EfdDim> Efd<D> {
                 let lambda = &t * (i + 1) as f64;
                 let cos = lambda.map(f64::cos);
                 let sin = lambda.map(f64::sin);
+                let c = na::Matrix2xX::from_iterator(c.len() / 2, c.iter().copied());
                 let mut path = MatrixXxC::<D::Dim>::zeros(t.len());
-                for (i, mut s) in path.column_iter_mut().enumerate() {
-                    s.copy_from(&(&cos * c[i * 2] + &sin * c[i * 2 + 1]));
-                }
+                path.column_iter_mut()
+                    .zip(c.column_iter())
+                    .for_each(|(mut s, c)| s.copy_from(&(&cos * c[0] + &sin * c[1])));
                 path
             })
             .reduce(|a, b| a + b)

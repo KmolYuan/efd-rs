@@ -20,7 +20,7 @@ interp = "1"
 [dependencies.nalgebra]
 version = "0.32"
 default-features = false
-features = ["libm", "macros"]
+features = ["libm", "macros", "alloc"]
 
 [dev-dependencies]
 plotters = "0.3"
