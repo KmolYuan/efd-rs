@@ -4,6 +4,16 @@ use alloc::vec::Vec;
 /// Alias for evaluate `EfdDim::Trans::Coord` from `D`.
 pub type Coord<D> = <<D as EfdDim>::Trans as Trans>::Coord;
 
+pub(crate) type MatrixXxC<C> = na::OMatrix<f64, na::Dyn, C>;
+
+pub(crate) fn to_mat<C, const DIM: usize>(curve: C) -> MatrixXxC<na::Const<DIM>>
+where
+    C: Curve<[f64; DIM]>,
+{
+    let curve = curve.to_curve();
+    MatrixXxC::<na::Const<DIM>>::from_row_iterator(curve.len(), curve.into_iter().flatten())
+}
+
 /// Copy-on-write curve type.
 pub trait Curve<A: Clone>: Sized {
     /// Move or copy curve type into owned type. (`Vec`)

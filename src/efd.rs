@@ -1,10 +1,6 @@
 use crate::*;
 use alloc::vec::Vec;
-use core::{
-    f64::consts::{PI, TAU},
-    marker::PhantomData,
-};
-use ndarray::{s, Array1, Array2, Axis, Slice};
+use core::f64::consts::{PI, TAU};
 
 /// 2D EFD coefficients type.
 pub type Efd2 = Efd<D2>;
@@ -27,9 +23,8 @@ pub type Efd3 = Efd<D3>;
 /// Please see [`Transform`] for more information.
 #[derive(Clone)]
 pub struct Efd<D: EfdDim> {
-    coeffs: Array2<f64>,
+    coeffs: Coeff<D>,
     trans: Transform<D::Trans>,
-    _dim: PhantomData<D>,
 }
 
 impl<D: EfdDim> Efd<D> {
@@ -38,13 +33,9 @@ impl<D: EfdDim> Efd<D> {
     /// The array size is (harmonic) x (dimension x 2).
     ///
     /// The dimension is [`<<D as EfdDim>::Trans as Trans>::DIM`](Trans::DIM).
-    pub fn try_from_coeffs(coeffs: Array2<f64>) -> Result<Self, EfdError<D>> {
-        (coeffs.nrows() > 0 && coeffs.ncols() == D::Trans::DIM * 2)
-            .then_some(Self {
-                coeffs,
-                trans: Transform::identity(),
-                _dim: PhantomData,
-            })
+    pub fn try_from_coeffs(coeffs: Coeff<D>) -> Result<Self, EfdError<D>> {
+        (coeffs.nrows() > 0)
+            .then_some(Self { coeffs, trans: Transform::identity() })
             .ok_or(EfdError::new())
     }
 
@@ -93,15 +84,15 @@ impl<D: EfdDim> Efd<D> {
         // Nyquist Frequency
         let harmonic = curve.len() / 2;
         let (mut coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
-        let lut = cumsum(coeffs.mapv(pow2), None).sum_axis(Axis(1));
-        let total_power = lut.last().unwrap();
+        let lut = cumsum(coeffs.map(pow2)).column_sum();
+        let total_power = lut[lut.len() - 1];
         let (harmonic, _) = lut
             .iter()
             .enumerate()
             .find(|(_, power)| *power / total_power >= threshold)
             .unwrap();
-        coeffs.slice_axis_inplace(Axis(0), Slice::from(..=harmonic));
-        Self { coeffs, trans, _dim: PhantomData }
+        coeffs.resize_vertically_mut(harmonic + 1, 0.);
+        Self { coeffs, trans }
     }
 
     /// Calculate EFD coefficients from a series of existing discrete points.
@@ -128,7 +119,7 @@ impl<D: EfdDim> Efd<D> {
                 panic!("Invalid curve! Please use `efd::valid_curve()` to verify.");
             } else {
                 let (coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
-                Self { coeffs, trans, _dim: PhantomData }
+                Self { coeffs, trans }
             }
         } else {
             Self::from_curve(curve, is_open)
@@ -143,14 +134,14 @@ impl<D: EfdDim> Efd<D> {
 
     /// Consume self and return a raw array of the coefficients.
     #[must_use]
-    pub fn into_inner(self) -> Array2<f64> {
+    pub fn into_inner(self) -> Coeff<D> {
         self.coeffs
     }
 
     /// Get the array view of the coefficients.
     #[must_use]
-    pub fn coeffs(&self) -> ndarray::ArrayView2<f64> {
-        self.coeffs.view()
+    pub fn coeffs(&self) -> &Coeff<D> {
+        &self.coeffs
     }
 
     /// Get the reference of transform type.
@@ -177,7 +168,7 @@ impl<D: EfdDim> Efd<D> {
     /// different.
     #[must_use]
     pub fn square_err(&self, rhs: &Self) -> f64 {
-        padding(self, rhs, |a, b| (a - b).mapv(pow2).sum())
+        padding(self, rhs, |a, b| (a - b).map(pow2).sum())
     }
 
     /// L1 norm error, aka Manhattan distance.
@@ -186,7 +177,7 @@ impl<D: EfdDim> Efd<D> {
     /// different.
     #[must_use]
     pub fn l1_norm(&self, rhs: &Self) -> f64 {
-        padding(self, rhs, |a, b| (a - b).mapv(f64::abs).sum())
+        padding(self, rhs, |a, b| (a - b).map(f64::abs).sum())
     }
 
     /// L2 norm error, aka Euclidean distance.
@@ -195,7 +186,7 @@ impl<D: EfdDim> Efd<D> {
     /// different.
     #[must_use]
     pub fn l2_norm(&self, rhs: &Self) -> f64 {
-        padding(self, rhs, |a, b| (a - b).mapv(pow2).sum().sqrt())
+        padding(self, rhs, |a, b| (a - b).map(pow2).sum().sqrt())
     }
 
     /// Lp norm error, slower than [`Self::l1_norm()`] and [`Self::l2_norm()`].
@@ -205,14 +196,16 @@ impl<D: EfdDim> Efd<D> {
     #[must_use]
     pub fn lp_norm(&self, rhs: &Self, p: i32) -> f64 {
         padding(self, rhs, |a, b| {
-            (a - b).mapv(|x| x.abs().powi(p)).sum().powf(1. / p as f64)
+            (a - b).map(|x| x.abs().powi(p)).sum().powf(1. / p as f64)
         })
     }
 
     /// Reverse the order of described curve then return a mutable reference.
     pub fn reverse_inplace(&mut self) {
-        let mut s = self.coeffs.slice_mut(s![.., 1..;2]);
-        s *= -1.;
+        self.coeffs
+            .column_iter_mut()
+            .step_by(2)
+            .for_each(|mut c| c *= -1.);
     }
 
     /// Consume and return a reversed version of the coefficients. This method
@@ -285,25 +278,25 @@ impl<D: EfdDim> Efd<D> {
     #[must_use]
     pub fn generate_norm_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
         assert!(n > 1, "n ({n}) must larger than 1");
-        let mut t = Array1::from_elem(n, 1. / (n - 1) as f64);
+        let mut t = na::MatrixXx1::repeat(n, 1. / (n - 1) as f64);
         t[0] = 0.;
-        let t = cumsum(t, None) * theta;
+        let t = cumsum(t) * theta;
         self.coeffs
-            .axis_iter(Axis(0))
+            .row_iter()
             .enumerate()
             .map(|(i, c)| {
                 let lambda = &t * (i + 1) as f64;
-                let cos = lambda.mapv(f64::cos);
-                let sin = lambda.mapv(f64::sin);
-                let mut path = Array2::zeros([t.len(), D::Trans::DIM]);
-                for (i, mut s) in path.axis_iter_mut(Axis(1)).enumerate() {
-                    s.assign(&(&cos * c[i * 2] + &sin * c[i * 2 + 1]));
+                let cos = lambda.map(f64::cos);
+                let sin = lambda.map(f64::sin);
+                let mut path = MatrixXxC::<D::Dim>::zeros(t.len());
+                for (i, mut s) in path.column_iter_mut().enumerate() {
+                    s.copy_from(&(&cos * c[i * 2] + &sin * c[i * 2 + 1]));
                 }
                 path
             })
             .reduce(|a, b| a + b)
             .unwrap()
-            .axis_iter(Axis(0))
+            .row_iter()
             .map(D::to_coord)
             .collect()
     }
@@ -312,18 +305,18 @@ impl<D: EfdDim> Efd<D> {
 fn padding<D, F>(a: &Efd<D>, b: &Efd<D>, f: F) -> f64
 where
     D: EfdDim,
-    F: Fn(&Array2<f64>, &Array2<f64>) -> f64,
+    F: Fn(&Coeff<D>, &Coeff<D>) -> f64,
 {
     use core::cmp::Ordering::*;
     match a.harmonic().cmp(&b.harmonic()) {
         Equal => f(&a.coeffs, &b.coeffs),
         Greater => {
-            let zeros = Array2::zeros([a.harmonic() - b.harmonic(), a.coeffs.ncols()]);
-            f(&a.coeffs, &ndarray::concatenate![Axis(0), b.coeffs, zeros])
+            let b_coeffs = b.coeffs.clone().resize_vertically(a.harmonic(), 0.);
+            f(&a.coeffs, &b_coeffs)
         }
         Less => {
-            let zeros = Array2::zeros([b.harmonic() - a.harmonic(), a.coeffs.ncols()]);
-            f(&ndarray::concatenate![Axis(0), a.coeffs, zeros], &b.coeffs)
+            let a_coeffs = a.coeffs.clone().resize_vertically(b.harmonic(), 0.);
+            f(&a_coeffs, &b.coeffs)
         }
     }
 }

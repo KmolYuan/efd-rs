@@ -213,7 +213,7 @@ impl<T: Trans> Transform<T> {
     /// let a = Efd2::from_curve(path1, false);
     /// let b = Efd2::from_curve(path2, false);
     /// let trans = b.as_trans() * a.as_trans().inverse();
-    /// assert!(dbg!(curve_diff(&trans.transform(path1), path2)) < EPS);
+    /// assert!(curve_diff(&trans.transform(path1), path2) < EPS);
     /// ```
     #[must_use]
     pub fn apply(&self, rhs: &Self) -> Self {

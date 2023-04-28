@@ -1,32 +1,33 @@
-use crate::Curve;
-use alloc::vec;
-use ndarray::{s, Array, Array2, Axis, CowArray, Dimension, FixedInitializer};
+use crate::*;
+use alloc::vec::Vec;
 
 #[inline(always)]
 pub(crate) fn pow2(x: f64) -> f64 {
     x * x
 }
 
-pub(crate) fn diff<'a, D, A>(arr: A, axis: Option<Axis>) -> Array<f64, D>
+pub(crate) fn diff<R, C, S>(arr: na::Matrix<f64, R, C, S>) -> na::OMatrix<f64, na::Dyn, C>
 where
-    D: Dimension,
-    CowArray<'a, f64, D>: From<A>,
+    R: na::Dim,
+    C: na::Dim,
+    S: na::Storage<f64, R, C>,
+    na::DefaultAllocator: na::allocator::Allocator<f64, R, C>,
 {
-    let arr = CowArray::from(arr);
-    let axis = axis.unwrap_or_else(|| Axis(arr.ndim() - 1));
-    let head = arr.slice_axis(axis, (..-1).into());
-    let tail = arr.slice_axis(axis, (1..).into());
-    &tail - &head
+    let arr = arr.into_owned();
+    let head = arr.rows_range(..arr.nrows() - 1);
+    let tail = arr.rows_range(1..);
+    tail - head
 }
 
-pub(crate) fn cumsum<'a, D, A>(arr: A, axis: Option<Axis>) -> Array<f64, D>
+pub(crate) fn cumsum<R, C, S>(arr: na::Matrix<f64, R, C, S>) -> na::OMatrix<f64, R, C>
 where
-    D: Dimension + ndarray::RemoveAxis,
-    CowArray<'a, f64, D>: From<A>,
+    R: na::Dim,
+    C: na::Dim,
+    S: na::Storage<f64, R, C>,
+    na::DefaultAllocator: na::allocator::Allocator<f64, R, C>,
 {
-    let mut arr = CowArray::from(arr).into_owned();
-    let axis = axis.unwrap_or(Axis(0));
-    arr.axis_iter_mut(axis).reduce(|prev, mut next| {
+    let mut arr = arr.into_owned();
+    arr.row_iter_mut().reduce(|prev, mut next| {
         next += &prev;
         next
     });
@@ -46,11 +47,7 @@ macro_rules! impl_curve_diff {
     ($($(#[$meta:meta])+ fn $name:ident($($arg:ident:$ty:ty),*) { ($($expr:expr),+) })+) => {$(
         $(#[$meta])+
         #[must_use]
-        pub fn $name<A, B>(a: &[A], b: &[B], $($arg:$ty),*) -> f64
-        where
-            A: FixedInitializer<Elem = f64> + Clone,
-            B: FixedInitializer<Elem = f64> + Clone,
-        {
+        pub fn $name<const DIM: usize>( a: &[[f64; DIM]], b: &[[f64; DIM]], $($arg:$ty),*) -> f64 {
             curve_diff_res_norm(a, b, $($expr),+)
         }
     )+};
@@ -74,32 +71,32 @@ impl_curve_diff! {
     fn partial_curve_diff_res(res: usize) { (res, false) }
 }
 
-fn curve_diff_res_norm<A, B>(a: &[A], b: &[B], res: usize, norm: bool) -> f64
-where
-    A: FixedInitializer<Elem = f64> + Clone,
-    B: FixedInitializer<Elem = f64> + Clone,
-{
+fn curve_diff_res_norm<const DIM: usize>(
+    a: &[[f64; DIM]],
+    b: &[[f64; DIM]],
+    res: usize,
+    norm: bool,
+) -> f64 {
     assert!(a.len() >= 2 && b.len() >= 2 && res > 0);
-    let a = Array2::from(a.closed_lin());
-    let b = Array2::from(b.closed_lin());
+    let a = to_mat(a.closed_lin());
+    let b = to_mat(b.closed_lin());
     let at = get_time(&a, norm);
-    let bt = get_time(&b, norm).to_vec();
+    let bt = get_time(&b, norm).iter().copied().collect::<Vec<_>>();
     let bzt = *bt.last().unwrap();
     let err = (0..res)
-        .map(|v| (&at + v as f64 / res as f64) % bzt)
+        .map(|v| at.add_scalar(v as f64 / res as f64).map(|x| x % bzt))
         .map(|t| {
-            let t = t.as_slice().unwrap();
+            let t = t.as_slice();
             (0..b.ncols())
                 .map(|i| {
-                    let ax = a.slice(s![.., i]);
-                    let bx = b.slice(s![.., i]);
-                    let bx = bx.as_standard_layout();
-                    let bx = interp::interp_slice(&bt, bx.as_slice().unwrap(), t);
-                    (&ax - ndarray::Array1::from(bx)).mapv(pow2)
+                    let ax = a.column(i);
+                    let bx = b.column(i);
+                    let bx = interp::interp_slice(&bt, bx.as_slice(), t);
+                    (ax - na::MatrixXx1::from_vec(bx)).map(pow2)
                 })
                 .reduce(|a, b| a + b)
                 .unwrap()
-                .mapv(f64::sqrt)
+                .map(f64::sqrt)
                 .sum()
         })
         .min_by(|a, b| a.partial_cmp(b).unwrap())
@@ -107,12 +104,12 @@ where
     err / at.len() as f64
 }
 
-fn get_time(curve: &ndarray::Array2<f64>, norm: bool) -> ndarray::Array1<f64> {
-    let dxyz = diff(curve, Some(Axis(0)));
-    let dt = dxyz.mapv(pow2).sum_axis(Axis(1)).mapv(f64::sqrt);
-    let t = ndarray::concatenate![Axis(0), ndarray::array![0.], cumsum(&dt, None)];
+fn get_time<D: na::DimName>(curve: &MatrixXxC<D>, norm: bool) -> na::MatrixXx1<f64> {
+    let dxyz = diff(curve.clone());
+    let dt = dxyz.map(pow2).column_sum().map(f64::sqrt);
+    let t = cumsum(dt).insert_row(0, 0.);
     if norm {
-        let zt = *t.last().unwrap();
+        let zt = t[t.len() - 1];
         t / zt
     } else {
         t

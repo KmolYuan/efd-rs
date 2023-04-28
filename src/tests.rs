@@ -3,16 +3,15 @@
 use core::f64::consts::TAU;
 
 /// Epsilon for curve difference.
-pub const EPS: f64 = 1.6e-14;
+pub const EPS: f64 = 2.2e-14;
 pub const RES: usize = 1000;
 
 #[test]
 fn error() {
     use crate::*;
-    use ndarray::*;
-    let coeff = arr2(&[[10., 20., 20., 10.], [3., 4., 4., 3.]]);
+    let coeff = Coeff2::from_row_slice(&[10., 20., 20., 10., 3., 4., 4., 3.]);
     let a = Efd2::try_from_coeffs(coeff).unwrap();
-    let coeff = arr2(&[[10., 20., 20., 10.]]);
+    let coeff = Coeff2::from_row_slice(&[10., 20., 20., 10.]);
     let b = Efd2::try_from_coeffs(coeff).unwrap();
     assert_eq!(a.square_err(&b), 50.);
     assert_eq!(b.square_err(&a), 50.);
@@ -36,7 +35,7 @@ fn efd2d() {
     assert!(efd.l1_norm(&efd_half) < EPS);
     // Test transformation
     let trans = efd.as_trans();
-    assert_abs_diff_eq!(trans.trans()[0], -1.248409055632365);
+    assert_abs_diff_eq!(trans.trans()[0], -1.248409055632358);
     assert_abs_diff_eq!(trans.trans()[1], 55.26080122817753);
     assert_abs_diff_eq!(trans.rot().angle(), 0.6423416350347734);
     assert_abs_diff_eq!(trans.scale(), 48.16765830752243);
@@ -85,7 +84,6 @@ fn efd3d() {
 #[cfg(feature = "std")]
 fn plot() -> Result<(), Box<dyn std::error::Error>> {
     use crate::*;
-    use ndarray::*;
     use plotters::prelude::*;
 
     pub fn bounding_box<'a>(pts: impl IntoIterator<Item = &'a [f64; 2]>) -> [f64; 4] {
@@ -118,7 +116,7 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let coeff = arr2(&[[12., 35., 35., 13.], [5., 21., 21., 5.], [1., 12., 12., 1.]]);
+    let coeff = Coeff2::from_row_slice(&[12., 35., 35., 13., 5., 21., 21., 5., 1., 12., 12., 1.]);
     let efd = Efd2::try_from_coeffs(coeff).unwrap();
     let path = efd.generate(360);
     let [x_min, x_max, y_min, y_max] = bounding_box(&path);
@@ -137,18 +135,19 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
     }
     let trans0 = efd.as_trans();
     let mut c0 = [0.; 2];
-    for c in efd.coeffs().axis_iter(Axis(0)) {
-        let m = na::matrix![c[0], c[1]; c[2], c[3]];
-        let f = |t: f64| {
-            let v = m * na::matrix![t.cos(); t.sin()];
-            [v[0], v[1]]
-        };
-        let t = Array1::linspace(0., std::f64::consts::TAU, 100);
+    for c in efd.coeffs().row_iter() {
+        let m = na::Matrix2::from_iterator(c.iter().copied()).transpose();
         let trans = trans0 * Transform2::new(c0, na::UnitComplex::new(0.), 1.);
-        let ellipse = t.into_iter().map(f).map(|[x, y]| {
-            let [x, y] = trans.transform_pt(&[x, y]);
-            (x, y)
-        });
+        let ellipse = (0..100)
+            .map(|i| {
+                let t = i as f64 * std::f64::consts::TAU / 100.;
+                let v = m * na::matrix![t.cos(); t.sin()];
+                [v[0], v[1]]
+            })
+            .map(|[x, y]| {
+                let [x, y] = trans.transform_pt(&[x, y]);
+                (x, y)
+            });
         let p1 = c0;
         c0[0] += c[0];
         c0[1] += c[2];

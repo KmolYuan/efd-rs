@@ -12,10 +12,9 @@ categories = ["algorithm", "no-std"]
 
 [features]
 default = ["std"]
-std = ["ndarray/std", "nalgebra/std"]
+std = ["nalgebra/std"]
 
 [dependencies]
-ndarray = { version = "0.15", default-features = false }
 interp = "1"
 
 [dependencies.nalgebra]
