@@ -6,16 +6,16 @@ pub(crate) fn pow2(x: f64) -> f64 {
     x * x
 }
 
-pub(crate) fn diff<R, C, S>(arr: na::Matrix<f64, R, C, S>) -> na::OMatrix<f64, na::Dyn, C>
+pub(crate) fn diff<R, C, S>(arr: na::Matrix<f64, R, C, S>) -> na::OMatrix<f64, R, na::Dyn>
 where
-    R: na::Dim,
+    R: na::DimName,
     C: na::Dim,
     S: na::Storage<f64, R, C>,
     na::DefaultAllocator: na::allocator::Allocator<f64, R, C>,
 {
     let arr = arr.into_owned();
-    let head = arr.rows_range(..arr.nrows() - 1);
-    let tail = arr.rows_range(1..);
+    let head = arr.columns_range(..arr.ncols() - 1);
+    let tail = arr.columns_range(1..);
     tail - head
 }
 
@@ -27,8 +27,8 @@ where
     na::DefaultAllocator: na::allocator::Allocator<f64, R, C>,
 {
     let mut arr = arr.into_owned();
-    arr.row_iter_mut().reduce(|prev, mut next| {
-        next += &prev;
+    arr.column_iter_mut().reduce(|prev, mut next| {
+        next += prev;
         next
     });
     arr
@@ -87,12 +87,12 @@ fn curve_diff_res_norm<const DIM: usize>(
         .map(|v| at.add_scalar(v as f64 / res as f64).map(|x| x % bzt))
         .map(|t| {
             let t = t.as_slice();
-            (0..b.ncols())
+            (0..DIM)
                 .map(|i| {
-                    let ax = a.column(i);
-                    let bx = b.column(i);
-                    let bx = interp::interp_slice(&bt, bx.as_slice(), t);
-                    (ax - na::MatrixXx1::from_vec(bx)).map(pow2)
+                    let ax = a.row(i);
+                    let bx = b.row(i).iter().copied().collect::<Vec<_>>();
+                    let bx = interp::interp_slice(&bt, &bx, t);
+                    (ax - na::Matrix1xX::from_vec(bx)).map(pow2)
                 })
                 .reduce(|a, b| a + b)
                 .unwrap()
@@ -104,10 +104,10 @@ fn curve_diff_res_norm<const DIM: usize>(
     err / at.len() as f64
 }
 
-fn get_time<D: na::DimName>(curve: &MatrixXxC<D>, norm: bool) -> na::MatrixXx1<f64> {
+fn get_time<D: na::DimName>(curve: &MatrixRxX<D>, norm: bool) -> na::Matrix1xX<f64> {
     let dxyz = diff(curve.clone());
-    let dt = dxyz.map(pow2).column_sum().map(f64::sqrt);
-    let t = cumsum(dt).insert_row(0, 0.);
+    let dt = dxyz.map(pow2).row_sum().map(f64::sqrt);
+    let t = cumsum(dt).insert_column(0, 0.);
     if norm {
         let zt = t[t.len() - 1];
         t / zt

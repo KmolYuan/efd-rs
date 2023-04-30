@@ -83,14 +83,14 @@ impl<D: EfdDim> Efd<D> {
         // Nyquist Frequency
         let harmonic = curve.len() / 2;
         let (mut coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
-        let lut = cumsum(coeffs.map(pow2)).column_sum();
+        let lut = cumsum(coeffs.map(pow2)).row_sum();
         let total_power = lut[lut.len() - 1];
         let (harmonic, _) = lut
             .iter()
             .enumerate()
             .find(|(_, power)| *power / total_power >= threshold)
             .unwrap();
-        coeffs.resize_vertically_mut(harmonic + 1, 0.);
+        coeffs.resize_horizontally_mut(harmonic + 1, 0.);
         Self { coeffs, trans }
     }
 
@@ -158,7 +158,7 @@ impl<D: EfdDim> Efd<D> {
     /// Get the harmonic number of the coefficients.
     #[must_use]
     pub fn harmonic(&self) -> usize {
-        self.coeffs.nrows()
+        self.coeffs.ncols()
     }
 
     /// Square error.
@@ -202,7 +202,7 @@ impl<D: EfdDim> Efd<D> {
     /// Reverse the order of described curve then return a mutable reference.
     pub fn reverse_inplace(&mut self) {
         self.coeffs
-            .column_iter_mut()
+            .row_iter_mut()
             .step_by(2)
             .for_each(|mut c| c *= -1.);
     }
@@ -277,26 +277,26 @@ impl<D: EfdDim> Efd<D> {
     #[must_use]
     pub fn generate_norm_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
         assert!(n > 1, "n ({n}) must larger than 1");
-        let mut t = na::MatrixXx1::repeat(n, 1. / (n - 1) as f64);
+        let mut t = na::Matrix1xX::repeat(n, 1. / (n - 1) as f64);
         t[0] = 0.;
         let t = cumsum(t) * theta;
         self.coeffs
-            .row_iter()
+            .column_iter()
             .enumerate()
             .map(|(i, c)| {
                 let lambda = &t * (i + 1) as f64;
                 let cos = lambda.map(f64::cos);
                 let sin = lambda.map(f64::sin);
-                let c = na::Matrix2xX::from_iterator(c.len() / 2, c.iter().copied());
-                let mut path = MatrixXxC::<D::Dim>::zeros(t.len());
-                path.column_iter_mut()
+                let c = na::MatrixView::<f64, na::U2, D::Dim>::from_slice(c.as_slice());
+                let mut path = MatrixRxX::<D::Dim>::zeros(t.len());
+                path.row_iter_mut()
                     .zip(c.column_iter())
                     .for_each(|(mut s, c)| s.copy_from(&(&cos * c[0] + &sin * c[1])));
                 path
             })
             .reduce(|a, b| a + b)
             .unwrap()
-            .row_iter()
+            .column_iter()
             .map(D::to_coord)
             .collect()
     }
@@ -311,11 +311,11 @@ where
     match a.harmonic().cmp(&b.harmonic()) {
         Equal => f(&a.coeffs, &b.coeffs),
         Greater => {
-            let b_coeffs = b.coeffs.clone().resize_vertically(a.harmonic(), 0.);
+            let b_coeffs = b.coeffs.clone().resize_horizontally(a.harmonic(), 0.);
             f(&a.coeffs, &b_coeffs)
         }
         Less => {
-            let a_coeffs = a.coeffs.clone().resize_vertically(b.harmonic(), 0.);
+            let a_coeffs = a.coeffs.clone().resize_horizontally(b.harmonic(), 0.);
             f(&a_coeffs, &b.coeffs)
         }
     }

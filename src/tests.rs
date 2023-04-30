@@ -9,9 +9,9 @@ pub const RES: usize = 1000;
 #[test]
 fn error() {
     use crate::*;
-    let coeff = Coeff2::from_row_slice(&[10., 20., 20., 10., 3., 4., 4., 3.]);
+    let coeff = Coeff2::from_column_slice(&[10., 20., 20., 10., 3., 4., 4., 3.]);
     let a = Efd2::try_from_coeffs(coeff).unwrap();
-    let coeff = Coeff2::from_row_slice(&[10., 20., 20., 10.]);
+    let coeff = Coeff2::from_column_slice(&[10., 20., 20., 10.]);
     let b = Efd2::try_from_coeffs(coeff).unwrap();
     assert_eq!(a.square_err(&b), 50.);
     assert_eq!(b.square_err(&a), 50.);
@@ -116,7 +116,8 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let coeff = Coeff2::from_row_slice(&[12., 35., 35., 13., 5., 21., 21., 5., 1., 12., 12., 1.]);
+    let coeff =
+        Coeff2::from_column_slice(&[12., 35., 35., 13., 5., 21., 21., 5., 1., 12., 12., 1.]);
     let efd = Efd2::try_from_coeffs(coeff).unwrap();
     let path = efd.generate(360);
     let [x_min, x_max, y_min, y_max] = bounding_box(&path);
@@ -135,8 +136,8 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
     }
     let trans0 = efd.as_trans();
     let mut c0 = [0.; 2];
-    for c in efd.coeffs().row_iter() {
-        let m = na::Matrix2::from_iterator(c.iter().copied()).transpose();
+    for c in efd.coeffs().column_iter() {
+        let m = na::MatrixView2::from_slice(c.as_slice()).transpose();
         let trans = trans0 * Transform2::new(c0, na::UnitComplex::new(0.), 1.);
         let ellipse = (0..100)
             .map(|i| {
