@@ -50,7 +50,7 @@ impl<D: EfdDim> Efd<D> {
     where
         C: Curve<Coord<D>>,
     {
-        Self::from_curve_gate(curve, is_open, None)
+        Self::from_curve_threshold(curve, is_open, None)
     }
 
     /// Calculate EFD coefficients from an existing discrete points and Fourier
@@ -66,7 +66,7 @@ impl<D: EfdDim> Efd<D> {
     /// Please use [`valid_curve()`] to verify the curve if there has NaN
     /// input.
     #[must_use]
-    pub fn from_curve_gate<C, T>(curve: C, is_open: bool, threshold: T) -> Self
+    pub fn from_curve_threshold<C, T>(curve: C, is_open: bool, threshold: T) -> Self
     where
         C: Curve<Coord<D>>,
         Option<f64>: From<T>,
