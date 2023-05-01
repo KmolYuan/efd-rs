@@ -47,7 +47,7 @@ macro_rules! impl_curve_diff {
     ($($(#[$meta:meta])+ fn $name:ident($($arg:ident:$ty:ty),*) { ($($expr:expr),+) })+) => {$(
         $(#[$meta])+
         #[must_use]
-        pub fn $name<const DIM: usize>( a: &[[f64; DIM]], b: &[[f64; DIM]], $($arg:$ty),*) -> f64 {
+        pub fn $name<A: CoordHint>( a: &[A], b: &[A], $($arg:$ty),*) -> f64 {
             curve_diff_res_norm(a, b, $($expr),+)
         }
     )+};
@@ -71,12 +71,7 @@ impl_curve_diff! {
     fn partial_curve_diff_res(res: usize) { (res, false) }
 }
 
-fn curve_diff_res_norm<const DIM: usize>(
-    a: &[[f64; DIM]],
-    b: &[[f64; DIM]],
-    res: usize,
-    norm: bool,
-) -> f64 {
+fn curve_diff_res_norm<A: CoordHint>(a: &[A], b: &[A], res: usize, norm: bool) -> f64 {
     assert!(a.len() >= 2 && b.len() >= 2 && res > 0);
     let a = to_mat(a.closed_lin());
     let b = to_mat(b.closed_lin());
@@ -87,7 +82,7 @@ fn curve_diff_res_norm<const DIM: usize>(
         .map(|v| at.add_scalar(v as f64 / res as f64).map(|x| x % bzt))
         .map(|t| {
             let t = t.as_slice();
-            (0..DIM)
+            (0..b.nrows())
                 .map(|i| {
                     let ax = a.row(i);
                     let bx = b.row(i).iter().copied().collect::<Vec<_>>();

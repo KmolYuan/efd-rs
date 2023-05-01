@@ -286,7 +286,7 @@ impl<D: EfdDim> Efd<D> {
             .map(|(i, c)| {
                 let t = &t * (i + 1) as f64;
                 let t = na::Matrix2xX::from_rows(&[t.map(f64::cos), t.map(f64::sin)]);
-                na::MatrixView::<f64, na::U2, D::Dim>::from_slice(c.as_slice()).tr_mul(&t)
+                CKernel::<D>::from_slice(c.as_slice()).tr_mul(&t)
             })
             .reduce(|a, b| a + b)
             .unwrap()

@@ -1,4 +1,4 @@
-use crate::{EfdDim, Trans};
+use crate::{CoordHint, EfdDim, Trans};
 use alloc::vec::Vec;
 
 /// Alias for evaluate `EfdDim::Trans::Coord` from `D`.
@@ -6,12 +6,13 @@ pub type Coord<D> = <<D as EfdDim>::Trans as Trans>::Coord;
 
 pub(crate) type MatrixRxX<R> = na::OMatrix<f64, R, na::Dyn>;
 
-pub(crate) fn to_mat<C, const DIM: usize>(curve: C) -> MatrixRxX<na::Const<DIM>>
+pub(crate) fn to_mat<A, C>(curve: C) -> MatrixRxX<A::Dim>
 where
-    C: Curve<[f64; DIM]>,
+    A: CoordHint,
+    C: Curve<A>,
 {
     let curve = curve.to_curve();
-    MatrixRxX::<na::Const<DIM>>::from_iterator(curve.len(), curve.into_iter().flatten())
+    MatrixRxX::<A::Dim>::from_iterator(curve.len(), curve.into_iter().flat_map(A::flat))
 }
 
 /// Copy-on-write curve type.

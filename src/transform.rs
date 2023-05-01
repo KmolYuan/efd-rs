@@ -14,7 +14,7 @@ pub trait Trans {
     /// Dimension hint. It might be 2 or 3.
     const DIM: usize;
     /// Coordinate/Translation type.
-    type Coord: Clone + PartialEq + 'static;
+    type Coord: CoordHint;
     /// Rotation angle type.
     type Rot: Clone + 'static;
     /// Scaling factor type.
@@ -36,6 +36,45 @@ pub trait Trans {
     /// Merge two transform.
     fn apply(&self, rhs: &Self) -> Self;
 }
+
+/// Hint for transforming coordinate type to matrix.
+pub trait CoordHint: Clone + PartialEq + 'static {
+    /// Dimension. Is a constant width.
+    type Dim: na::base::DimName;
+    /// Coefficient number per harmonic. Is a constant width.
+    type CDim: na::base::DimName;
+    /// Flaten type.
+    type Flat: Iterator<Item = f64>;
+    /// Mutable flaten type.
+    type FlatMut<'a>: Iterator<Item = &'a mut f64>;
+
+    /// Flaten method.
+    fn flat(self) -> Self::Flat;
+    /// Mutable flaten method.
+    fn flat_mut(&mut self) -> Self::FlatMut<'_>;
+}
+
+macro_rules! impl_hint {
+    ($ty:ty, $dim:ident, $cdim:ident) => {
+        impl CoordHint for $ty {
+            type Dim = na::$dim;
+            type CDim = na::$cdim;
+            type Flat = <Self as IntoIterator>::IntoIter;
+            type FlatMut<'a> = <&'a mut Self as IntoIterator>::IntoIter;
+
+            fn flat(self) -> Self::Flat {
+                self.into_iter()
+            }
+
+            fn flat_mut(&mut self) -> Self::FlatMut<'_> {
+                self.iter_mut()
+            }
+        }
+    };
+}
+
+impl_hint!([f64; 2], U2, U4);
+impl_hint!([f64; 3], U3, U6);
 
 impl Trans for T2 {
     const DIM: usize = 2;
