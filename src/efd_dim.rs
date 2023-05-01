@@ -27,6 +27,13 @@ pub(crate) type CKernelMut<'a, D> = na::MatrixViewMut<'a, f64, na::U2, Dim<D>>;
 pub trait EfdDim {
     /// Transform type.
     type Trans: Trans;
+    /// Rotation type.
+    type Rot: Into<Rot<Self>>;
+
+    /// Get the rotation type.
+    fn get_rot(m: CKernel<Self>) -> Self::Rot;
+    /// Rotate the angle by rotation type.
+    fn rot_psi(m: CKernelMut<Self>, psi: &Self::Rot);
 
     /// Generate coefficients and transform.
     fn from_curve_harmonic(
@@ -38,6 +45,20 @@ pub trait EfdDim {
 
 impl EfdDim for D2 {
     type Trans = T2;
+    type Rot = na::Rotation2<f64>;
+
+    fn get_rot(m: CKernel<Self>) -> Self::Rot {
+        // Angle of semi-major axis
+        // Case in 2D are equivalent to:
+        //
+        // let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], 0.).normalize();
+        // na::UnitComplex::new(u.dot(&na::Vector3::x()).acos())
+        na::Rotation2::new(m[(0, 1)].atan2(m[(0, 0)]))
+    }
+
+    fn rot_psi(mut m: CKernelMut<Self>, psi: &Self::Rot) {
+        m.copy_from(&(&m * psi));
+    }
 
     fn from_curve_harmonic(
         curve: &[Coord<Self>],
@@ -64,29 +85,33 @@ impl EfdDim for D2 {
                 .step_by(2)
                 .for_each(|mut s| s *= -1.);
         }
-        // Angle of semi-major axis
-        // Case in 2D are equivalent to:
-        //
-        // let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], 0.).normalize();
-        // na::UnitComplex::new(u.dot(&na::Vector3::x()).acos())
-        let psi = na::UnitComplex::new(coeffs[(2, 0)].atan2(coeffs[(0, 0)]));
-        let psi_inv = psi.to_rotation_matrix();
+        let psi = Self::get_rot(CKernel::<Self>::from_slice(coeffs.column(0).as_slice()));
         for mut c in coeffs.column_iter_mut() {
-            let mut m = CKernelMut::<Self>::from_slice(c.as_mut_slice());
-            m.copy_from(&(&m * psi_inv));
+            Self::rot_psi(CKernelMut::<Self>::from_slice(c.as_mut_slice()), &psi);
         }
         let scale = {
             let c = CKernel::<Self>::from_slice(coeffs.column(0).data.into_slice());
             c.row(0).map(pow2).sum().sqrt()
         };
         coeffs /= scale;
-        let trans = Transform::new(center, psi, scale);
+        let trans = Transform::new(center, psi.into(), scale);
         (coeffs, trans)
     }
 }
 
 impl EfdDim for D3 {
     type Trans = T3;
+    type Rot = na::Rotation3<f64>;
+
+    fn get_rot(c: na::MatrixView<f64, na::U2, Dim<Self>>) -> Self::Rot {
+        let u = c.row(0).transpose().normalize();
+        let v = c.row(1).transpose().normalize();
+        na::Rotation3::from_basis_unchecked(&[u, v, u.cross(&v)])
+    }
+
+    fn rot_psi(mut m: CKernelMut<Self>, psi: &Self::Rot) {
+        m.copy_from(&(&m * psi));
+    }
 
     fn from_curve_harmonic(
         curve: &[Coord<Self>],
@@ -113,17 +138,9 @@ impl EfdDim for D3 {
                 .step_by(2)
                 .for_each(|mut s| s *= -1.);
         }
-        // Angle of semi-major axis
-        let psi = {
-            let c = CKernel::<Self>::from_slice(coeffs.column(0).data.into_slice());
-            let u = c.row(0).transpose().normalize();
-            let v = c.row(1).transpose().normalize();
-            na::Rotation3::from_basis_unchecked(&[u, v, u.cross(&v)])
-        };
-        let psi_inv = psi;
+        let psi = Self::get_rot(CKernel::<Self>::from_slice(coeffs.column(0).as_slice()));
         for mut c in coeffs.column_iter_mut() {
-            let mut m = CKernelMut::<Self>::from_slice(c.as_mut_slice());
-            m.copy_from(&(&m * psi_inv));
+            Self::rot_psi(CKernelMut::<Self>::from_slice(c.as_mut_slice()), &psi);
         }
         let scale = {
             let c = CKernel::<Self>::from_slice(coeffs.column(0).data.into_slice());
