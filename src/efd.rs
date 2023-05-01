@@ -291,7 +291,7 @@ impl<D: EfdDim> Efd<D> {
             .reduce(|a, b| a + b)
             .unwrap()
             .column_iter()
-            .map(D::to_coord)
+            .map(Coord::<D>::to_coord)
             .collect()
     }
 }

@@ -17,6 +17,8 @@ pub type CoordView<'a, D> = na::MatrixView<'a, f64, Dim<D>, na::U1>;
 pub type Dim<D> = <<<D as EfdDim>::Trans as Trans>::Coord as CoordHint>::Dim;
 /// Alias for the coefficient number.
 pub type CDim<D> = <<<D as EfdDim>::Trans as Trans>::Coord as CoordHint>::CDim;
+/// Alias for the rotation type.
+pub type Rot<D> = <<D as EfdDim>::Trans as Trans>::Rot;
 
 pub(crate) type CKernel<'a, D> = na::MatrixView<'a, f64, na::U2, Dim<D>>;
 pub(crate) type CKernelMut<'a, D> = na::MatrixViewMut<'a, f64, na::U2, Dim<D>>;
@@ -32,9 +34,6 @@ pub trait EfdDim {
         harmonic: usize,
         is_open: bool,
     ) -> (Coeff<Self>, Transform<Self::Trans>);
-
-    /// Transform array slice to coordinate type.
-    fn to_coord(c: CoordView<Self>) -> Coord<Self>;
 }
 
 impl EfdDim for D2 {
@@ -76,14 +75,13 @@ impl EfdDim for D2 {
             let mut m = CKernelMut::<Self>::from_slice(c.as_mut_slice());
             m.copy_from(&(&m * psi_inv));
         }
-        let scale = coeffs[(0, 0)].hypot(coeffs[(2, 0)]);
+        let scale = {
+            let c = CKernel::<Self>::from_slice(coeffs.column(0).data.into_slice());
+            c.row(0).map(pow2).sum().sqrt()
+        };
         coeffs /= scale;
         let trans = Transform::new(center, psi, scale);
         (coeffs, trans)
-    }
-
-    fn to_coord(c: CoordView<Self>) -> Coord<Self> {
-        [c[0], c[1]]
     }
 }
 
@@ -134,10 +132,6 @@ impl EfdDim for D3 {
         coeffs /= scale;
         let trans = Transform::new(center, psi.into(), scale);
         (coeffs, trans)
-    }
-
-    fn to_coord(c: CoordView<Self>) -> Coord<Self> {
-        [c[0], c[1], c[2]]
     }
 }
 

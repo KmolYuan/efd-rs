@@ -38,7 +38,7 @@ pub trait Trans {
 }
 
 /// Hint for transforming coordinate type to matrix.
-pub trait CoordHint: Clone + PartialEq + 'static {
+pub trait CoordHint: Clone + PartialEq + Sized + 'static {
     /// Dimension. Is a constant width.
     type Dim: na::base::DimName;
     /// Coefficient number per harmonic. Is a constant width.
@@ -48,6 +48,8 @@ pub trait CoordHint: Clone + PartialEq + 'static {
     /// Mutable flaten type.
     type FlatMut<'a>: Iterator<Item = &'a mut f64>;
 
+    /// Transform array slice to coordinate type.
+    fn to_coord(c: na::MatrixView<f64, Self::Dim, na::U1>) -> Self;
     /// Flaten method.
     fn flat(self) -> Self::Flat;
     /// Mutable flaten method.
@@ -55,12 +57,16 @@ pub trait CoordHint: Clone + PartialEq + 'static {
 }
 
 macro_rules! impl_hint {
-    ($ty:ty, $dim:ident, $cdim:ident) => {
+    ($ty:ty, $dim:ident, $cdim:ident, |$c:ident| $self:expr) => {
         impl CoordHint for $ty {
             type Dim = na::$dim;
             type CDim = na::$cdim;
             type Flat = <Self as IntoIterator>::IntoIter;
             type FlatMut<'a> = <&'a mut Self as IntoIterator>::IntoIter;
+
+            fn to_coord($c: na::MatrixView<f64, Self::Dim, na::U1>) -> Self {
+                $self
+            }
 
             fn flat(self) -> Self::Flat {
                 self.into_iter()
@@ -73,8 +79,8 @@ macro_rules! impl_hint {
     };
 }
 
-impl_hint!([f64; 2], U2, U4);
-impl_hint!([f64; 3], U3, U6);
+impl_hint!([f64; 2], U2, U4, |c| [c[0], c[1]]);
+impl_hint!([f64; 3], U3, U6, |c| [c[0], c[1], c[2]]);
 
 impl Trans for T2 {
     const DIM: usize = 2;
