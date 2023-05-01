@@ -13,9 +13,11 @@ pub type Coeff3 = Coeff<D3>;
 pub type Coeff<D> = na::OMatrix<f64, CDim<D>, na::Dyn>;
 /// Coordinate view used in the conversion method.
 pub type CoordView<'a, D> = na::MatrixView<'a, f64, Dim<D>, na::U1>;
+/// Alias for the dimension.
+pub type Dim<D> = <<<D as EfdDim>::Trans as Trans>::Coord as CoordHint>::Dim;
+/// Alias for the coefficient number.
+pub type CDim<D> = <<<D as EfdDim>::Trans as Trans>::Coord as CoordHint>::CDim;
 
-pub(crate) type Dim<D> = <<<D as EfdDim>::Trans as Trans>::Coord as CoordHint>::Dim;
-pub(crate) type CDim<D> = <<<D as EfdDim>::Trans as Trans>::Coord as CoordHint>::CDim;
 pub(crate) type CKernel<'a, D> = na::MatrixView<'a, f64, na::U2, Dim<D>>;
 pub(crate) type CKernelMut<'a, D> = na::MatrixViewMut<'a, f64, na::U2, Dim<D>>;
 
