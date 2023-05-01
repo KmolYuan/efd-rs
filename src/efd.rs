@@ -284,15 +284,9 @@ impl<D: EfdDim> Efd<D> {
             .column_iter()
             .enumerate()
             .map(|(i, c)| {
-                let lambda = &t * (i + 1) as f64;
-                let cos = lambda.map(f64::cos);
-                let sin = lambda.map(f64::sin);
-                let c = na::MatrixView::<f64, na::U2, D::Dim>::from_slice(c.as_slice());
-                let mut path = MatrixRxX::<D::Dim>::zeros(t.len());
-                path.row_iter_mut()
-                    .zip(c.column_iter())
-                    .for_each(|(mut s, c)| s.copy_from(&(&cos * c[0] + &sin * c[1])));
-                path
+                let t = &t * (i + 1) as f64;
+                let t = na::Matrix2xX::from_rows(&[t.map(f64::cos), t.map(f64::sin)]);
+                na::MatrixView::<f64, na::U2, D::Dim>::from_slice(c.as_slice()).tr_mul(&t)
             })
             .reduce(|a, b| a + b)
             .unwrap()

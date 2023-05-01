@@ -137,12 +137,12 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
     let trans0 = efd.as_trans();
     let mut c0 = [0.; 2];
     for c in efd.coeffs().column_iter() {
-        let m = na::MatrixView2::from_slice(c.as_slice()).transpose();
+        let m = na::MatrixView2::from_slice(c.as_slice());
         let trans = trans0 * Transform2::new(c0, na::UnitComplex::new(0.), 1.);
         let ellipse = (0..100)
             .map(|i| {
                 let t = i as f64 * std::f64::consts::TAU / 100.;
-                let v = m * na::matrix![t.cos(); t.sin()];
+                let v = na::matrix![t.cos(), t.sin()] * m;
                 [v[0], v[1]]
             })
             .map(|[x, y]| {
