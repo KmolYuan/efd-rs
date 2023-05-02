@@ -28,6 +28,10 @@ pub trait Trans {
     fn new(trans: Self::Coord, rot: Self::Rot, scale: f64) -> Self;
     /// Transform a point.
     fn transform(&self, p: &Self::Coord) -> Self::Coord;
+    /// Merge two matrices.
+    fn apply(&self, rhs: &Self) -> Self;
+    /// Inverse matrices.
+    fn inverse(&self) -> Self;
 
     /// The value of the dimension.
     fn dim() -> usize {
@@ -52,65 +56,55 @@ pub trait CoordHint: Clone + PartialEq + Sized + 'static {
     fn flat_mut(&mut self) -> Self::FlatMut<'_>;
 }
 
-macro_rules! impl_hint {
-    ($ty:ty, $dim:ident, |$c:ident| $self:expr) => {
-        impl CoordHint for $ty {
-            type Dim = na::$dim;
-            type Flat = <Self as IntoIterator>::IntoIter;
-            type FlatMut<'a> = <&'a mut Self as IntoIterator>::IntoIter;
+impl<const DIM: usize> CoordHint for [f64; DIM]
+where
+    na::Const<DIM>: na::DimNameMul<na::U2>,
+{
+    type Dim = na::Const<DIM>;
+    type Flat = <Self as IntoIterator>::IntoIter;
+    type FlatMut<'a> = <&'a mut Self as IntoIterator>::IntoIter;
 
-            fn to_coord($c: na::MatrixView<f64, Self::Dim, na::U1>) -> Self {
-                $self
-            }
+    fn to_coord(c: na::MatrixView<f64, Self::Dim, na::U1>) -> Self {
+        c.as_slice().try_into().unwrap()
+    }
 
-            fn flat(self) -> Self::Flat {
-                self.into_iter()
-            }
+    fn flat(self) -> Self::Flat {
+        self.into_iter()
+    }
 
-            fn flat_mut(&mut self) -> Self::FlatMut<'_> {
-                self.iter_mut()
-            }
-        }
-    };
+    fn flat_mut(&mut self) -> Self::FlatMut<'_> {
+        self.iter_mut()
+    }
 }
 
-impl_hint!([f64; 2], U2, |c| [c[0], c[1]]);
-impl_hint!([f64; 3], U3, |c| [c[0], c[1], c[2]]);
-
-impl Trans for T2 {
-    type Coord = [f64; 2];
-    type Rot = na::UnitComplex<f64>;
+impl<R, const DIM: usize> Trans for Sim<R, DIM>
+where
+    R: na::AbstractRotation<f64, DIM> + 'static,
+    na::Const<DIM>: na::DimNameMul<na::U2>,
+{
+    type Coord = [f64; DIM];
+    type Rot = R;
 
     fn identity() -> Self {
         Self::identity()
     }
 
     fn new(trans: Self::Coord, rot: Self::Rot, scale: f64) -> Self {
-        let trans = na::Translation2::new(trans[0], trans[1]);
+        let trans = na::Translation { vector: na::SVector::from(trans) };
         Self::from_parts(trans, rot, scale)
     }
 
     fn transform(&self, p: &Self::Coord) -> Self::Coord {
-        let p = self * na::Point2::new(p[0], p[1]);
-        [p.x, p.y]
-    }
-}
-
-impl Trans for T3 {
-    type Coord = [f64; 3];
-    type Rot = na::UnitQuaternion<f64>;
-
-    fn identity() -> Self {
-        Self::identity()
+        let p = self * na::Point::from(*p);
+        CoordHint::to_coord(na::MatrixView::from(&p.coords))
     }
 
-    fn new([x, y, z]: Self::Coord, rot: Self::Rot, scale: f64) -> Self {
-        Self::from_parts(na::Translation3::new(x, y, z), rot, scale)
+    fn apply(&self, rhs: &Self) -> Self {
+        rhs * self
     }
 
-    fn transform(&self, p: &Self::Coord) -> Self::Coord {
-        let p = self * na::Point3::new(p[0], p[1], p[2]);
-        [p.x, p.y, p.z]
+    fn inverse(&self) -> Self {
+        self.inverse()
     }
 }
 
@@ -124,9 +118,8 @@ pub struct Transform<T: Trans> {
 
 impl<R, const DIM: usize> Default for Transform<Sim<R, DIM>>
 where
-    Sim<R, DIM>: Trans<Rot = R>,
-    Coord<Sim<R, DIM>>: CoordHint<Dim = na::Const<DIM>>,
-    Rot<Sim<R, DIM>>: na::AbstractRotation<f64, DIM>,
+    R: na::AbstractRotation<f64, DIM> + 'static,
+    na::Const<DIM>: na::DimNameMul<na::U2>,
 {
     fn default() -> Self {
         Self::identity()
@@ -135,12 +128,11 @@ where
 
 impl<R, const DIM: usize> core::fmt::Debug for Transform<Sim<R, DIM>>
 where
-    Sim<R, DIM>: Trans<Rot = R>,
-    Coord<Sim<R, DIM>>: CoordHint<Dim = na::Const<DIM>> + core::fmt::Debug,
-    Rot<Sim<R, DIM>>: na::AbstractRotation<f64, DIM> + core::fmt::Debug,
+    R: na::AbstractRotation<f64, DIM> + core::fmt::Debug + 'static,
+    na::Const<DIM>: na::DimNameMul<na::U2> + core::fmt::Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        f.debug_struct(&alloc::format!("Transform{}", Sim::dim()))
+        f.debug_struct(&alloc::format!("Transform{}", Sim::<R, DIM>::dim()))
             .field("translation", &self.trans())
             .field("rotation", &self.rot())
             .field("scale", &self.scale())
@@ -214,34 +206,8 @@ impl<T: Trans> Transform<T> {
     {
         curve.into_iter().map(|c| self.transform_pt(&c))
     }
-}
 
-impl<R, const DIM: usize> Transform<Sim<R, DIM>>
-where
-    Sim<R, DIM>: Trans<Rot = R>,
-    Coord<Sim<R, DIM>>: CoordHint<Dim = na::Const<DIM>>,
-    Rot<Sim<R, DIM>>: na::AbstractRotation<f64, DIM>,
-{
-    /// Translate property.
-    #[must_use]
-    pub fn trans(&self) -> Coord<Sim<R, DIM>> {
-        let view = na::MatrixView::from(&self.inner.isometry.translation.vector);
-        CoordHint::to_coord(view)
-    }
-
-    /// Rotation property.
-    #[must_use]
-    pub fn rot(&self) -> &Rot<Sim<R, DIM>> {
-        &self.inner.isometry.rotation
-    }
-
-    /// Scaling property.
-    #[must_use]
-    pub fn scale(&self) -> f64 {
-        self.inner.scaling()
-    }
-
-    /// An operator on two transformation matrices.
+    /// Merge inverse `self` and `rhs` matrices.
     ///
     /// It can be used on a not normalized contour `a` transforming to `b`.
     ///
@@ -261,7 +227,7 @@ where
         self.inverse().apply(rhs)
     }
 
-    /// Merge two transformation matrices.
+    /// Merge two matrices.
     ///
     /// Same as `rhs * self`.
     ///
@@ -278,10 +244,10 @@ where
     /// ```
     #[must_use]
     pub fn apply(&self, rhs: &Self) -> Self {
-        Self { inner: &rhs.inner * &self.inner }
+        Self { inner: self.inner.apply(&rhs.inner) }
     }
 
-    /// Inverse the operation of this information.
+    /// Inverse matrices.
     ///
     /// ```
     /// use efd::{curve_diff, tests::*, Efd2};
@@ -300,15 +266,35 @@ where
     }
 }
 
+impl<R, const DIM: usize> Transform<Sim<R, DIM>>
+where
+    R: na::AbstractRotation<f64, DIM> + 'static,
+    na::Const<DIM>: na::DimNameMul<na::U2>,
+{
+    /// Translate property.
+    #[must_use]
+    pub fn trans(&self) -> Coord<Sim<R, DIM>> {
+        let view = na::MatrixView::from(&self.inner.isometry.translation.vector);
+        CoordHint::to_coord(view)
+    }
+
+    /// Rotation property.
+    #[must_use]
+    pub fn rot(&self) -> &Rot<Sim<R, DIM>> {
+        &self.inner.isometry.rotation
+    }
+
+    /// Scaling property.
+    #[must_use]
+    pub fn scale(&self) -> f64 {
+        self.inner.scaling()
+    }
+}
+
 macro_rules! impl_mul {
     ($ty1:ty, $ty2:ty) => {
-        impl<R, const DIM: usize> core::ops::Mul<$ty2> for $ty1
-        where
-            Sim<R, DIM>: Trans<Rot = R>,
-            Coord<Sim<R, DIM>>: CoordHint<Dim = na::Const<DIM>>,
-            Rot<Sim<R, DIM>>: na::AbstractRotation<f64, DIM>,
-        {
-            type Output = Transform<Sim<R, DIM>>;
+        impl<T: Trans> core::ops::Mul<$ty2> for $ty1 {
+            type Output = Transform<T>;
             #[must_use]
             fn mul(self, rhs: $ty2) -> Self::Output {
                 self.apply(&rhs)
@@ -317,7 +303,7 @@ macro_rules! impl_mul {
     };
 }
 
-impl_mul!(Transform<Sim<R, DIM>>, Self);
-impl_mul!(&Transform<Sim<R, DIM>>, Self);
-impl_mul!(Transform<Sim<R, DIM>>, &Self);
-impl_mul!(&Transform<Sim<R, DIM>>, Transform<Sim<R, DIM>>);
+impl_mul!(Transform<T>, Self);
+impl_mul!(&Transform<T>, Self);
+impl_mul!(Transform<T>, &Self);
+impl_mul!(&Transform<T>, Transform<T>);
