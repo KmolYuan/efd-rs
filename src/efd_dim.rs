@@ -20,20 +20,13 @@ pub type CDim<D> = <<<D as EfdDim>::Trans as Trans>::Coord as CoordHint>::CDim;
 /// Alias for the rotation type.
 pub type Rot<D> = <<D as EfdDim>::Trans as Trans>::Rot;
 
-pub(crate) type CKernel<'a, D> = na::MatrixView<'a, f64, na::U2, Dim<D>>;
-pub(crate) type CKernelMut<'a, D> = na::MatrixViewMut<'a, f64, na::U2, Dim<D>>;
+type CKernel<'a, const DIM: usize> = na::MatrixView<'a, f64, na::U2, na::Const<DIM>>;
+type CKernelMut<'a, const DIM: usize> = na::MatrixViewMut<'a, f64, na::U2, na::Const<DIM>>;
 
 /// Trait for EFD dimension.
 pub trait EfdDim {
     /// Transform type.
     type Trans: Trans;
-    /// Rotation type.
-    type Rot: Into<Rot<Self>>;
-
-    /// Get the rotation type.
-    fn get_rot(m: CKernel<Self>) -> Self::Rot;
-    /// Rotate the angle by rotation type.
-    fn rot_psi(m: CKernelMut<Self>, psi: &Self::Rot);
 
     /// Generate coefficients and transform.
     fn from_curve_harmonic(
@@ -45,118 +38,47 @@ pub trait EfdDim {
 
 impl EfdDim for D2 {
     type Trans = T2;
-    type Rot = na::Rotation2<f64>;
-
-    fn get_rot(m: CKernel<Self>) -> Self::Rot {
-        // Angle of semi-major axis
-        // Case in 2D are equivalent to:
-        //
-        // let u = na::Vector3::new(coeffs[[0, 0]], coeffs[[0, 2]], 0.).normalize();
-        // na::UnitComplex::new(u.dot(&na::Vector3::x()).acos())
-        na::Rotation2::new(m[(0, 1)].atan2(m[(0, 0)]))
-    }
-
-    fn rot_psi(mut m: CKernelMut<Self>, psi: &Self::Rot) {
-        m.copy_from(&(&m * psi));
-    }
 
     fn from_curve_harmonic(
         curve: &[Coord<Self>],
         harmonic: usize,
         is_open: bool,
     ) -> (Coeff<Self>, Transform<Self::Trans>) {
-        let (mut coeffs, center) = get_coeff_center(curve, harmonic, is_open);
-        // Angle of starting point
-        let theta = {
-            let c = CKernel::<Self>::from_slice(coeffs.column(0).data.into_slice());
-            let dy = 2. * c.row_product().sum();
-            let dx = c.map(pow2).column_sum();
-            0.5 * dy.atan2(dx[0] - dx[1])
-        };
-        for (i, mut c) in coeffs.column_iter_mut().enumerate() {
-            let theta = na::Rotation2::new((i + 1) as f64 * -theta);
-            let mut m = CKernelMut::<Self>::from_slice(c.as_mut_slice());
-            m.copy_from(&(theta * &m));
-        }
-        // Normalize coefficients sign
-        if harmonic > 1 && coeffs[(0, 0)] * coeffs[(0, 1)] < 0. {
-            coeffs
-                .column_iter_mut()
-                .step_by(2)
-                .for_each(|mut s| s *= -1.);
-        }
-        let psi = Self::get_rot(CKernel::<Self>::from_slice(coeffs.column(0).as_slice()));
-        for mut c in coeffs.column_iter_mut() {
-            Self::rot_psi(CKernelMut::<Self>::from_slice(c.as_mut_slice()), &psi);
-        }
-        let scale = {
-            let c = CKernel::<Self>::from_slice(coeffs.column(0).data.into_slice());
-            c.row(0).map(pow2).sum().sqrt()
-        };
-        coeffs /= scale;
-        let trans = Transform::new(center, psi.into(), scale);
-        (coeffs, trans)
+        impl_coeff(curve, harmonic, is_open, |m| {
+            na::Rotation2::new(m[(0, 1)].atan2(m[(0, 0)]))
+        })
     }
 }
 
 impl EfdDim for D3 {
     type Trans = T3;
-    type Rot = na::Rotation3<f64>;
-
-    fn get_rot(c: na::MatrixView<f64, na::U2, Dim<Self>>) -> Self::Rot {
-        let u = c.row(0).transpose().normalize();
-        let v = c.row(1).transpose().normalize();
-        na::Rotation3::from_basis_unchecked(&[u, v, u.cross(&v)])
-    }
-
-    fn rot_psi(mut m: CKernelMut<Self>, psi: &Self::Rot) {
-        m.copy_from(&(&m * psi));
-    }
 
     fn from_curve_harmonic(
         curve: &[Coord<Self>],
         harmonic: usize,
         is_open: bool,
     ) -> (Coeff<Self>, Transform<Self::Trans>) {
-        let (mut coeffs, center) = get_coeff_center(curve, harmonic, is_open);
-        // Angle of starting point
-        let theta = {
-            let c = CKernel::<Self>::from_slice(coeffs.column(0).data.into_slice());
-            let dy = 2. * c.row_product().sum();
-            let dx = c.map(pow2).column_sum();
-            0.5 * dy.atan2(dx[0] - dx[1])
-        };
-        for (i, mut c) in coeffs.column_iter_mut().enumerate() {
-            let theta = na::Rotation2::new((i + 1) as f64 * -theta);
-            let mut m = CKernelMut::<Self>::from_slice(c.as_mut_slice());
-            m.copy_from(&(theta * &m));
-        }
-        // Normalize coefficients sign
-        if harmonic > 1 && coeffs[(0, 0)] * coeffs[(0, 1)] < 0. {
-            coeffs
-                .column_iter_mut()
-                .step_by(2)
-                .for_each(|mut s| s *= -1.);
-        }
-        let psi = Self::get_rot(CKernel::<Self>::from_slice(coeffs.column(0).as_slice()));
-        for mut c in coeffs.column_iter_mut() {
-            Self::rot_psi(CKernelMut::<Self>::from_slice(c.as_mut_slice()), &psi);
-        }
-        let scale = {
-            let c = CKernel::<Self>::from_slice(coeffs.column(0).data.into_slice());
-            c.row(0).map(pow2).sum().sqrt()
-        };
-        coeffs /= scale;
-        let trans = Transform::new(center, psi.into(), scale);
-        (coeffs, trans)
+        impl_coeff(curve, harmonic, is_open, |m| {
+            let u = m.row(0).transpose().normalize();
+            let v = m.row(1).transpose().normalize();
+            na::Rotation3::from_basis_unchecked(&[u, v, u.cross(&v)])
+        })
     }
 }
 
-fn get_coeff_center<A: CoordHint>(
+fn impl_coeff<A, T, F, const DIM: usize, const CDIM: usize>(
     curve: &[A],
     harmonic: usize,
     is_open: bool,
-) -> (MatrixRxX<A::CDim>, A) {
+    get_psi: F,
+) -> (MatrixRxX<A::CDim>, Transform<T>)
+where
+    // const-generic assertion
+    A: CoordHint<Dim = na::Const<DIM>, CDim = na::Const<CDIM>>,
+    T: Trans<Coord = A, Scale = f64>,
+    T::Rot: From<na::Rotation<f64, DIM>>,
+    F: FnOnce(CKernel<DIM>) -> na::Rotation<f64, DIM>,
+{
     let curve_arr = if is_open {
         to_mat(curve)
     } else {
@@ -196,5 +118,36 @@ fn get_coeff_center<A: CoordHint>(
             *oxyz += (dxyz.component_mul(&c) + xi.component_mul(&dt)).sum() / zt
                 * if is_open { 2. } else { 1. };
         });
-    (coeffs, center)
+    // Angle of starting point
+    let theta = {
+        let c = CKernel::<DIM>::from_slice(coeffs.column(0).data.into_slice());
+        let dy = 2. * c.row_product().sum();
+        let dx = c.map(pow2).column_sum();
+        0.5 * dy.atan2(dx[0] - dx[1])
+    };
+    for (i, mut c) in coeffs.column_iter_mut().enumerate() {
+        let theta = na::Rotation2::new((i + 1) as f64 * -theta);
+        let mut m = CKernelMut::<DIM>::from_slice(c.as_mut_slice());
+        m.copy_from(&(theta * &m));
+    }
+    // Normalize coefficients sign
+    if harmonic > 1 && coeffs[(0, 0)] * coeffs[(0, 1)] < 0. {
+        coeffs
+            .column_iter_mut()
+            .step_by(2)
+            .for_each(|mut s| s *= -1.);
+    }
+    // Rotation angle
+    let psi = get_psi(CKernel::<DIM>::from_slice(coeffs.column(0).as_slice()));
+    for mut c in coeffs.column_iter_mut() {
+        let mut m = CKernelMut::<DIM>::from_slice(c.as_mut_slice());
+        m.copy_from(&(&m * psi));
+    }
+    // Scale factor
+    let scale = {
+        let c = CKernel::<DIM>::from_slice(coeffs.column(0).data.into_slice());
+        c.row(0).map(pow2).sum().sqrt()
+    };
+    coeffs /= scale;
+    (coeffs, Transform::new(center, psi.into(), scale))
 }
