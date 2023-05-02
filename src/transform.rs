@@ -38,9 +38,7 @@ pub trait Trans {
 /// Hint for transforming coordinate type to matrix.
 pub trait CoordHint: Clone + PartialEq + Sized + 'static {
     /// Dimension. Is a constant width.
-    type Dim: na::base::DimName;
-    /// Coefficient number per harmonic. Is a constant width.
-    type CDim: na::base::DimName;
+    type Dim: na::DimNameMul<na::U2>;
     /// Flaten type.
     type Flat: Iterator<Item = f64>;
     /// Mutable flaten type.
@@ -55,10 +53,9 @@ pub trait CoordHint: Clone + PartialEq + Sized + 'static {
 }
 
 macro_rules! impl_hint {
-    ($ty:ty, $dim:ident, $cdim:ident, |$c:ident| $self:expr) => {
+    ($ty:ty, $dim:ident, |$c:ident| $self:expr) => {
         impl CoordHint for $ty {
             type Dim = na::$dim;
-            type CDim = na::$cdim;
             type Flat = <Self as IntoIterator>::IntoIter;
             type FlatMut<'a> = <&'a mut Self as IntoIterator>::IntoIter;
 
@@ -77,8 +74,8 @@ macro_rules! impl_hint {
     };
 }
 
-impl_hint!([f64; 2], U2, U4, |c| [c[0], c[1]]);
-impl_hint!([f64; 3], U3, U6, |c| [c[0], c[1], c[2]]);
+impl_hint!([f64; 2], U2, |c| [c[0], c[1]]);
+impl_hint!([f64; 3], U3, |c| [c[0], c[1], c[2]]);
 
 impl Trans for T2 {
     type Coord = [f64; 2];

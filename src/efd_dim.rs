@@ -15,11 +15,12 @@ pub type Coeff<D> = na::OMatrix<f64, CDim<D>, na::Dyn>;
 pub type CoordView<'a, D> = na::MatrixView<'a, f64, Dim<D>, na::U1>;
 /// Alias for the dimension.
 pub type Dim<D> = <Coord<D> as CoordHint>::Dim;
-/// Alias for the coefficient number.
-pub type CDim<D> = <Coord<D> as CoordHint>::CDim;
+/// Alias for the coefficient number. (DIM * 2)
+pub type CDim<D> = CCDim<Coord<D>>;
 
 type CKernel<'a, const DIM: usize> = na::MatrixView<'a, f64, na::U2, na::Const<DIM>>;
 type CKernelMut<'a, const DIM: usize> = na::MatrixViewMut<'a, f64, na::U2, na::Const<DIM>>;
+type CCDim<A> = na::DimNameProd<<A as CoordHint>::Dim, na::U2>;
 
 /// Trait for EFD dimension.
 pub trait EfdDim {
@@ -69,15 +70,16 @@ impl EfdDim for D3 {
     }
 }
 
-fn impl_coeff<A, T, F, const DIM: usize, const CDIM: usize>(
+fn impl_coeff<A, T, F, const DIM: usize>(
     curve: &[A],
     harmonic: usize,
     is_open: bool,
     get_psi: F,
-) -> (MatrixRxX<A::CDim>, Transform<T>)
+) -> (MatrixRxX<CCDim<A>>, Transform<T>)
 where
     // const-generic assertion
-    A: CoordHint<Dim = na::Const<DIM>, CDim = na::Const<CDIM>>,
+    na::Const<DIM>: na::DimNameMul<na::U2>,
+    A: CoordHint<Dim = na::Const<DIM>>,
     T: Trans<Coord = A>,
     T::Rot: From<na::Rotation<f64, DIM>>,
     F: FnOnce(CKernel<DIM>) -> na::Rotation<f64, DIM>,
@@ -93,7 +95,7 @@ where
     let zt = t[t.len() - 1] * if is_open { 2. } else { 1. };
     let scalar = zt / (PI * PI) * if is_open { 1. } else { 0.5 };
     let phi = &t * TAU / zt;
-    let mut coeffs = MatrixRxX::<A::CDim>::zeros(harmonic);
+    let mut coeffs = MatrixRxX::<CCDim<A>>::zeros(harmonic);
     for (i, mut c) in coeffs.column_iter_mut().enumerate() {
         let n = i as f64 + 1.;
         let phi = &phi * n;
