@@ -11,14 +11,13 @@ pub type Transform3 = Transform<T3>;
 
 /// A trait used in inner type of [`Transform`].
 pub trait Trans {
-    /// Dimension hint. It might be 2 or 3.
-    const DIM: usize;
     /// Coordinate/Translation type.
     type Coord: CoordHint;
     /// Rotation angle type.
     type Rot: Clone + 'static;
     /// Scaling factor type.
     type Scale: Clone + 'static;
+
     /// Default identity state.
     fn identity() -> Self;
     /// Creation from three properties.
@@ -35,6 +34,11 @@ pub trait Trans {
     fn inverse(&self) -> Self;
     /// Merge two transform.
     fn apply(&self, rhs: &Self) -> Self;
+
+    /// The value of the dimension.
+    fn dim() -> usize {
+        <<Self::Coord as CoordHint>::Dim as na::DimName>::dim()
+    }
 }
 
 /// Hint for transforming coordinate type to matrix.
@@ -83,7 +87,6 @@ impl_hint!([f64; 2], U2, U4, |c| [c[0], c[1]]);
 impl_hint!([f64; 3], U3, U6, |c| [c[0], c[1], c[2]]);
 
 impl Trans for T2 {
-    const DIM: usize = 2;
     type Coord = [f64; 2];
     type Rot = na::UnitComplex<f64>;
     type Scale = f64;
@@ -125,7 +128,6 @@ impl Trans for T2 {
 }
 
 impl Trans for T3 {
-    const DIM: usize = 3;
     type Coord = [f64; 3];
     type Rot = na::UnitQuaternion<f64>;
     type Scale = f64;
@@ -173,6 +175,12 @@ pub struct Transform<T: Trans> {
     inner: T,
 }
 
+impl<T: Trans> Default for Transform<T> {
+    fn default() -> Self {
+        Self::identity()
+    }
+}
+
 impl<T: Trans> core::fmt::Debug for Transform<T>
 where
     T::Coord: core::fmt::Debug,
@@ -180,17 +188,11 @@ where
     T::Scale: core::fmt::Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        f.debug_struct(&alloc::format!("Transform{}", T::DIM))
+        f.debug_struct(&alloc::format!("Transform{}", T::dim()))
             .field("translation", &self.inner.trans())
             .field("rotation", &self.inner.rot())
             .field("scale", &self.inner.scale())
             .finish()
-    }
-}
-
-impl<T: Trans> Default for Transform<T> {
-    fn default() -> Self {
-        Self::identity()
     }
 }
 

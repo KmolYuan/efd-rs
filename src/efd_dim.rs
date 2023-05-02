@@ -14,21 +14,19 @@ pub type Coeff<D> = na::OMatrix<f64, CDim<D>, na::Dyn>;
 /// Coordinate view used in the conversion method.
 pub type CoordView<'a, D> = na::MatrixView<'a, f64, Dim<D>, na::U1>;
 /// Alias for the dimension.
-pub type Dim<D> = <<<D as EfdDim>::Trans as Trans>::Coord as CoordHint>::Dim;
+pub type Dim<D> = <Coord<D> as CoordHint>::Dim;
 /// Alias for the coefficient number.
-pub type CDim<D> = <<<D as EfdDim>::Trans as Trans>::Coord as CoordHint>::CDim;
-/// Alias for the rotation type.
-pub type Rot<D> = <<D as EfdDim>::Trans as Trans>::Rot;
+pub type CDim<D> = <Coord<D> as CoordHint>::CDim;
 
 type CKernel<'a, const DIM: usize> = na::MatrixView<'a, f64, na::U2, na::Const<DIM>>;
 type CKernelMut<'a, const DIM: usize> = na::MatrixViewMut<'a, f64, na::U2, na::Const<DIM>>;
 
 /// Trait for EFD dimension.
 pub trait EfdDim {
-    /// Transform type.
+    /// Transform type of similarity matrix.
     type Trans: Trans;
 
-    /// Generate coefficients and transform.
+    /// Generate coefficients and similarity matrix.
     fn from_curve_harmonic(
         curve: &[Coord<Self>],
         harmonic: usize,
@@ -45,6 +43,11 @@ impl EfdDim for D2 {
         is_open: bool,
     ) -> (Coeff<Self>, Transform<Self::Trans>) {
         impl_coeff(curve, harmonic, is_open, |m| {
+            // Simplified from:
+            //
+            // let u = m.row(0).transpose().normalize();
+            // let v = m.row(1).transpose().normalize();
+            // na::Rotation2::from_basis_unchecked(&[u, v])
             na::Rotation2::new(m[(0, 1)].atan2(m[(0, 0)]))
         })
     }
