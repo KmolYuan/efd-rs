@@ -78,7 +78,7 @@ fn impl_coeff<A, T, F, const DIM: usize, const CDIM: usize>(
 where
     // const-generic assertion
     A: CoordHint<Dim = na::Const<DIM>, CDim = na::Const<CDIM>>,
-    T: Trans<Coord = A, Scale = f64>,
+    T: Trans<Coord = A>,
     T::Rot: From<na::Rotation<f64, DIM>>,
     F: FnOnce(CKernel<DIM>) -> na::Rotation<f64, DIM>,
 {
