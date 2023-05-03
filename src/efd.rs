@@ -62,9 +62,9 @@ impl<D: EfdDim> Efd<D> {
     /// # Panic
     ///
     /// Panic if the `threshold` is not in `0.0..1.0` or the curve length is not
-    /// greater than 1 in debug mode. This function check the lengths only.
-    /// Please use [`valid_curve()`] to verify the curve if there has NaN
-    /// input.
+    /// greater than 1 in the **debug mode**. This function check the lengths
+    /// only. Please use [`valid_curve()`] to verify the curve if there has
+    /// NaN input.
     #[must_use]
     pub fn from_curve_threshold<C, T>(curve: C, is_open: bool, threshold: T) -> Self
     where
@@ -72,14 +72,9 @@ impl<D: EfdDim> Efd<D> {
         Option<f64>: From<T>,
     {
         let curve = curve.as_curve();
-        if curve.len() < 2 {
-            panic!("Invalid curve! Please use `efd::valid_curve()` to verify.");
-        }
+        debug_assert!(curve.len() > 1, "the curve length must greater than 1");
         let threshold = Option::from(threshold).unwrap_or(0.9999);
-        debug_assert!(
-            (0.0..1.0).contains(&threshold),
-            "threshold must in 0.0..1.0"
-        );
+        debug_assert!((0.0..1.0).contains(&threshold), "threshold must in [0,1]");
         // Nyquist Frequency
         let harmonic = curve.len() / 2;
         let (mut coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
@@ -102,9 +97,9 @@ impl<D: EfdDim> Efd<D> {
     /// # Panic
     ///
     /// Panic if the specific harmonic is zero or the curve length is not
-    /// greater than 1 in debug mode. This function check the lengths only.
-    /// Please use [`valid_curve()`] to verify the curve if there has NaN
-    /// input.
+    /// greater than 1 in the **debug mode**. This function check the lengths
+    /// only. Please use [`valid_curve()`] to verify the curve if there has
+    /// NaN input.
     #[must_use]
     pub fn from_curve_harmonic<C, H>(curve: C, is_open: bool, harmonic: H) -> Self
     where
@@ -114,12 +109,9 @@ impl<D: EfdDim> Efd<D> {
         if let Some(harmonic) = Option::from(harmonic) {
             debug_assert!(harmonic != 0, "harmonic must not be 0");
             let curve = curve.as_curve();
-            if curve.len() < 2 {
-                panic!("Invalid curve! Please use `efd::valid_curve()` to verify.");
-            } else {
-                let (coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
-                Self { coeffs, trans }
-            }
+            debug_assert!(curve.len() > 1, "the curve length must greater than 1");
+            let (coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
+            Self { coeffs, trans }
         } else {
             Self::from_curve(curve, is_open)
         }
