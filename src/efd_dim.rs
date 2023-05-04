@@ -65,7 +65,8 @@ impl EfdDim for D3 {
         impl_coeff(curve, harmonic, is_open, |m| {
             let u = m.row(0).transpose().normalize();
             let v = m.row(1).transpose().normalize();
-            na::Rotation3::from_basis_unchecked(&[u, v, u.cross(&v)])
+            let w = u.cross(&v);
+            na::Rotation3::from_basis_unchecked(&[u, v, w])
         })
     }
 }
