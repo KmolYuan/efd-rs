@@ -105,12 +105,12 @@ where
         let cos_phi = (phi_back.map(f64::cos) - phi_front.map(f64::cos)).component_div(&dt);
         dxyz.row_iter()
             .zip(c.iter_mut().step_by(2))
-            .for_each(|(d, c)| *c = scalar * (d.component_mul(&cos_phi)).sum());
+            .for_each(|(d, c)| *c = scalar * d.component_mul(&cos_phi).sum());
         if !is_open {
             let sin_phi = (phi_back.map(f64::sin) - phi_front.map(f64::sin)).component_div(&dt);
             dxyz.row_iter()
                 .zip(c.iter_mut().skip(1).step_by(2))
-                .for_each(|(d, c)| *c = scalar * (d.component_mul(&sin_phi)).sum());
+                .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
         }
     }
     let tdt = t.columns_range(1..).component_div(&dt);
