@@ -10,6 +10,8 @@ pub type Efd3 = Efd<D3>;
 /// Elliptical Fourier Descriptor coefficients.
 /// Provide transformation between discrete points and coefficients.
 ///
+/// Start with [`Efd::from_curve()`] and its related methods.
+///
 /// # Transformation
 ///
 /// The transformation of normalized coefficients.
@@ -21,6 +23,13 @@ pub type Efd3 = Efd<D3>;
 /// the coefficients are normalized with regard to the absolute value of A₁.
 ///
 /// Please see [`Transform`] for more information.
+///
+/// # Raw Coefficients
+///
+/// The coefficients is contained with `na::Matrix`, use
+/// [`Efd::try_from_coeffs()`] to input the coefficients externally.
+///
+/// Use [`Efd::into_inner()`] to get the matrix of the coefficients.
 #[derive(Clone)]
 pub struct Efd<D: EfdDim> {
     coeffs: Coeff<D>,
@@ -39,7 +48,7 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// [`Efd::try_from_coeffs_unnorm()`], [`Efd::from_coeffs_unchecked()`]
     pub fn try_from_coeffs(mut coeffs: Coeff<D>) -> Option<Self> {
-        (coeffs.nrows() != 0).then(|| {
+        (coeffs.ncols() != 0).then(|| {
             let trans = D::coeff_norm(&mut coeffs);
             Self { coeffs, trans }
         })
@@ -51,8 +60,12 @@ impl<D: EfdDim> Efd<D> {
     /// The dimension is [`<<D as EfdDim>::Trans as Trans>::DIM`](Trans::DIM).
     ///
     /// Return none if the harmonic is zero.
+    ///
+    /// # See Also
+    ///
+    /// [`Efd::try_from_coeffs()`], [`Efd::from_coeffs_unchecked()`]
     pub fn try_from_coeffs_unnorm(coeffs: Coeff<D>) -> Option<Self> {
-        (coeffs.nrows() != 0).then_some(Self { coeffs, trans: Transform::identity() })
+        (coeffs.ncols() != 0).then_some(Self { coeffs, trans: Transform::identity() })
     }
 
     /// Create object from a 2D array directly.
@@ -74,6 +87,10 @@ impl<D: EfdDim> Efd<D> {
     /// Panic if the curve length is not greater than 1 in debug mode. This
     /// function check the lengths only. Please use [`valid_curve()`] to
     /// verify the curve if there has NaN input.
+    ///
+    /// # See Also
+    ///
+    /// [`Efd::from_curve_threshold()`], [`Efd::from_curve_harmonic()`]
     #[must_use]
     pub fn from_curve<C>(curve: C, is_open: bool) -> Self
     where
