@@ -17,7 +17,7 @@ pub trait Trans {
     /// Coordinate/Translation type.
     type Coord: CoordHint;
     /// Rotation angle type.
-    type Rot: Clone + 'static;
+    type Rot: Clone + Default + 'static;
 
     /// Default identity state.
     fn identity() -> Self;
@@ -43,7 +43,7 @@ pub trait Trans {
 }
 
 /// Hint for transforming coordinate type to matrix.
-pub trait CoordHint: Clone + PartialEq + Sized + 'static {
+pub trait CoordHint: Clone + Default + PartialEq + Sized + 'static {
     /// Dimension. Is a constant width.
     type Dim: na::DimNameMul<na::U2>;
     /// Flaten type.
@@ -62,6 +62,7 @@ pub trait CoordHint: Clone + PartialEq + Sized + 'static {
 impl<const DIM: usize> CoordHint for [f64; DIM]
 where
     na::Const<DIM>: na::DimNameMul<na::U2>,
+    [f64; DIM]: Default,
 {
     type Dim = na::Const<DIM>;
     type Flat = <Self as IntoIterator>::IntoIter;
@@ -82,8 +83,9 @@ where
 
 impl<R, const DIM: usize> Trans for Sim<R, DIM>
 where
-    R: na::AbstractRotation<f64, DIM> + 'static,
+    R: na::AbstractRotation<f64, DIM> + Default + 'static,
     na::Const<DIM>: na::DimNameMul<na::U2>,
+    [f64; DIM]: Default,
 {
     type Coord = [f64; DIM];
     type Rot = R;
