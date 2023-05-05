@@ -39,8 +39,8 @@ pub struct Efd<D: EfdDim> {
 impl<D: EfdDim> Efd<D> {
     /// Create object from a 2D array with boundary check and normalization.
     ///
-    /// The array size is (harmonic) x (dimension x 2).
-    /// The dimension is [`<<D as EfdDim>::Trans as Trans>::DIM`](Trans::DIM).
+    /// The array size is (harmonic) x (dimension x 2). The dimension is
+    /// [`CoordHint::Dim`].
     ///
     /// Return none if the harmonic is zero.
     ///
@@ -56,8 +56,8 @@ impl<D: EfdDim> Efd<D> {
 
     /// Create object from a 2D array with boundary check.
     ///
-    /// The array size is (harmonic) x (dimension x 2).
-    /// The dimension is [`<<D as EfdDim>::Trans as Trans>::DIM`](Trans::DIM).
+    /// The array size is (harmonic) x (dimension x 2). The dimension is
+    /// [`CoordHint::Dim`].
     ///
     /// Return none if the harmonic is zero.
     ///
@@ -70,8 +70,8 @@ impl<D: EfdDim> Efd<D> {
 
     /// Create object from a 2D array directly.
     ///
-    /// The array size is (harmonic) x (dimension x 2).
-    /// The dimension is [`<<D as EfdDim>::Trans as Trans>::DIM`](Trans::DIM).
+    /// The array size is (harmonic) x (dimension x 2). The dimension is
+    /// [`CoordHint::Dim`].
     ///
     /// # Safety
     ///

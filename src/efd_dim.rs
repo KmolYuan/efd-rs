@@ -1,9 +1,9 @@
 use crate::*;
 use core::f64::consts::{PI, TAU};
 
-/// 2D EFD dimension type.
+/// 2D EFD dimension marker.
 pub enum D2 {}
-/// 3D EFD dimension type.
+/// 3D EFD dimension marker.
 pub enum D3 {}
 /// 2D Coefficient type.
 pub type Coeff2 = Coeff<D2>;
