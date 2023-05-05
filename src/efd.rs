@@ -28,14 +28,43 @@ pub struct Efd<D: EfdDim> {
 }
 
 impl<D: EfdDim> Efd<D> {
+    /// Create object from a 2D array with boundary check and normalization.
+    ///
+    /// The array size is (harmonic) x (dimension x 2).
+    /// The dimension is [`<<D as EfdDim>::Trans as Trans>::DIM`](Trans::DIM).
+    ///
+    /// Return none if the harmonic is zero.
+    ///
+    /// # See Also
+    ///
+    /// [`Efd::try_from_coeffs_unnorm()`], [`Efd::from_coeffs_unchecked()`]
+    pub fn try_from_coeffs(mut coeffs: Coeff<D>) -> Option<Self> {
+        (coeffs.nrows() != 0).then(|| {
+            let trans = D::coeff_norm(&mut coeffs);
+            Self { coeffs, trans }
+        })
+    }
+
     /// Create object from a 2D array with boundary check.
     ///
     /// The array size is (harmonic) x (dimension x 2).
     /// The dimension is [`<<D as EfdDim>::Trans as Trans>::DIM`](Trans::DIM).
     ///
-    /// Return none if harmonic is zero.
-    pub fn try_from_coeffs(coeffs: Coeff<D>) -> Option<Self> {
+    /// Return none if the harmonic is zero.
+    pub fn try_from_coeffs_unnorm(coeffs: Coeff<D>) -> Option<Self> {
         (coeffs.nrows() != 0).then_some(Self { coeffs, trans: Transform::identity() })
+    }
+
+    /// Create object from a 2D array directly.
+    ///
+    /// The array size is (harmonic) x (dimension x 2).
+    /// The dimension is [`<<D as EfdDim>::Trans as Trans>::DIM`](Trans::DIM).
+    ///
+    /// # Safety
+    ///
+    /// Other operations might panic if the harmonic is zero.
+    pub unsafe fn from_coeffs_unchecked(coeffs: Coeff<D>) -> Self {
+        Self { coeffs, trans: Transform::identity() }
     }
 
     /// Calculate EFD coefficients from an existing discrete points.
@@ -77,7 +106,7 @@ impl<D: EfdDim> Efd<D> {
         debug_assert!((0.0..1.0).contains(&threshold), "threshold must in [0,1]");
         // Nyquist Frequency
         let harmonic = curve.len() / 2;
-        let (mut coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
+        let (mut coeffs, trans) = D::get_coeff(curve, harmonic, is_open);
         let lut = cumsum(coeffs.map(pow2)).row_sum();
         let total_power = lut[lut.len() - 1];
         let (harmonic, _) = lut
@@ -110,11 +139,31 @@ impl<D: EfdDim> Efd<D> {
             debug_assert!(harmonic != 0, "harmonic must not be 0");
             let curve = curve.as_curve();
             debug_assert!(curve.len() > 1, "the curve length must greater than 1");
-            let (coeffs, trans) = D::from_curve_harmonic(curve, harmonic, is_open);
+            let (coeffs, trans) = D::get_coeff(curve, harmonic, is_open);
             Self { coeffs, trans }
         } else {
             Self::from_curve(curve, is_open)
         }
+    }
+
+    /// Calculate EFD coefficients **without** normalization.
+    ///
+    /// # Panic
+    ///
+    /// Panic if the specific harmonic is zero or the curve length is not
+    /// greater than 1 in the **debug mode**. This function check the lengths
+    /// only. Please use [`valid_curve()`] to verify the curve if there has
+    /// NaN input.
+    #[must_use]
+    pub fn from_curve_harmonic_unnorm<C>(curve: C, is_open: bool, harmonic: usize) -> Self
+    where
+        C: Curve<Coord<D>>,
+    {
+        debug_assert!(harmonic != 0, "harmonic must not be 0");
+        let curve = curve.as_curve();
+        debug_assert!(curve.len() > 1, "the curve length must greater than 1");
+        let (coeffs, trans) = D::get_coeff_unnorm(curve, harmonic, is_open);
+        Self { coeffs, trans }
     }
 
     /// A builder method for changing transform type.

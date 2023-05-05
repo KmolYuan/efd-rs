@@ -159,7 +159,7 @@ impl<T: Trans> Transform<T> {
         Self { inner: T::new(trans, rot, scale) }
     }
 
-    /// Create without transform.
+    /// Create with identity matrix.
     #[must_use]
     pub fn identity() -> Self {
         Self { inner: T::identity() }
@@ -302,7 +302,7 @@ macro_rules! impl_mul {
             type Output = Transform<T>;
             #[must_use]
             fn mul(self, rhs: $ty2) -> Self::Output {
-                self.apply(&rhs)
+                rhs.apply(&self)
             }
         }
     };

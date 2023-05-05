@@ -10,9 +10,9 @@ pub const RES: usize = 1000;
 fn error() {
     use crate::*;
     let coeff = Coeff2::from_column_slice(&[10., 20., 20., 10., 3., 4., 4., 3.]);
-    let a = Efd2::try_from_coeffs(coeff).unwrap();
+    let a = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
     let coeff = Coeff2::from_column_slice(&[10., 20., 20., 10.]);
-    let b = Efd2::try_from_coeffs(coeff).unwrap();
+    let b = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
     assert_eq!(a.square_err(&b), 50.);
     assert_eq!(b.square_err(&a), 50.);
 }

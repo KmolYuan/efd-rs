@@ -28,62 +28,65 @@ pub trait EfdDim {
     type Trans: Trans;
 
     /// Generate coefficients and similarity matrix.
-    fn from_curve_harmonic(
+    fn get_coeff(
+        curve: &[Coord<Self>],
+        harmonic: usize,
+        is_open: bool,
+    ) -> (Coeff<Self>, Transform<Self::Trans>) {
+        let (mut coeffs, trans1) = Self::get_coeff_unnorm(curve, harmonic, is_open);
+        let trans2 = Self::coeff_norm(&mut coeffs);
+        (coeffs, trans1 * trans2)
+    }
+
+    /// Generate coefficients and similarity matrix **without** normalization.
+    fn get_coeff_unnorm(
         curve: &[Coord<Self>],
         harmonic: usize,
         is_open: bool,
     ) -> (Coeff<Self>, Transform<Self::Trans>);
+    /// Normalize coefficients.
+    fn coeff_norm(coeffs: &mut Coeff<Self>) -> Transform<Self::Trans>;
 }
 
 impl EfdDim for D2 {
     type Trans = T2;
 
-    fn from_curve_harmonic(
+    fn get_coeff_unnorm(
         curve: &[Coord<Self>],
         harmonic: usize,
         is_open: bool,
     ) -> (Coeff<Self>, Transform<Self::Trans>) {
-        impl_coeff(curve, harmonic, is_open, |m| {
-            // Simplified from:
-            //
-            // let u = m.row(0).transpose().normalize();
-            // let v = m.row(1).transpose().normalize();
-            // na::Rotation2::from_basis_unchecked(&[u, v])
-            na::Rotation2::new(m[(0, 1)].atan2(m[(0, 0)]))
-        })
+        let (coeffs, center) = impl_coeff(curve, harmonic, is_open);
+        (coeffs, Transform::new(center, Default::default(), 1.))
+    }
+
+    fn coeff_norm(coeffs: &mut Coeff<Self>) -> Transform<Self::Trans> {
+        let (psi, scale) = impl_norm(coeffs, impl_psi2);
+        Transform::new([0.; 2], psi.into(), scale)
     }
 }
 
 impl EfdDim for D3 {
     type Trans = T3;
 
-    fn from_curve_harmonic(
+    fn get_coeff_unnorm(
         curve: &[Coord<Self>],
         harmonic: usize,
         is_open: bool,
     ) -> (Coeff<Self>, Transform<Self::Trans>) {
-        impl_coeff(curve, harmonic, is_open, |m| {
-            let u = m.row(0).transpose().normalize();
-            let v = m.row(1).transpose().normalize();
-            let w = u.cross(&v);
-            na::Rotation3::from_basis_unchecked(&[u, v, w])
-        })
+        let (coeffs, center) = impl_coeff(curve, harmonic, is_open);
+        (coeffs, Transform::new(center, Default::default(), 1.))
+    }
+
+    fn coeff_norm(coeffs: &mut Coeff<Self>) -> Transform<Self::Trans> {
+        let (psi, scale) = impl_norm(coeffs, impl_psi3);
+        Transform::new([0.; 3], psi.into(), scale)
     }
 }
 
-fn impl_coeff<A, T, F, const DIM: usize>(
-    curve: &[A],
-    harmonic: usize,
-    is_open: bool,
-    get_psi: F,
-) -> (MatrixRxX<CCDim<A>>, Transform<T>)
+fn impl_coeff<A>(curve: &[A], harmonic: usize, is_open: bool) -> (MatrixRxX<CCDim<A>>, A)
 where
-    // const-generic assertion
-    na::Const<DIM>: na::DimNameMul<na::U2>,
-    A: CoordHint<Dim = na::Const<DIM>>,
-    T: Trans<Coord = A>,
-    T::Rot: From<na::Rotation<f64, DIM>>,
-    F: FnOnce(CKernel<DIM>) -> na::Rotation<f64, DIM>,
+    A: CoordHint,
 {
     let curve_arr = if is_open {
         to_mat(curve)
@@ -124,6 +127,18 @@ where
             *oxyz += (dxyz.component_mul(&c) + xi.component_mul(&dt)).sum() / zt
                 * if is_open { 2. } else { 1. };
         });
+    (coeffs, center)
+}
+
+fn impl_norm<F, const DIM: usize>(
+    coeffs: &mut MatrixRxX<na::DimNameProd<na::Const<DIM>, na::U2>>,
+    get_psi: F,
+) -> (na::Rotation<f64, DIM>, f64)
+where
+    // const-generic assertion
+    na::Const<DIM>: na::DimNameMul<na::U2>,
+    F: FnOnce(CKernel<DIM>) -> na::Rotation<f64, DIM>,
+{
     // Angle of starting point
     let theta = {
         let c = CKernel::<DIM>::from_slice(coeffs.column(0).data.into_slice());
@@ -137,7 +152,7 @@ where
         m.copy_from(&(theta * &m));
     }
     // Normalize coefficients sign
-    if harmonic > 1 && coeffs[(0, 0)] * coeffs[(0, 1)] < 0. {
+    if coeffs.ncols() > 1 && coeffs[(0, 0)] * coeffs[(0, 1)] < 0. {
         coeffs
             .column_iter_mut()
             .step_by(2)
@@ -154,6 +169,22 @@ where
         let c = CKernel::<DIM>::from_slice(coeffs.column(0).data.into_slice());
         c.row(0).map(pow2).sum().sqrt()
     };
-    coeffs /= scale;
-    (coeffs, Transform::new(center, psi.into(), scale))
+    *coeffs /= scale;
+    (psi, scale)
+}
+
+fn impl_psi2(m: CKernel<2>) -> na::Rotation2<f64> {
+    // Simplified from:
+    //
+    // let u = m.row(0).transpose().normalize();
+    // let v = m.row(1).transpose().normalize();
+    // na::Rotation2::from_basis_unchecked(&[u, v])
+    na::Rotation2::new(m[(0, 1)].atan2(m[(0, 0)]))
+}
+
+fn impl_psi3(m: CKernel<3>) -> na::Rotation3<f64> {
+    let u = m.row(0).transpose().normalize();
+    let v = m.row(1).transpose().normalize();
+    let w = u.cross(&v);
+    na::Rotation3::from_basis_unchecked(&[u, v, w])
 }
