@@ -10,9 +10,6 @@ pub type Transform2 = Transform<T2>;
 /// 3D transformation type.
 pub type Transform3 = Transform<T3>;
 
-type Coord<T> = <T as Trans>::Coord;
-type Rot<T> = <T as Trans>::Rot;
-
 type Sim<R, const DIM: usize> = na::Similarity<f64, R, DIM>;
 
 /// A trait used in inner type of [`Transform`].
@@ -32,6 +29,12 @@ pub trait Trans {
     fn apply(&self, rhs: &Self) -> Self;
     /// Inverse matrices.
     fn inverse(&self) -> Self;
+    /// Transformation property.
+    fn trans(&self) -> Self::Coord;
+    /// Rotation property.
+    fn rot(&self) -> &Self::Rot;
+    /// Scaling property.
+    fn scale(&self) -> f64;
 
     /// The value of the dimension.
     fn dim() -> usize {
@@ -106,6 +109,19 @@ where
     fn inverse(&self) -> Self {
         self.inverse()
     }
+
+    fn trans(&self) -> Self::Coord {
+        let view = na::MatrixView::from(&self.isometry.translation.vector);
+        CoordHint::to_coord(view)
+    }
+
+    fn rot(&self) -> &Self::Rot {
+        &self.isometry.rotation
+    }
+
+    fn scale(&self) -> f64 {
+        self.scaling()
+    }
 }
 
 /// Transform type.
@@ -116,25 +132,21 @@ pub struct Transform<T: Trans> {
     inner: T,
 }
 
-impl<R, const DIM: usize> Default for Transform<Sim<R, DIM>>
-where
-    R: na::AbstractRotation<f64, DIM> + 'static,
-    na::Const<DIM>: na::DimNameMul<na::U2>,
-{
+impl<T: Trans> Default for Transform<T> {
     fn default() -> Self {
         Self::identity()
     }
 }
 
-impl<R, const DIM: usize> core::fmt::Debug for Transform<Sim<R, DIM>>
+impl<T: Trans> core::fmt::Debug for Transform<T>
 where
-    R: na::AbstractRotation<f64, DIM> + core::fmt::Debug + 'static,
-    na::Const<DIM>: na::DimNameMul<na::U2> + core::fmt::Debug,
+    T::Coord: core::fmt::Debug,
+    T::Rot: core::fmt::Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        f.debug_struct(&alloc::format!("Transform{}", Sim::<R, DIM>::dim()))
+        f.debug_struct(&alloc::format!("Transform{}", T::dim()))
             .field("translation", &self.trans())
-            .field("rotation", &self.rot())
+            .field("rotation", self.rot())
             .field("scale", &self.scale())
             .finish()
     }
@@ -143,7 +155,7 @@ where
 impl<T: Trans> Transform<T> {
     /// Create a new transform type.
     #[must_use]
-    pub fn new(trans: Coord<T>, rot: Rot<T>, scale: f64) -> Self {
+    pub fn new(trans: T::Coord, rot: T::Rot, scale: f64) -> Self {
         Self { inner: T::new(trans, rot, scale) }
     }
 
@@ -157,7 +169,7 @@ impl<T: Trans> Transform<T> {
     ///
     /// Please see [`Self::transform()`] for more information.
     #[must_use]
-    pub fn transform_pt(&self, p: &Coord<T>) -> Coord<T> {
+    pub fn transform_pt(&self, p: &T::Coord) -> T::Coord {
         self.inner.transform(p)
     }
 
@@ -177,9 +189,9 @@ impl<T: Trans> Transform<T> {
     /// # assert!(curve_diff(&path1_inv, &path) < EPS);
     /// ```
     #[must_use]
-    pub fn transform<C>(&self, curve: C) -> Vec<Coord<T>>
+    pub fn transform<C>(&self, curve: C) -> Vec<T::Coord>
     where
-        C: AsRef<[Coord<T>]>,
+        C: AsRef<[T::Coord]>,
     {
         curve
             .as_ref()
@@ -191,7 +203,7 @@ impl<T: Trans> Transform<T> {
     /// Transform a contour in-placed with this information.
     pub fn transform_inplace<C>(&self, mut curve: C)
     where
-        C: AsMut<[Coord<T>]>,
+        C: AsMut<[T::Coord]>,
     {
         curve
             .as_mut()
@@ -200,9 +212,9 @@ impl<T: Trans> Transform<T> {
     }
 
     /// Transform an iterator contour.
-    pub fn transform_iter<'a, C>(&'a self, curve: C) -> impl Iterator<Item = Coord<T>> + 'a
+    pub fn transform_iter<'a, C>(&'a self, curve: C) -> impl Iterator<Item = T::Coord> + 'a
     where
-        C: IntoIterator<Item = Coord<T>> + 'a,
+        C: IntoIterator<Item = T::Coord> + 'a,
     {
         curve.into_iter().map(|c| self.transform_pt(&c))
     }
@@ -264,30 +276,23 @@ impl<T: Trans> Transform<T> {
     pub fn inverse(&self) -> Self {
         Self { inner: self.inner.inverse() }
     }
-}
 
-impl<R, const DIM: usize> Transform<Sim<R, DIM>>
-where
-    R: na::AbstractRotation<f64, DIM> + 'static,
-    na::Const<DIM>: na::DimNameMul<na::U2>,
-{
     /// Translate property.
     #[must_use]
-    pub fn trans(&self) -> Coord<Sim<R, DIM>> {
-        let view = na::MatrixView::from(&self.inner.isometry.translation.vector);
-        CoordHint::to_coord(view)
+    pub fn trans(&self) -> T::Coord {
+        self.inner.trans()
     }
 
     /// Rotation property.
     #[must_use]
-    pub fn rot(&self) -> &Rot<Sim<R, DIM>> {
-        &self.inner.isometry.rotation
+    pub fn rot(&self) -> &T::Rot {
+        self.inner.rot()
     }
 
     /// Scaling property.
     #[must_use]
     pub fn scale(&self) -> f64 {
-        self.inner.scaling()
+        self.inner.scale()
     }
 }
 

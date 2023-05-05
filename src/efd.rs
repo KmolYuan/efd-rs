@@ -286,6 +286,30 @@ impl<D: EfdDim> Efd<D> {
     }
 }
 
+impl<D: EfdDim> core::fmt::Debug for Efd<D>
+where
+    Transform<D::Trans>: core::fmt::Debug,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_struct("Efd")
+            .field("coeff", &CoeffFmt::<D>(&self.coeffs))
+            .field("trans", &self.trans)
+            .finish()
+    }
+}
+
+struct CoeffFmt<'a, D: EfdDim>(&'a Coeff<D>);
+
+impl<D: EfdDim> core::fmt::Debug for CoeffFmt<'_, D> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let entries = self
+            .0
+            .row_iter()
+            .map(|row| Vec::from(row.into_owned().data));
+        f.debug_list().entries(entries).finish()
+    }
+}
+
 fn padding<D, F>(a: &Efd<D>, b: &Efd<D>, f: F) -> f64
 where
     D: EfdDim,
