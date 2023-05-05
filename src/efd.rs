@@ -183,7 +183,7 @@ impl<D: EfdDim> Efd<D> {
         Self { coeffs, trans }
     }
 
-    /// A builder method for changing transform type.
+    /// A builder method for changing transformation type.
     #[must_use]
     pub fn with_trans(self, trans: Transform<D::Trans>) -> Self {
         Self { trans, ..self }
@@ -201,13 +201,13 @@ impl<D: EfdDim> Efd<D> {
         &self.coeffs
     }
 
-    /// Get the reference of transform type.
+    /// Get the reference of transformation type.
     #[must_use]
     pub fn as_trans(&self) -> &Transform<D::Trans> {
         &self.trans
     }
 
-    /// Get the mutable reference of transform type.
+    /// Get the mutable reference of transformation type.
     #[must_use]
     pub fn as_trans_mut(&mut self) -> &mut Transform<D::Trans> {
         &mut self.trans

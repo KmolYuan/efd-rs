@@ -24,7 +24,7 @@ type CCDim<A> = na::DimNameProd<<A as CoordHint>::Dim, na::U2>;
 
 /// Trait for EFD dimension.
 pub trait EfdDim {
-    /// Transform type of similarity matrix.
+    /// Transformation type of similarity matrix.
     type Trans: Trans;
 
     /// Generate coefficients and similarity matrix.
