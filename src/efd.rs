@@ -360,6 +360,8 @@ where
         f.debug_struct("Efd")
             .field("coeff", &CoeffFmt::<D>(&self.coeffs))
             .field("trans", &self.trans)
+            .field("dim", &D::Trans::dim())
+            .field("harmonic", &self.harmonic())
             .finish()
     }
 }
