@@ -161,10 +161,9 @@ where
     }
     // Rotation angle
     let psi = get_psi(CCKernel::<DIM>::from_slice(coeffs.column(0).as_slice()));
-    let psi_inv = psi.inverse();
     for mut c in coeffs.column_iter_mut() {
         let mut m = CCKernelMut::<DIM>::from_slice(c.as_mut_slice());
-        m.copy_from(&(psi_inv * &m));
+        m.tr_mul(psi.matrix()).transpose_to(&mut m);
     }
     // Scale factor
     let scale = {
