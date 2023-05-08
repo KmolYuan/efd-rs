@@ -99,6 +99,8 @@ fn impl_coeff<T: Trans>(
     let zt = t[t.len() - 1] * if is_open { 2. } else { 1. };
     let scalar = zt / (PI * PI) * if is_open { 1. } else { 0.5 };
     let phi = &t * TAU / zt;
+    // Coefficients (2dim * N)
+    // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
     let mut coeffs = MatrixRxX::<CCDim<T>>::zeros(harmonic);
     for (i, mut c) in coeffs.column_iter_mut().enumerate() {
         let n = i as f64 + 1.;
@@ -141,6 +143,7 @@ where
     T::Rot: From<na::Rotation<f64, DIM>>,
 {
     // Angle of starting point
+    // m = m * theta
     let theta = {
         let c = CCKernel::<DIM>::from_slice(coeffs.column(0).data.into_slice());
         let dy = 2. * c.column_product().sum();
@@ -160,16 +163,17 @@ where
             .for_each(|mut s| s *= -1.);
     }
     // Rotation angle
+    // m = psi' * m
     let psi = get_psi(CCKernel::<DIM>::from_slice(coeffs.column(0).as_slice()));
     for mut c in coeffs.column_iter_mut() {
         let mut m = CCKernelMut::<DIM>::from_slice(c.as_mut_slice());
         m.tr_mul(psi.matrix()).transpose_to(&mut m);
     }
     // Scale factor
-    let scale = {
-        let c = CCKernel::<DIM>::from_slice(coeffs.column(0).data.into_slice());
-        c.column(0).map(pow2).sum().sqrt()
-    };
+    // |u1|
+    let scale = CCKernel::<DIM>::from_slice(coeffs.column(0).data.into_slice())
+        .column(0)
+        .norm();
     *coeffs /= scale;
     Transform::new(Default::default(), psi.into(), scale)
 }
