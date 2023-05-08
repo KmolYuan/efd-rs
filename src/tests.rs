@@ -108,17 +108,19 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         if dx > dy {
             let cen = (y_min + y_max) * 0.5;
             let r = dx * 0.5;
-            [*x_min, *x_max, cen - r, cen + r]
+            let mg = dx * 0.1;
+            [*x_min - mg, *x_max + mg, cen - r - mg, cen + r + mg]
         } else {
             let cen = (x_min + x_max) * 0.5;
             let r = dy * 0.5;
-            [cen - r, cen + r, *y_min, *y_max]
+            let mg = dy * 0.1;
+            [cen - r - mg, cen + r + mg, *y_min - mg, *y_max + mg]
         }
     }
 
     let coeff =
         Coeff2::from_column_slice(&[12., 35., 35., 13., 5., 21., 21., 5., 1., 12., 12., 1.]);
-    let efd = Efd2::try_from_coeffs(coeff).unwrap();
+    let efd = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
     let path = efd.generate(360);
     let [x_min, x_max, y_min, y_max] = bounding_box(&path);
     let b = SVGBackend::new("test.svg", (1200, 1200));
