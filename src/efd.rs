@@ -195,10 +195,30 @@ impl<D: EfdDim> Efd<D> {
         self.coeffs
     }
 
-    /// Get the array view of the coefficients.
+    /// Get a reference to the coefficients.
     #[must_use]
     pub fn coeffs(&self) -> &Coeff<D> {
         &self.coeffs
+    }
+
+    /// Get a view to the specific coefficients. (`0..self.harmonic`)
+    #[must_use]
+    pub fn coeff(&self, harmonic: usize) -> CKernel<D> {
+        CKernel::<D>::from_slice(self.coeffs.column(harmonic).data.into_slice())
+    }
+
+    /// Get an iterator over all the coefficients per harmonic.
+    pub fn coeffs_iter(&self) -> impl Iterator<Item = CKernel<D>> {
+        self.coeffs
+            .column_iter()
+            .map(|c| CKernel::<D>::from_slice(c.data.into_slice()))
+    }
+
+    /// Get a mutable iterator over all the coefficients per harmonic.
+    pub fn coeffs_iter_mut(&mut self) -> impl Iterator<Item = CKernelMut<D>> {
+        self.coeffs
+            .column_iter_mut()
+            .map(|c| CKernelMut::<D>::from_slice(c.data.into_slice_mut()))
     }
 
     /// Get the reference of transformation type.
@@ -261,7 +281,7 @@ impl<D: EfdDim> Efd<D> {
     pub fn reverse_inplace(&mut self) {
         self.coeffs
             .row_iter_mut()
-            .step_by(2)
+            .skip(D::Trans::dim())
             .for_each(|mut c| c *= -1.);
     }
 
@@ -342,7 +362,7 @@ impl<D: EfdDim> Efd<D> {
             .map(|(i, c)| {
                 let t = &t * (i + 1) as f64;
                 let t = na::Matrix2xX::from_rows(&[t.map(f64::cos), t.map(f64::sin)]);
-                na::MatrixView::<f64, na::U2, Dim<D>>::from_slice(c.as_slice()).tr_mul(&t)
+                CKernel::<D>::from_slice(c.as_slice()) * t
             })
             .reduce(|a, b| a + b)
             .unwrap()
@@ -372,8 +392,8 @@ impl<D: EfdDim> core::fmt::Debug for CoeffFmt<'_, D> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let entries = self
             .0
-            .row_iter()
-            .map(|row| Vec::from(row.into_owned().data));
+            .column_iter()
+            .map(|c| c.iter().copied().collect::<Vec<_>>());
         f.debug_list().entries(entries).finish()
     }
 }

@@ -17,9 +17,13 @@ pub type CoordView<'a, D> = na::MatrixView<'a, f64, Dim<D>, na::U1>;
 pub type Dim<D> = <Coord<D> as CoordHint>::Dim;
 /// Alias for the coefficient number. (DIM * 2)
 pub type CDim<D> = CCDim<<D as EfdDim>::Trans>;
+/// A matrix view of specific coefficients. (DIM * 2)
+pub type CKernel<'a, D> = na::MatrixView<'a, f64, Dim<D>, na::U2>;
+/// A mutable matrix view of specific coefficients. (DIM * 2)
+pub type CKernelMut<'a, D> = na::MatrixViewMut<'a, f64, Dim<D>, na::U2>;
 
-type CKernel<'a, const DIM: usize> = na::MatrixView<'a, f64, na::U2, na::Const<DIM>>;
-type CKernelMut<'a, const DIM: usize> = na::MatrixViewMut<'a, f64, na::U2, na::Const<DIM>>;
+type CCKernel<'a, const DIM: usize> = na::MatrixView<'a, f64, na::Const<DIM>, na::U2>;
+type CCKernelMut<'a, const DIM: usize> = na::MatrixViewMut<'a, f64, na::Const<DIM>, na::U2>;
 type CCDim<T> = na::DimNameProd<<<T as Trans>::Coord as CoordHint>::Dim, na::U2>;
 
 /// Trait for EFD dimension.
@@ -61,7 +65,7 @@ impl EfdDim for D2 {
             // let u = m.row(0).transpose().normalize();
             // let v = m.row(1).transpose().normalize();
             // na::Rotation2::from_basis_unchecked(&[u, v])
-            na::Rotation2::new(m[(0, 1)].atan2(m[(0, 0)]))
+            na::Rotation2::new(m[(1, 0)].atan2(m[(0, 0)]))
         })
     }
 }
@@ -71,8 +75,8 @@ impl EfdDim for D3 {
 
     fn coeff_norm(coeffs: &mut Coeff<Self>) -> Transform<Self::Trans> {
         impl_norm(coeffs, |m| {
-            let u = m.row(0).transpose().normalize();
-            let v = m.row(1).transpose().normalize();
+            let u = m.column(0).normalize();
+            let v = m.column(1).normalize();
             let w = u.cross(&v);
             na::Rotation3::from_basis_unchecked(&[u, v, w])
         })
@@ -104,12 +108,12 @@ fn impl_coeff<T: Trans>(
         let scalar = scalar / (n * n);
         let cos_phi = (phi_back.map(f64::cos) - phi_front.map(f64::cos)).component_div(&dt);
         dxyz.row_iter()
-            .zip(c.iter_mut().step_by(2))
+            .zip(c.iter_mut().take(dxyz.nrows()))
             .for_each(|(d, c)| *c = scalar * d.component_mul(&cos_phi).sum());
         if !is_open {
             let sin_phi = (phi_back.map(f64::sin) - phi_front.map(f64::sin)).component_div(&dt);
             dxyz.row_iter()
-                .zip(c.iter_mut().skip(1).step_by(2))
+                .zip(c.iter_mut().skip(dxyz.nrows()))
                 .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
         }
     }
@@ -128,7 +132,7 @@ fn impl_coeff<T: Trans>(
 
 fn impl_norm<T, const DIM: usize, const CDIM: usize>(
     coeffs: &mut MatrixRxX<na::Const<CDIM>>,
-    get_psi: impl FnOnce(CKernel<DIM>) -> na::Rotation<f64, DIM>,
+    get_psi: impl FnOnce(CCKernel<DIM>) -> na::Rotation<f64, DIM>,
 ) -> Transform<T>
 where
     // const-generic assertion
@@ -138,15 +142,15 @@ where
 {
     // Angle of starting point
     let theta = {
-        let c = CKernel::<DIM>::from_slice(coeffs.column(0).data.into_slice());
-        let dy = 2. * c.row_product().sum();
-        let dx = c.map(pow2).column_sum();
+        let c = CCKernel::<DIM>::from_slice(coeffs.column(0).data.into_slice());
+        let dy = 2. * c.column_product().sum();
+        let dx = c.map(pow2).row_sum();
         0.5 * dy.atan2(dx[0] - dx[1])
     };
     for (i, mut c) in coeffs.column_iter_mut().enumerate() {
-        let theta = na::Rotation2::new((i + 1) as f64 * -theta);
-        let mut m = CKernelMut::<DIM>::from_slice(c.as_mut_slice());
-        m.copy_from(&(theta * &m));
+        let theta = na::Rotation2::new((i + 1) as f64 * theta);
+        let mut m = CCKernelMut::<DIM>::from_slice(c.as_mut_slice());
+        m.copy_from(&(&m * theta));
     }
     // Normalize coefficients sign
     if coeffs.ncols() > 1 && coeffs[(0, 0)] * coeffs[(0, 1)] < 0. {
@@ -156,15 +160,16 @@ where
             .for_each(|mut s| s *= -1.);
     }
     // Rotation angle
-    let psi = get_psi(CKernel::<DIM>::from_slice(coeffs.column(0).as_slice()));
+    let psi = get_psi(CCKernel::<DIM>::from_slice(coeffs.column(0).as_slice()));
+    let psi_inv = psi.inverse();
     for mut c in coeffs.column_iter_mut() {
-        let mut m = CKernelMut::<DIM>::from_slice(c.as_mut_slice());
-        m.copy_from(&(&m * psi));
+        let mut m = CCKernelMut::<DIM>::from_slice(c.as_mut_slice());
+        m.copy_from(&(psi_inv * &m));
     }
     // Scale factor
     let scale = {
-        let c = CKernel::<DIM>::from_slice(coeffs.column(0).data.into_slice());
-        c.row(0).map(pow2).sum().sqrt()
+        let c = CCKernel::<DIM>::from_slice(coeffs.column(0).data.into_slice());
+        c.column(0).map(pow2).sum().sqrt()
     };
     *coeffs /= scale;
     Transform::new(Default::default(), psi.into(), scale)

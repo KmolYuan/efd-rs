@@ -136,8 +136,7 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
     }
     let trans0 = efd.as_trans();
     let mut c0 = [0.; 2];
-    for c in efd.coeffs().column_iter() {
-        let m = na::MatrixView2::from_slice(c.as_slice());
+    for m in efd.coeffs_iter() {
         let trans = trans0 * Transform2::new(c0, na::UnitComplex::new(0.), 1.);
         let ellipse = (0..100)
             .map(|i| {
@@ -150,8 +149,8 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
                 (x, y)
             });
         let p1 = c0;
-        c0[0] += c[0];
-        c0[1] += c[2];
+        c0[0] += m[(0, 0)];
+        c0[1] += m[(1, 0)];
         let p2 = c0;
         let [x1, y1] = trans0.transform_pt(&p1);
         let [x2, y2] = trans0.transform_pt(&p2);
