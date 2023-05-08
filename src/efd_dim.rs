@@ -62,8 +62,8 @@ impl EfdDim for D2 {
         impl_norm(coeffs, |m| {
             // Simplified from:
             //
-            // let u = m.row(0).transpose().normalize();
-            // let v = m.row(1).transpose().normalize();
+            // let u = m.column(0).normalize();
+            // let v = m.column(1).normalize();
             // na::Rotation2::from_basis_unchecked(&[u, v])
             na::Rotation2::new(m[(1, 0)].atan2(m[(0, 0)]))
         })
