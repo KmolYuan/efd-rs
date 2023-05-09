@@ -103,7 +103,7 @@ fn impl_coeff<T: Trans>(
     // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
     let mut coeffs = MatrixRxX::<CCDim<T>>::zeros(harmonic);
     for (i, mut c) in coeffs.column_iter_mut().enumerate() {
-        let n = i as f64 + 1.;
+        let n = (i + 1) as f64;
         let phi = &phi * n;
         let phi_front = phi.columns_range(..phi.len() - 1);
         let phi_back = phi.columns_range(1..);
