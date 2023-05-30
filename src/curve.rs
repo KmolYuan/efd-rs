@@ -67,14 +67,28 @@ impl<A: Clone> Curve<A> for Vec<A> {
     }
 }
 
-impl<A: Clone, const N: usize> Curve<A> for [A; N] {
-    fn to_curve(self) -> Vec<A> {
-        self.to_vec()
-    }
+macro_rules! impl_slice {
+    () => {
+        fn to_curve(self) -> Vec<A> {
+            self.to_vec()
+        }
 
-    fn as_curve(&self) -> &[A] {
-        self
-    }
+        fn as_curve(&self) -> &[A] {
+            self
+        }
+    };
+}
+
+impl<A: Clone, const N: usize> Curve<A> for [A; N] {
+    impl_slice!();
+}
+
+impl<A: Clone> Curve<A> for &[A] {
+    impl_slice!();
+}
+
+impl<A: Clone> Curve<A> for alloc::borrow::Cow<'_, [A]> {
+    impl_slice!();
 }
 
 impl<A: Clone, T: Curve<A> + Clone> Curve<A> for &T {
@@ -84,15 +98,5 @@ impl<A: Clone, T: Curve<A> + Clone> Curve<A> for &T {
 
     fn as_curve(&self) -> &[A] {
         (*self).as_curve()
-    }
-}
-
-impl<A: Clone> Curve<A> for &[A] {
-    fn to_curve(self) -> Vec<A> {
-        self.to_vec()
-    }
-
-    fn as_curve(&self) -> &[A] {
-        self
     }
 }
