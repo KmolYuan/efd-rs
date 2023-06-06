@@ -355,7 +355,7 @@ impl<D: EfdDim> Efd<D> {
     #[must_use]
     pub fn generate_norm_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
         assert!(n > 1, "n ({n}) must larger than 1");
-        let t = na::Matrix1xX::from_fn(n, |_, i| i as f64 / n as f64 * theta);
+        let t = na::Matrix1xX::from_fn(n, |_, i| i as f64 / (n - 1) as f64 * theta);
         self.coeffs
             .column_iter()
             .enumerate()
