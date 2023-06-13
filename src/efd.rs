@@ -43,10 +43,6 @@ impl<D: EfdDim> Efd<D> {
     /// [`CoordHint::Dim`].
     ///
     /// Return none if the harmonic is zero.
-    ///
-    /// # See Also
-    ///
-    /// [`Efd::try_from_coeffs_unnorm()`], [`Efd::from_coeffs_unchecked()`]
     pub fn try_from_coeffs(mut coeffs: Coeff<D>) -> Option<Self> {
         (coeffs.ncols() != 0).then(|| {
             let trans = D::coeff_norm(&mut coeffs);
@@ -60,10 +56,6 @@ impl<D: EfdDim> Efd<D> {
     /// [`CoordHint::Dim`].
     ///
     /// Return none if the harmonic is zero.
-    ///
-    /// # See Also
-    ///
-    /// [`Efd::try_from_coeffs()`], [`Efd::from_coeffs_unchecked()`]
     pub fn try_from_coeffs_unnorm(coeffs: Coeff<D>) -> Option<Self> {
         (coeffs.ncols() != 0).then_some(Self { coeffs, trans: Transform::identity() })
     }
@@ -80,65 +72,61 @@ impl<D: EfdDim> Efd<D> {
         Self { coeffs, trans: Transform::identity() }
     }
 
-    /// Calculate EFD coefficients from an existing discrete points.
+    /// Fully automated coefficient calculation.
+    ///
+    /// 1. The initial harmonic number is the same as the curve point.
+    /// 1. Fourier Power Anaysis (FPA) uses 99.99% threshold.
     ///
     /// # Panic
     ///
     /// Panic if the curve length is not greater than 1 in debug mode. This
     /// function check the lengths only. Please use [`valid_curve()`] to
     /// verify the curve if there has NaN input.
-    ///
-    /// # See Also
-    ///
-    /// [`Efd::from_curve_threshold()`], [`Efd::from_curve_harmonic()`]
     #[must_use]
     pub fn from_curve<C>(curve: C, is_open: bool) -> Self
     where
         C: Curve<Coord<D>>,
     {
-        Self::from_curve_threshold(curve, is_open, None)
+        let len = curve.as_curve().len();
+        Self::from_curve_harmonic(curve, is_open, if is_open { len * 2 } else { len })
+            .fourier_power_anaysis(None)
     }
 
-    /// Calculate EFD coefficients from an existing discrete points and Fourier
-    /// power threshold.
+    /// Same as [`Efd::from_curve()`], but if your sampling points are large,
+    /// use Nyquist Frequency as an initial harmonic number.
     ///
-    /// If the threshold is not given, it will be calculated with Fourier power
-    /// analysis.
+    /// Nyquist Frequency is half of the sample number.
     ///
-    /// # Panic
-    ///
-    /// Panic if the `threshold` is not in `0.0..1.0` or the curve length is not
-    /// greater than 1 in the **debug mode**. This function check the lengths
-    /// only. Please use [`valid_curve()`] to verify the curve if there has
-    /// NaN input.
+    /// Please ensure the sampling points are generated from a known function
+    /// and are more than enough. Otherwise, it will cause undersampling.
     #[must_use]
+    pub fn from_curve_nyquist<C>(curve: C, is_open: bool) -> Self
+    where
+        C: Curve<Coord<D>>,
+    {
+        let len = curve.as_curve().len();
+        Self::from_curve_harmonic(curve, is_open, if is_open { len } else { len / 2 })
+            .fourier_power_anaysis(None)
+    }
+
+    /// Same as [`Efd::from_curve()`], but use a customized threshold in Fourier
+    /// Power Anaysis (FPA).
+    #[must_use]
+    #[deprecated = "this method is rarely used"]
     pub fn from_curve_threshold<C, T>(curve: C, is_open: bool, threshold: T) -> Self
     where
         C: Curve<Coord<D>>,
         Option<f64>: From<T>,
     {
-        let curve = curve.as_curve();
-        debug_assert!(curve.len() > 1, "the curve length must greater than 1");
-        let threshold = Option::from(threshold).unwrap_or(0.9999);
-        debug_assert!((0.0..1.0).contains(&threshold), "threshold must in [0,1]");
-        // Nyquist Frequency
-        let harmonic = curve.len() / 2;
-        let (mut coeffs, trans) = D::get_coeff(curve, harmonic, is_open);
-        let lut = cumsum(coeffs.map(pow2)).row_sum();
-        let total_power = lut[lut.len() - 1];
-        let (harmonic, _) = lut
-            .iter()
-            .enumerate()
-            .find(|(_, power)| *power / total_power >= threshold)
-            .unwrap();
-        coeffs.resize_horizontally_mut(harmonic + 1, 0.);
-        Self { coeffs, trans }
+        let len = curve.as_curve().len();
+        Self::from_curve_harmonic(curve, is_open, if is_open { len * 2 } else { len })
+            .fourier_power_anaysis(threshold)
     }
 
-    /// Calculate EFD coefficients from a series of existing discrete points.
+    /// Manual coefficient calculation.
     ///
-    /// If the harmonic number is not given, it will be calculated with Fourier
-    /// power analysis.
+    /// 1. The initial harmonic is decide by user.
+    /// 1. No harmonic reduced. Please call [`Efd::fourier_power_anaysis()`].
     ///
     /// # Panic
     ///
@@ -147,30 +135,18 @@ impl<D: EfdDim> Efd<D> {
     /// only. Please use [`valid_curve()`] to verify the curve if there has
     /// NaN input.
     #[must_use]
-    pub fn from_curve_harmonic<C, H>(curve: C, is_open: bool, harmonic: H) -> Self
+    pub fn from_curve_harmonic<C>(curve: C, is_open: bool, harmonic: usize) -> Self
     where
         C: Curve<Coord<D>>,
-        Option<usize>: From<H>,
     {
-        if let Some(harmonic) = Option::from(harmonic) {
-            debug_assert!(harmonic != 0, "harmonic must not be 0");
-            let curve = curve.as_curve();
-            debug_assert!(curve.len() > 1, "the curve length must greater than 1");
-            let (coeffs, trans) = D::get_coeff(curve, harmonic, is_open);
-            Self { coeffs, trans }
-        } else {
-            Self::from_curve(curve, is_open)
-        }
+        debug_assert!(harmonic != 0, "harmonic must not be 0");
+        let curve = curve.as_curve();
+        debug_assert!(curve.len() > 1, "the curve length must greater than 1");
+        let (coeffs, trans) = D::get_coeff(curve, harmonic, is_open);
+        Self { coeffs, trans }
     }
 
-    /// Calculate EFD coefficients **without** normalization.
-    ///
-    /// # Panic
-    ///
-    /// Panic if the specific harmonic is zero or the curve length is not
-    /// greater than 1 in the **debug mode**. This function check the lengths
-    /// only. Please use [`valid_curve()`] to verify the curve if there has
-    /// NaN input.
+    /// Same as [`Efd::from_curve_harmonic()`] but without normalization.
     #[must_use]
     pub fn from_curve_harmonic_unnorm<C>(curve: C, is_open: bool, harmonic: usize) -> Self
     where
@@ -189,6 +165,30 @@ impl<D: EfdDim> Efd<D> {
         Self { trans, ..self }
     }
 
+    /// Use Fourier Power Anaysis (FPA) to reduce the harmonic number.
+    ///
+    /// The coefficient memory will be saved but cannot be used twice due to
+    /// undersampling.
+    ///
+    /// The default threshold is 99.99%.
+    #[must_use]
+    pub fn fourier_power_anaysis<T>(mut self, threshold: T) -> Self
+    where
+        Option<f64>: From<T>,
+    {
+        let threshold = Option::from(threshold).unwrap_or(0.9999);
+        debug_assert!((0.0..1.0).contains(&threshold), "threshold must in 0..1");
+        let lut = cumsum(self.coeffs.map(pow2)).row_sum();
+        let total_power = lut[lut.len() - 1];
+        let (harmonic, _) = lut
+            .iter()
+            .enumerate()
+            .find(|(_, power)| *power / total_power >= threshold)
+            .unwrap();
+        self.coeffs.resize_horizontally_mut(harmonic + 1, 0.);
+        self
+    }
+
     /// Consume self and return a raw array of the coefficients.
     #[must_use]
     pub fn into_inner(self) -> Coeff<D> {
@@ -201,7 +201,7 @@ impl<D: EfdDim> Efd<D> {
         &self.coeffs
     }
 
-    /// Get a view to the specific coefficients. (`0..self.harmonic`)
+    /// Get a view to the specific coefficients. (`0..self.harmonic()`)
     #[must_use]
     pub fn coeff(&self, harmonic: usize) -> CKernel<D> {
         CKernel::<D>::from_slice(self.coeffs.column(harmonic).data.into_slice())
@@ -300,11 +300,6 @@ impl<D: EfdDim> Efd<D> {
     /// # Panic
     ///
     /// The number of the points `n` must larger than 1.
-    ///
-    /// # See Also
-    ///
-    /// [`Efd::generate_half()`], [`Efd::generate_in()`],
-    /// [`Efd::generate_norm_in()`]
     #[must_use]
     pub fn generate(&self, n: usize) -> Vec<Coord<D>> {
         self.generate_in(n, TAU)
@@ -315,10 +310,6 @@ impl<D: EfdDim> Efd<D> {
     /// # Panic
     ///
     /// The number of the points `n` must larger than 1.
-    ///
-    /// # See Also
-    ///
-    /// [`Efd::generate()`], [`Efd::generate_in()`], [`Efd::generate_norm_in()`]
     #[must_use]
     pub fn generate_half(&self, n: usize) -> Vec<Coord<D>> {
         self.generate_in(n, PI)
@@ -329,11 +320,6 @@ impl<D: EfdDim> Efd<D> {
     /// # Panic
     ///
     /// The number of the points `n` must larger than 1.
-    ///
-    /// # See Also
-    ///
-    /// [`Efd::generate_half()`], [`Efd::generate_in()`],
-    /// [`Efd::generate_norm_in()`]
     #[must_use]
     pub fn generate_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
         let mut curve = self.generate_norm_in(n, theta);
@@ -348,10 +334,6 @@ impl<D: EfdDim> Efd<D> {
     /// # Panic
     ///
     /// The number of the points `n` must larger than 1.
-    ///
-    /// # See Also
-    ///
-    /// [`Efd::generate()`], [`Efd::generate_half()`], [`Efd::generate_in()`]
     #[must_use]
     pub fn generate_norm_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
         assert!(n > 1, "n ({n}) must larger than 1");
