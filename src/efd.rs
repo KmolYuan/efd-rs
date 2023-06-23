@@ -178,14 +178,15 @@ impl<D: EfdDim> Efd<D> {
     {
         let threshold = Option::from(threshold).unwrap_or(0.9999);
         debug_assert!((0.0..1.0).contains(&threshold), "threshold must in 0..1");
-        let lut = cumsum(self.coeffs.map(pow2)).row_sum();
-        let total_power = lut[lut.len() - 1];
-        let (harmonic, _) = lut
-            .iter()
-            .enumerate()
-            .find(|(_, power)| *power / total_power >= threshold)
-            .unwrap();
-        self.coeffs.resize_horizontally_mut(harmonic + 1, 0.);
+        let mut lut = cumsum(self.coeffs.map(pow2)).row_sum();
+        lut /= lut[lut.len() - 1];
+        let harmonic = match lut
+            .as_slice()
+            .binary_search_by(|x| x.partial_cmp(&threshold).unwrap())
+        {
+            Ok(h) | Err(h) => h + 1,
+        };
+        self.coeffs.resize_horizontally_mut(harmonic, 0.);
         self
     }
 
