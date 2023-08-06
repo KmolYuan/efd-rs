@@ -141,13 +141,13 @@ fn plot2d() -> Result<(), Box<dyn std::error::Error>> {
         let ellipse = (0..100)
             .map(|i| {
                 let t = i as f64 * std::f64::consts::TAU / 100.;
-                let v = m * na::matrix![t.cos(); t.sin()];
-                [v[0], v[1]]
+                m * na::matrix![t.cos(); t.sin()]
             })
-            .map(|[x, y]| trans.transform_pt(&[x, y]).into());
+            .map(|c| trans.transform_pt(&c.data.0[0]).into());
         let p1 = c0;
-        c0[0] += m[(0, 0)];
-        c0[1] += m[(1, 0)];
+        c0.iter_mut()
+            .zip(m.column(0).iter())
+            .for_each(|(c, u)| *c += u);
         let p1 = trans0.transform_pt(&p1).into();
         let p2 = trans0.transform_pt(&c0).into();
         chart.draw_series([Circle::new(p2, 5, RED.filled())])?;
@@ -221,14 +221,13 @@ fn plot3d() -> Result<(), Box<dyn std::error::Error>> {
         let ellipse = (0..100)
             .map(|i| {
                 let t = i as f64 * std::f64::consts::TAU / 100.;
-                let v = m * na::matrix![t.cos(); t.sin()];
-                [v[0], v[1], v[2]]
+                m * na::matrix![t.cos(); t.sin()]
             })
-            .map(|[x, y, z]| trans.transform_pt(&[x, y, z]).into());
+            .map(|c| trans.transform_pt(&c.data.0[0]).into());
         let p1 = c0;
-        c0[0] += m[(0, 0)];
-        c0[1] += m[(1, 0)];
-        c0[2] += m[(2, 0)];
+        c0.iter_mut()
+            .zip(m.column(0).iter())
+            .for_each(|(c, u)| *c += u);
         let p1 = trans0.transform_pt(&p1).into();
         let p2 = trans0.transform_pt(&c0).into();
         chart.draw_series([Circle::new(p2, 5, RED.filled())])?;
