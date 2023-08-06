@@ -138,9 +138,11 @@ fn plot2d() -> Result<(), Box<dyn std::error::Error>> {
     let mut c0 = [0.; 2];
     for m in efd.coeffs_iter() {
         let trans = trans0 * Transform2::new(c0, na::UnitComplex::new(0.), 1.);
-        let ellipse = (0..100)
+        const N: usize = 100;
+        const N_F: f64 = N as f64;
+        let ellipse = (0..N)
             .map(|i| {
-                let t = i as f64 * std::f64::consts::TAU / 100.;
+                let t = i as f64 * std::f64::consts::TAU / N_F;
                 m * na::matrix![t.cos(); t.sin()]
             })
             .map(|c| trans.transform_pt(&c.data.0[0]).into());
@@ -218,9 +220,11 @@ fn plot3d() -> Result<(), Box<dyn std::error::Error>> {
     let mut c0 = [0.; 3];
     for m in efd.coeffs_iter() {
         let trans = trans0 * Transform3::new(c0, na::UnitQuaternion::identity(), 1.);
-        let ellipse = (0..100)
+        const N: usize = 100;
+        const N_F: f64 = N as f64;
+        let ellipse = (0..N)
             .map(|i| {
-                let t = i as f64 * std::f64::consts::TAU / 100.;
+                let t = i as f64 * std::f64::consts::TAU / N_F;
                 m * na::matrix![t.cos(); t.sin()]
             })
             .map(|c| trans.transform_pt(&c.data.0[0]).into());
