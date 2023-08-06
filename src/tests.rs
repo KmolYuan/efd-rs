@@ -126,9 +126,7 @@ fn plot2d() -> Result<(), Box<dyn std::error::Error>> {
     let b = SVGBackend::new("test2d.svg", (1200, 1200));
     let root = b.into_drawing_area();
     root.fill(&WHITE)?;
-    let mut chart = ChartBuilder::on(&root)
-        .margin(0)
-        .build_cartesian_2d(x_min..x_max, y_min..y_max)?;
+    let mut chart = ChartBuilder::on(&root).build_cartesian_2d(x_min..x_max, y_min..y_max)?;
     let p0 = path[0];
     chart.draw_series([Circle::new((p0[0], p0[1]), 3, BLACK.filled())])?;
     for (p, color) in [((10., 0.), RED), ((0., 10.), BLUE)] {
@@ -197,11 +195,8 @@ fn plot3d() -> Result<(), Box<dyn std::error::Error>> {
     let b = SVGBackend::new("test3d.svg", (1200, 1200));
     let root = b.into_drawing_area();
     root.fill(&WHITE)?;
-    let mut chart = ChartBuilder::on(&root).margin(0).build_cartesian_3d(
-        x_min..x_max,
-        y_min..y_max,
-        z_min..z_max,
-    )?;
+    let mut chart =
+        ChartBuilder::on(&root).build_cartesian_3d(x_min..x_max, y_min..y_max, z_min..z_max)?;
     chart.with_projection(|mut pb| {
         pb.yaw = 0.3;
         pb.scale = 1.4;
