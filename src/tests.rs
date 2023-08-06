@@ -80,56 +80,54 @@ fn efd3d() {
     assert!(curve_diff(&target, TARGET3D) < EPS);
 }
 
+#[cfg(test)]
+fn get_area<const N: usize>(pts: &[[f64; N]]) -> [[f64; 2]; N] {
+    pts.iter()
+        .fold([[f64::INFINITY, f64::NEG_INFINITY]; N], |mut b, c| {
+            b.iter_mut()
+                .zip(c.iter())
+                .for_each(|(b, c)| *b = [b[0].min(*c), b[1].max(*c)]);
+            b
+        })
+}
+
 #[test]
 #[cfg(feature = "std")]
-fn plot() -> Result<(), Box<dyn std::error::Error>> {
+fn plot2d() -> Result<(), Box<dyn std::error::Error>> {
     use crate::*;
     use plotters::prelude::*;
 
-    pub fn bounding_box<'a>(pts: impl IntoIterator<Item = &'a [f64; 2]>) -> [f64; 4] {
-        let [mut x_min, mut x_max] = [&f64::INFINITY, &-f64::INFINITY];
-        let [mut y_min, mut y_max] = [&f64::INFINITY, &-f64::INFINITY];
-        for [x, y] in pts {
-            if x < x_min {
-                x_min = x;
-            }
-            if x > x_max {
-                x_max = x;
-            }
-            if y < y_min {
-                y_min = y;
-            }
-            if y > y_max {
-                y_max = y;
-            }
-        }
+    fn bounding_box(pts: &[[f64; 2]]) -> [f64; 4] {
+        let [[x_min, x_max], [y_min, y_max]] = get_area(pts);
         let dx = (x_max - x_min).abs();
         let dy = (y_max - y_min).abs();
         if dx > dy {
             let cen = (y_min + y_max) * 0.5;
             let r = dx * 0.5;
             let mg = dx * 0.1;
-            [*x_min - mg, *x_max + mg, cen - r - mg, cen + r + mg]
+            [x_min - mg, x_max + mg, cen - r - mg, cen + r + mg]
         } else {
             let cen = (x_min + x_max) * 0.5;
             let r = dy * 0.5;
             let mg = dy * 0.1;
-            [cen - r - mg, cen + r + mg, *y_min - mg, *y_max + mg]
+            [cen - r - mg, cen + r + mg, y_min - mg, y_max + mg]
         }
     }
 
-    let coeff =
-        Coeff2::from_column_slice(&[12., 35., 35., 13., 5., 21., 21., 5., 1., 12., 12., 1.]);
+    #[rustfmt::skip]
+    let coeff = Coeff2::from_column_slice(&[
+        12., 35., 35., 13.,
+        5., 21., 21., 5.,
+        1., 12., 12., 1.,
+    ]);
     let efd = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
     let path = efd.generate(360);
     let [x_min, x_max, y_min, y_max] = bounding_box(&path);
-    let b = SVGBackend::new("test.svg", (1200, 1200));
+    let b = SVGBackend::new("test2d.svg", (1200, 1200));
     let root = b.into_drawing_area();
     root.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&root)
-        .set_label_area_size(LabelAreaPosition::Left, (8).percent())
-        .set_label_area_size(LabelAreaPosition::Bottom, (4).percent())
-        .margin((8).percent())
+        .margin(0)
         .build_cartesian_2d(x_min..x_max, y_min..y_max)?;
     let p0 = path[0];
     chart.draw_series([Circle::new((p0[0], p0[1]), 3, BLACK.filled())])?;
@@ -143,25 +141,102 @@ fn plot() -> Result<(), Box<dyn std::error::Error>> {
         let ellipse = (0..100)
             .map(|i| {
                 let t = i as f64 * std::f64::consts::TAU / 100.;
-                let v = na::matrix![t.cos(), t.sin()] * m;
+                let v = m * na::matrix![t.cos(); t.sin()];
                 [v[0], v[1]]
             })
-            .map(|[x, y]| {
-                let [x, y] = trans.transform_pt(&[x, y]);
-                (x, y)
-            });
+            .map(|[x, y]| trans.transform_pt(&[x, y]).into());
         let p1 = c0;
         c0[0] += m[(0, 0)];
         c0[1] += m[(1, 0)];
-        let p2 = c0;
-        let [x1, y1] = trans0.transform_pt(&p1);
-        let [x2, y2] = trans0.transform_pt(&p2);
-        chart.draw_series([Circle::new((x2, y2), 5, RED.filled())])?;
-        chart.draw_series(LineSeries::new([(x1, y1), (x2, y2)], RED.stroke_width(5)))?;
+        let p1 = trans0.transform_pt(&p1).into();
+        let p2 = trans0.transform_pt(&c0).into();
+        chart.draw_series([Circle::new(p2, 5, RED.filled())])?;
+        chart.draw_series(LineSeries::new([p1, p2], RED.stroke_width(5)))?;
         chart.draw_series(LineSeries::new(ellipse, RED.stroke_width(7)))?;
     }
     chart.draw_series(LineSeries::new(
         path.into_iter().map(|[x, y]| (x, y)),
+        BLACK.stroke_width(10),
+    ))?;
+    Ok(())
+}
+
+#[test]
+#[cfg(feature = "std")]
+fn plot3d() -> Result<(), Box<dyn std::error::Error>> {
+    use crate::*;
+    use plotters::prelude::*;
+
+    fn bounding_box(pts: &[[f64; 3]]) -> [f64; 6] {
+        let mut b = get_area(pts);
+        let center = b.map(|[min, max]| (min + max) * 0.5);
+        let width = b
+            .iter()
+            .map(|[min, max]| (max - min).abs())
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
+        b.iter_mut().zip(center).for_each(|([min, max], c)| {
+            *min = c - width * 0.5;
+            *max = c + width * 0.5;
+        });
+        let [[x_min, x_max], [y_min, y_max], [z_min, z_max]] = b;
+        [x_min, x_max, y_min, y_max, z_min, z_max]
+    }
+
+    #[rustfmt::skip]
+    let coeff = Coeff3::from_column_slice(&[
+        12., 35., 20., 12., 5., 21.,
+        21., 5., 1., 12., 12., 1.,
+        3., 7., 12., 3., 5., 21.,
+    ]);
+    let efd = Efd3::try_from_coeffs_unnorm(coeff).unwrap();
+    let path = efd.generate(360);
+    let [x_min, x_max, y_min, y_max, z_min, z_max] = bounding_box(&path);
+    let b = SVGBackend::new("test3d.svg", (1200, 1200));
+    let root = b.into_drawing_area();
+    root.fill(&WHITE)?;
+    let mut chart = ChartBuilder::on(&root).margin(0).build_cartesian_3d(
+        x_min..x_max,
+        y_min..y_max,
+        z_min..z_max,
+    )?;
+    chart.with_projection(|mut pb| {
+        pb.yaw = 0.3;
+        pb.scale = 1.4;
+        pb.into_matrix()
+    });
+    let p0 = path[0];
+    chart.draw_series([Circle::new((p0[0], p0[1], p0[2]), 3, BLACK.filled())])?;
+    for (p, color) in [
+        ((10., 0., 0.), RED),
+        ((0., 10., 0.), BLUE),
+        ((0., 0., 10.), GREEN),
+    ] {
+        chart.draw_series(LineSeries::new([(0., 0., 0.), p], color.stroke_width(10)))?;
+    }
+    let trans0 = efd.as_trans();
+    let mut c0 = [0.; 3];
+    for m in efd.coeffs_iter() {
+        let trans = trans0 * Transform3::new(c0, na::UnitQuaternion::identity(), 1.);
+        let ellipse = (0..100)
+            .map(|i| {
+                let t = i as f64 * std::f64::consts::TAU / 100.;
+                let v = m * na::matrix![t.cos(); t.sin()];
+                [v[0], v[1], v[2]]
+            })
+            .map(|[x, y, z]| trans.transform_pt(&[x, y, z]).into());
+        let p1 = c0;
+        c0[0] += m[(0, 0)];
+        c0[1] += m[(1, 0)];
+        c0[2] += m[(2, 0)];
+        let p1 = trans0.transform_pt(&p1).into();
+        let p2 = trans0.transform_pt(&c0).into();
+        chart.draw_series([Circle::new(p2, 5, RED.filled())])?;
+        chart.draw_series(LineSeries::new([p1, p2], RED.stroke_width(5)))?;
+        chart.draw_series(LineSeries::new(ellipse, RED.stroke_width(7)))?;
+    }
+    chart.draw_series(LineSeries::new(
+        path.into_iter().map(|c| c.into()),
         BLACK.stroke_width(10),
     ))?;
     Ok(())
