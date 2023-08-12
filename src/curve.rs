@@ -28,7 +28,9 @@ pub trait Curve<A: Clone>: Sized {
 
     /// Close the curve by the first element.
     ///
-    /// Panic with empty curve.
+    /// # Panics
+    ///
+    /// Panics if the curve is empty.
     #[must_use]
     fn closed_lin(self) -> Vec<A> {
         let mut c = self.to_curve();
