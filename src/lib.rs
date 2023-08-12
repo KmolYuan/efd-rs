@@ -1,9 +1,9 @@
 #![doc = include_str!("../README.md")]
 //! # Features
 //!
-//! This crate support no-std solution via using "libm", a crate provide
-//! pure-rust math functions. Disable the "std" feature will automatic enable
-//! it.
+//! This crate supports no-std solution via using "libm", a crate provides
+//! pure-rust math functions. Disable the "std" feature will automatically
+//! enable it.
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
 #![cfg_attr(not(feature = "std"), no_std)]
