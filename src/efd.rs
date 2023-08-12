@@ -190,6 +190,16 @@ impl<D: EfdDim> Efd<D> {
         self
     }
 
+    /// Force normalize the coefficients.
+    ///
+    /// If the coefficients are constructed by `*_unnorm` or `*_unchecked`
+    /// methods, this method will normalize them.
+    pub fn normalized(self) -> Self {
+        let Self { mut coeffs, trans } = self;
+        let trans_new = D::coeff_norm(&mut coeffs);
+        Self { coeffs, trans: trans.apply(&trans_new) }
+    }
+
     /// Consume self and return a raw array of the coefficients.
     #[must_use]
     pub fn into_inner(self) -> Coeff<D> {
