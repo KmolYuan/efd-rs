@@ -1,3 +1,4 @@
+//! Curve trait and its implementations.
 use crate::{CoordHint, EfdDim, Trans};
 use alloc::vec::Vec;
 

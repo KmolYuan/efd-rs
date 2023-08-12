@@ -68,7 +68,7 @@ impl<D: EfdDim> Efd<D> {
     /// # Safety
     ///
     /// Other operations might panic if the harmonic is zero.
-    pub unsafe fn from_coeffs_unchecked(coeffs: Coeff<D>) -> Self {
+    pub fn from_coeffs_unchecked(coeffs: Coeff<D>) -> Self {
         Self { coeffs, trans: Transform::identity() }
     }
 

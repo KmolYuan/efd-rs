@@ -1,3 +1,4 @@
+//! Utility functions for the library.
 use crate::*;
 use alloc::vec::Vec;
 

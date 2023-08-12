@@ -1,3 +1,4 @@
+//! Dimension specific implementation.
 use crate::*;
 use core::f64::consts::{PI, TAU};
 
