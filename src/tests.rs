@@ -185,7 +185,7 @@ fn plot3d() -> Result<(), Box<dyn std::error::Error>> {
 
     #[rustfmt::skip]
     let coeff = Coeff3::from_column_slice(&[
-        12., 35., 20., 12., 5., 21.,
+        12., 35., 20., 22., 5., 21.,
         21., 5., 1., 12., 12., 1.,
         3., 7., 12., 3., 5., 21.,
     ]);
