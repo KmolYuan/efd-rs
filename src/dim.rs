@@ -1,3 +1,4 @@
+//! Dimension specific implementation.
 use crate::*;
 use core::f64::consts::{PI, TAU};
 
@@ -170,10 +171,8 @@ where
         m.tr_mul(psi.matrix()).transpose_to(&mut m);
     }
     // Scale factor
-    // |u1|
-    let scale = CCKernel::<DIM>::from_slice(coeffs.column(0).data.into_slice())
-        .column(0)
-        .norm();
+    // |u1| == a1 (after rotation)
+    let scale = coeffs[(0, 0)].abs();
     *coeffs /= scale;
     Transform::new(Default::default(), psi.into(), scale)
 }

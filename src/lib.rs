@@ -1,19 +1,27 @@
 #![doc = include_str!("../README.md")]
 //! # Features
 //!
-//! This crate support no-std solution via using "libm", a crate provide
-//! pure-rust math functions. Disable the "std" feature will automatic enable
-//! it.
+//! This crate supports no-std solution via using "libm", a crate provides
+//! pure-rust math functions. Disable the "std" feature will automatically
+//! enable it.
+//!
+//! ```toml
+//! default-features = false
+//! ```
 #![warn(missing_docs)]
+#![forbid(unsafe_code)]
 #![cfg_attr(not(feature = "std"), no_std)]
+
 extern crate alloc;
 pub extern crate nalgebra as na;
 
-pub use crate::{curve::*, efd::*, efd_dim::*, transform::*, utility::*};
+pub use crate::efd::*;
+#[doc(no_inline)]
+pub use crate::{curve::*, dim::*, transform::*, utility::*};
 
-mod curve;
+pub mod curve;
+pub mod dim;
 mod efd;
-mod efd_dim;
 pub mod tests;
-mod transform;
-mod utility;
+pub mod transform;
+pub mod utility;

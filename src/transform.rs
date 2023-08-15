@@ -1,3 +1,4 @@
+//! Transformation type.
 use crate::*;
 use alloc::vec::Vec;
 

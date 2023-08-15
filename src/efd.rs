@@ -65,10 +65,16 @@ impl<D: EfdDim> Efd<D> {
     /// The array size is (harmonic) x (dimension x 2). The dimension is
     /// [`CoordHint::Dim`].
     ///
-    /// # Safety
+    /// Zero harmonic is allowed but meaningless. If the harmonic is zero, some
+    /// operations will panic.
     ///
-    /// Other operations might panic if the harmonic is zero.
-    pub unsafe fn from_coeffs_unchecked(coeffs: Coeff<D>) -> Self {
+    /// ```
+    /// use efd::{Coeff2, Efd2};
+    /// let coeff = Coeff2::from_column_slice(&[]);
+    /// let path = Efd2::from_coeffs_unchecked(coeff).generate(20);
+    /// assert_eq!(path.len(), 0);
+    /// ```
+    pub fn from_coeffs_unchecked(coeffs: Coeff<D>) -> Self {
         Self { coeffs, trans: Transform::identity() }
     }
 
@@ -77,9 +83,9 @@ impl<D: EfdDim> Efd<D> {
     /// 1. The initial harmonic number is the same as the curve point.
     /// 1. Fourier Power Anaysis (FPA) uses 99.99% threshold.
     ///
-    /// # Panic
+    /// # Panics
     ///
-    /// Panic if the curve length is not greater than 1 in debug mode. This
+    /// Panics if the curve length is not greater than 1 in debug mode. This
     /// function check the lengths only. Please use [`valid_curve()`] to
     /// verify the curve if there has NaN input.
     #[must_use]
@@ -128,9 +134,9 @@ impl<D: EfdDim> Efd<D> {
     /// 1. The initial harmonic is decide by user.
     /// 1. No harmonic reduced. Please call [`Efd::fourier_power_anaysis()`].
     ///
-    /// # Panic
+    /// # Panics
     ///
-    /// Panic if the specific harmonic is zero or the curve length is not
+    /// Panics if the specific harmonic is zero or the curve length is not
     /// greater than 1 in the **debug mode**. This function check the lengths
     /// only. Please use [`valid_curve()`] to verify the curve if there has
     /// NaN input.
@@ -171,6 +177,10 @@ impl<D: EfdDim> Efd<D> {
     /// undersampling.
     ///
     /// The default threshold is 99.99%.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the threshold is not in 0..1, or the harmonic is zero.
     #[must_use]
     pub fn fourier_power_anaysis<T>(mut self, threshold: T) -> Self
     where
@@ -188,6 +198,20 @@ impl<D: EfdDim> Efd<D> {
         };
         self.coeffs.resize_horizontally_mut(harmonic, 0.);
         self
+    }
+
+    /// Force normalize the coefficients.
+    ///
+    /// If the coefficients are constructed by `*_unnorm` or `*_unchecked`
+    /// methods, this method will normalize them.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the harmonic is zero.
+    pub fn normalized(self) -> Self {
+        let Self { mut coeffs, trans } = self;
+        let trans_new = D::coeff_norm(&mut coeffs);
+        Self { coeffs, trans: trans.apply(&trans_new) }
     }
 
     /// Consume self and return a raw array of the coefficients.
@@ -298,9 +322,9 @@ impl<D: EfdDim> Efd<D> {
 
     /// Generate the described curve. (`theta=TAU`)
     ///
-    /// # Panic
+    /// # Panics
     ///
-    /// The number of the points `n` must larger than 1.
+    /// Panics if the number of the points `n` is less than 2.
     #[must_use]
     pub fn generate(&self, n: usize) -> Vec<Coord<D>> {
         self.generate_in(n, TAU)
@@ -308,9 +332,9 @@ impl<D: EfdDim> Efd<D> {
 
     /// Generate a half of the described curve. (`theta=PI`)
     ///
-    /// # Panic
+    /// # Panics
     ///
-    /// The number of the points `n` must larger than 1.
+    /// Panics if the number of the points `n` is less than 2.
     #[must_use]
     pub fn generate_half(&self, n: usize) -> Vec<Coord<D>> {
         self.generate_in(n, PI)
@@ -318,9 +342,9 @@ impl<D: EfdDim> Efd<D> {
 
     /// Generate the described curve in a specific angle `theta` (`0..=TAU`).
     ///
-    /// # Panic
+    /// # Panics
     ///
-    /// The number of the points `n` must larger than 1.
+    /// Panics if the number of the points `n` is less than 2.
     #[must_use]
     pub fn generate_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
         let mut curve = self.generate_norm_in(n, theta);
@@ -332,9 +356,9 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// Normalized curve is **without** transformation.
     ///
-    /// # Panic
+    /// # Panics
     ///
-    /// The number of the points `n` must larger than 1.
+    /// Panics if the number of the points `n` is less than 2.
     #[must_use]
     pub fn generate_norm_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
         assert!(n > 1, "n ({n}) must larger than 1");
@@ -348,7 +372,7 @@ impl<D: EfdDim> Efd<D> {
                 CKernel::<D>::from_slice(c.as_slice()) * t
             })
             .reduce(|a, b| a + b)
-            .unwrap()
+            .unwrap_or_else(|| na::OMatrix::<f64, Dim<D>, na::Dyn>::from_vec(Vec::new()))
             .column_iter()
             .map(Coord::<D>::to_coord)
             .collect()
