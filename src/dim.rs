@@ -60,14 +60,7 @@ impl EfdDim for D2 {
     type Trans = T2;
 
     fn coeff_norm(coeffs: &mut Coeff<Self>) -> Transform<Self::Trans> {
-        impl_norm(coeffs, |m| {
-            // Simplified from:
-            //
-            // let u = m.column(0).normalize();
-            // let v = m.column(1).normalize();
-            // na::Rotation2::from_basis_unchecked(&[u, v])
-            na::Rotation2::new(m[(1, 0)].atan2(m[(0, 0)]))
-        })
+        impl_norm(coeffs, |m| na::Rotation2::new(m[(1, 0)].atan2(m[(0, 0)])))
     }
 }
 
@@ -77,9 +70,15 @@ impl EfdDim for D3 {
     fn coeff_norm(coeffs: &mut Coeff<Self>) -> Transform<Self::Trans> {
         impl_norm(coeffs, |m| {
             let u = m.column(0).normalize();
-            let v = m.column(1).normalize();
-            let w = u.cross(&v);
-            na::Rotation3::from_basis_unchecked(&[u, v, w])
+            if let Some(v) = m.column(1).try_normalize(f64::EPSILON) {
+                let w = u.cross(&v);
+                na::Rotation3::from_basis_unchecked(&[u, v, w])
+            } else {
+                // Open curve, `v` is zero vector
+                let v = na::Vector3::x();
+                let axis = na::UnitVector3::new_unchecked(u.cross(&v));
+                na::Rotation3::from_axis_angle(&axis, u.dot(&v))
+            }
         })
     }
 }
