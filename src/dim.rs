@@ -76,7 +76,7 @@ impl EfdDim for D3 {
             } else {
                 // Open curve, `v` is zero vector
                 let v = na::Vector3::x();
-                na::Rotation3::from_axis_angle(&na::Unit::new_unchecked(u.cross(&v)), u.dot(&v))
+                na::Rotation3::from_scaled_axis(u.cross(&v) * u.dot(&v).acos())
             }
         })
     }
