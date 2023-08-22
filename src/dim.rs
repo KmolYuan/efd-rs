@@ -95,8 +95,8 @@ fn impl_coeff<T: Trans>(
     let dxyz = diff(curve_arr);
     let dt = dxyz.map(pow2).row_sum().map(f64::sqrt);
     let t = cumsum(dt.clone()).insert_column(0, 0.);
-    let zt = t[t.len() - 1] * if is_open { 2. } else { 1. };
-    let scalar = zt / (PI * PI) * if is_open { 1. } else { 0.5 };
+    let zt = t[t.len() - 1];
+    let scalar = zt / (PI * PI) * if is_open { 2. } else { 0.5 };
     let phi = &t * TAU / zt;
     // Coefficients (2dim * N)
     // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
@@ -111,12 +111,13 @@ fn impl_coeff<T: Trans>(
         dxyz.row_iter()
             .zip(c.iter_mut().take(dxyz.nrows()))
             .for_each(|(d, c)| *c = scalar * d.component_mul(&cos_phi).sum());
-        if !is_open {
-            let sin_phi = (phi_back.map(f64::sin) - phi_front.map(f64::sin)).component_div(&dt);
-            dxyz.row_iter()
-                .zip(c.iter_mut().skip(dxyz.nrows()))
-                .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
+        if is_open {
+            continue;
         }
+        let sin_phi = (phi_back.map(f64::sin) - phi_front.map(f64::sin)).component_div(&dt);
+        dxyz.row_iter()
+            .zip(c.iter_mut().skip(dxyz.nrows()))
+            .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
     }
     let tdt = t.columns_range(1..).component_div(&dt);
     let c = 0.5 * diff(t.map(pow2)).component_div(&dt);

@@ -33,13 +33,13 @@ fn efd2d() {
         .collect::<Vec<_>>();
     let efd_half = Efd2::from_curve(path, false);
     assert!(efd.l1_norm(&efd_half) < EPS);
+    assert_eq!(efd.harmonic(), 8);
     // Test transformation
     let trans = efd.as_trans();
     assert_abs_diff_eq!(trans.trans()[0], -1.248409055632358);
     assert_abs_diff_eq!(trans.trans()[1], 55.26080122817753);
     assert_abs_diff_eq!(trans.rot().angle(), 0.6423416350347734);
     assert_abs_diff_eq!(trans.scale(), 48.16765830752243);
-    assert_eq!(efd.harmonic(), 8);
     // Test normalized
     let norm = efd.generate_norm_in(NORM.len(), TAU);
     assert!(curve_diff(&norm, NORM) < EPS);
@@ -64,6 +64,7 @@ fn efd3d() {
         .collect::<Vec<_>>();
     let efd_half = Efd3::from_curve_nyquist(path, false);
     assert!(efd.l1_norm(&efd_half) < EPS);
+    assert_eq!(efd.harmonic(), 5);
     // Test transformation
     let trans = efd.as_trans();
     assert_abs_diff_eq!(trans.trans()[0], 0.7239345388499508);
@@ -71,7 +72,6 @@ fn efd3d() {
     assert_abs_diff_eq!(trans.trans()[2], 0.49979194975846675);
     assert_abs_diff_eq!(trans.rot().angle(), 2.9160714030359416);
     assert_abs_diff_eq!(trans.scale(), 0.5629099155595344);
-    assert_eq!(efd.harmonic(), 5);
     // Test normalized
     let norm = efd.generate_norm_in(NORM3D.len(), TAU);
     assert!(curve_diff(&norm, NORM3D) < EPS);
