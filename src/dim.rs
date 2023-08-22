@@ -95,8 +95,8 @@ fn impl_coeff<T: Trans>(
     let dxyz = diff(curve_arr);
     let dt = dxyz.map(pow2).row_sum().map(f64::sqrt);
     let t = cumsum(dt.clone()).insert_column(0, 0.);
-    let zt = t[t.len() - 1];
-    let scalar = zt / (PI * PI) * if is_open { 2. } else { 0.5 };
+    let zt = t[t.len() - 1] * if is_open { 2. } else { 1. };
+    let scalar = zt / (PI * PI) * if is_open { 1. } else { 0.5 };
     let phi = &t * TAU / zt;
     // Coefficients (2dim * N)
     // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
