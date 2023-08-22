@@ -95,9 +95,9 @@ fn impl_coeff<T: Trans>(
     let dxyz = diff(curve_arr);
     let dt = dxyz.map(pow2).row_sum().map(f64::sqrt);
     let t = cumsum(dt.clone()).insert_column(0, 0.);
-    let zt = t[t.len() - 1] * if is_open { 2. } else { 1. };
-    let scalar = zt / (PI * PI) * if is_open { 1. } else { 0.5 };
-    let phi = &t * TAU / zt;
+    let zt = t[t.len() - 1];
+    let scalar = zt / (PI * PI) * if is_open { 2. } else { 0.5 };
+    let phi = &t * TAU / zt * if is_open { 0.5 } else { 1. };
     // Coefficients (2dim * N)
     // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
     let mut coeffs = MatrixRxX::<CCDim<T>>::zeros(harmonic);
@@ -126,8 +126,7 @@ fn impl_coeff<T: Trans>(
         .zip(center.flat_mut())
         .for_each(|(dxyz, oxyz)| {
             let xi = cumsum(dxyz) - dxyz.component_mul(&tdt);
-            *oxyz += (dxyz.component_mul(&c) + xi.component_mul(&dt)).sum() / zt
-                * if is_open { 2. } else { 1. };
+            *oxyz += (dxyz.component_mul(&c) + xi.component_mul(&dt)).sum() / zt;
         });
     (coeffs, Transform::new(center, Default::default(), 1.))
 }
