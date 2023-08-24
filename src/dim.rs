@@ -23,6 +23,7 @@ pub type CKernel<'a, D> = na::MatrixView<'a, f64, Dim<D>, na::U2>;
 /// A mutable matrix view of specific coefficients. (DIM * 2)
 pub type CKernelMut<'a, D> = na::MatrixViewMut<'a, f64, Dim<D>, na::U2>;
 
+type CCoeff<const DIM: usize> = na::OMatrix<f64, na::Const<DIM>, na::Dyn>;
 type CCKernel<'a, const DIM: usize> = na::MatrixView<'a, f64, na::Const<DIM>, na::U2>;
 type CCKernelMut<'a, const DIM: usize> = na::MatrixViewMut<'a, f64, na::Const<DIM>, na::U2>;
 type CCDim<T> = na::DimNameProd<<<T as Trans>::Coord as CoordHint>::Dim, na::U2>;
@@ -68,13 +69,22 @@ impl EfdDim for D3 {
     type Trans = T3;
 
     fn coeff_norm(coeffs: &mut Coeff<Self>) -> Transform<Self::Trans> {
-        impl_norm(coeffs, |m| {
-            let u = m.column(0).normalize();
-            if let Some(v) = m.column(1).try_normalize(f64::EPSILON) {
+        impl_norm(coeffs, |coeffs| {
+            let m1 = CCKernel::<3>::from_slice(coeffs.column(0).data.into_slice());
+            let u = m1.column(0).normalize();
+            if let Some(v) = m1.column(1).try_normalize(f64::EPSILON) {
+                // Closed curve, use `u` and `v` plane as basis
                 let w = u.cross(&v);
                 na::Rotation3::from_basis_unchecked(&[u, v, w])
+            } else if coeffs.ncols() > 1 {
+                // Open curve, `v` is zero vector, use `u1` and `u2` plane as basis
+                let m2 = CCKernel::<3>::from_slice(coeffs.column(1).data.into_slice());
+                // `w` is orthogonal to `u` and `u2`
+                let w = u.cross(&m2.column(0)).normalize();
+                let u2 = w.cross(&u);
+                na::Rotation3::from_basis_unchecked(&[u, u2, w])
             } else {
-                // Open curve, `v` is zero vector
+                // Open curve, one harmonic, just rotate `u` to x-axis
                 let (u, v) = (na::Vector3::x(), u);
                 na::Rotation3::from_scaled_axis(u.cross(&v).normalize() * u.dot(&v).acos())
             }
@@ -132,8 +142,8 @@ fn impl_coeff<T: Trans>(
 }
 
 fn impl_norm<T, const DIM: usize, const CDIM: usize>(
-    coeffs: &mut MatrixRxX<na::Const<CDIM>>,
-    get_psi: impl FnOnce(CCKernel<DIM>) -> na::Rotation<f64, DIM>,
+    coeffs: &mut CCoeff<CDIM>,
+    get_psi: impl FnOnce(&CCoeff<CDIM>) -> na::Rotation<f64, DIM>,
 ) -> Transform<T>
 where
     // const-generic assertion
@@ -163,7 +173,7 @@ where
     }
     // Rotation angle
     // m = psi' * m
-    let psi = get_psi(CCKernel::<DIM>::from_slice(coeffs.column(0).as_slice()));
+    let psi = get_psi(coeffs);
     for mut c in coeffs.column_iter_mut() {
         let mut m = CCKernelMut::<DIM>::from_slice(c.as_mut_slice());
         m.tr_mul(psi.matrix()).transpose_to(&mut m);

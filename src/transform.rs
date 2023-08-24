@@ -44,7 +44,7 @@ pub trait Trans {
 }
 
 /// Hint for transforming coordinate type to matrix.
-pub trait CoordHint: Clone + Default + PartialEq + Sized + 'static {
+pub trait CoordHint: Clone + core::fmt::Debug + Default + PartialEq + Sized + 'static {
     /// Dimension. Is a constant width.
     type Dim: na::DimNameMul<na::U2>;
     /// Flaten type.

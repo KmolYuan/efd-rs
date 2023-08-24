@@ -264,6 +264,12 @@ impl<D: EfdDim> Efd<D> {
         self.coeffs.ncols()
     }
 
+    /// Check if the coefficients have NaN.
+    #[must_use]
+    pub fn is_nan(&self) -> bool {
+        self.coeffs.iter().any(|x| x.is_nan())
+    }
+
     /// Square error.
     ///
     /// The coefficients will paded automatically if harmonic number is
