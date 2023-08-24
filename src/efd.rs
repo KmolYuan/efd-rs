@@ -85,7 +85,7 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// # Panics
     ///
-    /// Panics if the curve length is not greater than 1 in debug mode. This
+    /// Panics if the curve length is not greater than 2 in debug mode. This
     /// function check the lengths only. Please use [`valid_curve()`] to
     /// verify the curve if there has NaN input.
     #[must_use]
@@ -137,7 +137,7 @@ impl<D: EfdDim> Efd<D> {
     /// # Panics
     ///
     /// Panics if the specific harmonic is zero or the curve length is not
-    /// greater than 1 in the **debug mode**. This function check the lengths
+    /// greater than 2 in the **debug mode**. This function check the lengths
     /// only. Please use [`valid_curve()`] to verify the curve if there has
     /// NaN input.
     #[must_use]
@@ -147,7 +147,7 @@ impl<D: EfdDim> Efd<D> {
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         let curve = curve.as_curve();
-        debug_assert!(curve.len() > 1, "the curve length must greater than 1");
+        debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let (coeffs, trans) = D::get_coeff(curve, harmonic, is_open);
         Self { coeffs, trans }
     }
@@ -160,7 +160,7 @@ impl<D: EfdDim> Efd<D> {
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         let curve = curve.as_curve();
-        debug_assert!(curve.len() > 1, "the curve length must greater than 1");
+        debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let (coeffs, trans) = D::get_coeff_unnorm(curve, harmonic, is_open);
         Self { coeffs, trans }
     }
@@ -264,10 +264,13 @@ impl<D: EfdDim> Efd<D> {
         self.coeffs.ncols()
     }
 
-    /// Check if the coefficients have NaN.
+    /// Check if the coefficients are valid.
     #[must_use]
-    pub fn is_nan(&self) -> bool {
-        self.coeffs.iter().any(|x| x.is_nan())
+    pub fn is_valid(&self) -> bool {
+        self.harmonic() > 0
+            && !self
+                .coeffs_iter()
+                .any(|m| m.iter().all(|x| x.abs() < f64::EPSILON) || m.iter().any(|x| x.is_nan()))
     }
 
     /// Square error.
