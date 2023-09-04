@@ -10,22 +10,7 @@ Keyword Alias:
 + Elliptical Fourier Analysis (EFA)
 + Elliptical Fourier Function (EFF)
 
-Reference: Kuhl, FP and Giardina, CR (1982). Elliptic Fourier features of a closed contour. Computer graphics and image processing, 18(3), 236-258.
-
 This is an unofficial implementation.
-
-```bibtex
-@article{kuhl1982elliptic,
-  title={Elliptic Fourier features of a closed contour},
-  author={Kuhl, Frank P and Giardina, Charles R},
-  journal={Computer graphics and image processing},
-  volume={18},
-  number={3},
-  pages={236--258},
-  year={1982},
-  publisher={Elsevier}
-}
-```
 
 Example of re-describing a new closed curve:
 
@@ -42,7 +27,28 @@ assert!(efd::valid_curve(&curve).is_some());
 let described_curve = efd::Efd2::from_curve(curve, false).generate(20);
 ```
 
-Example images:
+## Bibliography
 
-![2d](https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2d.svg)
-![3d](https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/3d.svg)
+```plain
+Kuhl, FP and Giardina, CR (1982). Elliptic Fourier features of a closed contour. Computer graphics and image processing, 18(3), 236-258.
+```
+
+```bibtex
+@article{kuhl1982elliptic,
+  title={Elliptic Fourier features of a closed contour},
+  author={Kuhl, Frank P and Giardina, Charles R},
+  journal={Computer graphics and image processing},
+  volume={18},
+  number={3},
+  pages={236--258},
+  year={1982},
+  publisher={Elsevier}
+}
+```
+
+## Example Images
+
+<div>
+<img width="40%" alt="2d" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2d.svg"/>
+<img width="40%" alt="3d" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/3d.svg"/>
+</div>
