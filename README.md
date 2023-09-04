@@ -41,3 +41,8 @@ let curve = vec![
 assert!(efd::valid_curve(&curve).is_some());
 let described_curve = efd::Efd2::from_curve(curve, false).generate(20);
 ```
+
+Example images:
+
+![2d](https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2d.svg)
+![3d](https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/3d.svg)

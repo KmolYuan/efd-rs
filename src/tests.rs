@@ -143,7 +143,7 @@ fn plot2d() -> Result<(), Box<dyn std::error::Error>> {
     let efd = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
     let path = efd.generate(360);
     let [x_min, x_max, y_min, y_max] = bounding_box(&path);
-    let b = SVGBackend::new("test2d.svg", (1200, 1200));
+    let b = SVGBackend::new("img/2d.svg", (1200, 1200));
     let root = b.into_drawing_area();
     root.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&root).build_cartesian_2d(x_min..x_max, y_min..y_max)?;
@@ -212,7 +212,7 @@ fn plot3d() -> Result<(), Box<dyn std::error::Error>> {
     let efd = Efd3::try_from_coeffs_unnorm(coeff).unwrap();
     let path = efd.generate(360);
     let [x_min, x_max, y_min, y_max, z_min, z_max] = bounding_box(&path);
-    let b = SVGBackend::new("test3d.svg", (1200, 1200));
+    let b = SVGBackend::new("img/3d.svg", (1200, 1200));
     let root = b.into_drawing_area();
     root.fill(&WHITE)?;
     let mut chart =
