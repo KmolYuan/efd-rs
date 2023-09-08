@@ -16,13 +16,13 @@
 extern crate alloc;
 pub extern crate nalgebra as na;
 
+pub use crate::efd::*;
 #[doc(no_inline)]
-pub use crate::{curve::*, dim::*, transform::*, utility::*};
-pub use crate::{distance::*, efd::*};
+pub use crate::{curve::*, dim::*, distance::*, transform::*, utility::*};
 
 pub mod curve;
 pub mod dim;
-mod distance;
+pub mod distance;
 mod efd;
 pub mod tests;
 pub mod transform;

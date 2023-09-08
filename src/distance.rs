@@ -1,3 +1,4 @@
+//! Distance trait.
 use crate::{Efd, EfdDim};
 use alloc::vec::Vec;
 
