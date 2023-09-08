@@ -115,20 +115,6 @@ impl<D: EfdDim> Efd<D> {
             .fourier_power_anaysis(None)
     }
 
-    /// Same as [`Efd::from_curve()`], but use a customized threshold in Fourier
-    /// Power Anaysis (FPA).
-    #[must_use]
-    #[deprecated = "this method is rarely used"]
-    pub fn from_curve_threshold<C, T>(curve: C, is_open: bool, threshold: T) -> Self
-    where
-        C: Curve<Coord<D>>,
-        Option<f64>: From<T>,
-    {
-        let len = curve.as_curve().len();
-        Self::from_curve_harmonic(curve, is_open, if is_open { len * 2 } else { len })
-            .fourier_power_anaysis(threshold)
-    }
-
     /// Manual coefficient calculation.
     ///
     /// 1. The initial harmonic is decide by user.
@@ -273,42 +259,10 @@ impl<D: EfdDim> Efd<D> {
                 .any(|m| m.iter().all(|x| x.abs() < f64::EPSILON) || m.iter().any(|x| x.is_nan()))
     }
 
-    /// Square error.
-    ///
-    /// The coefficients will paded automatically if harmonic number is
-    /// different.
+    /// Calculate the L1 distance between two coefficient set.
     #[must_use]
-    pub fn square_err(&self, rhs: &Self) -> f64 {
-        padding(self, rhs, |a, b| (a - b).map(pow2).sum())
-    }
-
-    /// L1 norm error, aka Manhattan distance.
-    ///
-    /// The coefficients will paded automatically if harmonic number is
-    /// different.
-    #[must_use]
-    pub fn l1_norm(&self, rhs: &Self) -> f64 {
-        padding(self, rhs, |a, b| (a - b).map(f64::abs).sum())
-    }
-
-    /// L2 norm error, aka Euclidean distance.
-    ///
-    /// The coefficients will paded automatically if harmonic number is
-    /// different.
-    #[must_use]
-    pub fn l2_norm(&self, rhs: &Self) -> f64 {
-        padding(self, rhs, |a, b| (a - b).map(pow2).sum().sqrt())
-    }
-
-    /// Lp norm error, slower than [`Self::l1_norm()`] and [`Self::l2_norm()`].
-    ///
-    /// The coefficients will paded automatically if harmonic number is
-    /// different.
-    #[must_use]
-    pub fn lp_norm(&self, rhs: &Self, p: i32) -> f64 {
-        padding(self, rhs, |a, b| {
-            (a - b).map(|x| x.abs().powi(p)).sum().powf(1. / p as f64)
-        })
+    pub fn distance(&self, rhs: &Self) -> f64 {
+        self.l1_norm(rhs)
     }
 
     /// Reverse the order of described curve then return a mutable reference.
@@ -411,24 +365,5 @@ impl<D: EfdDim> core::fmt::Debug for CoeffFmt<'_, D> {
             .column_iter()
             .map(|c| c.iter().copied().collect::<Vec<_>>());
         f.debug_list().entries(entries).finish()
-    }
-}
-
-fn padding<D, F>(a: &Efd<D>, b: &Efd<D>, f: F) -> f64
-where
-    D: EfdDim,
-    F: Fn(&Coeff<D>, &Coeff<D>) -> f64,
-{
-    use core::cmp::Ordering::*;
-    match a.harmonic().cmp(&b.harmonic()) {
-        Equal => f(&a.coeffs, &b.coeffs),
-        Greater => {
-            let b_coeffs = b.coeffs.clone().resize_horizontally(a.harmonic(), 0.);
-            f(&a.coeffs, &b_coeffs)
-        }
-        Less => {
-            let a_coeffs = a.coeffs.clone().resize_horizontally(b.harmonic(), 0.);
-            f(&a_coeffs, &b.coeffs)
-        }
     }
 }
