@@ -9,11 +9,13 @@ pub trait Distance: Sized {
     fn err_buf(&self, rhs: &Self) -> Vec<f64>;
 
     /// Calculate the square error.
+    #[must_use]
     fn square_err(&self, rhs: &Self) -> f64 {
         self.err_buf(rhs).into_iter().map(|x| x * x).sum()
     }
 
     /// Calculate the L0 norm of the error.
+    #[must_use]
     fn l0_norm(&self, rhs: &Self) -> f64 {
         let err_buf = self.err_buf(rhs);
         let len = err_buf.len();
@@ -25,16 +27,19 @@ pub trait Distance: Sized {
     }
 
     /// Calculate the L1 norm of the error.
+    #[must_use]
     fn l1_norm(&self, rhs: &Self) -> f64 {
         self.err_buf(rhs).into_iter().map(|x| x.abs()).sum()
     }
 
     /// Calculate the L2 norm of the error.
+    #[must_use]
     fn l2_norm(&self, rhs: &Self) -> f64 {
         self.square_err(rhs).sqrt()
     }
 
     /// Calculate the Lp norm of the error.
+    #[must_use]
     fn lp_norm(&self, rhs: &Self, p: i32) -> f64 {
         self.err_buf(rhs)
             .into_iter()

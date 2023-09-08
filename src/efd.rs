@@ -260,6 +260,8 @@ impl<D: EfdDim> Efd<D> {
     }
 
     /// Calculate the L1 distance between two coefficient set.
+    ///
+    /// For more distance methods, please see [`Distance`].
     #[must_use]
     pub fn distance(&self, rhs: &Self) -> f64 {
         self.l1_norm(rhs)

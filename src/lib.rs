@@ -1,4 +1,5 @@
 #![doc = include_str!("../README.md")]
+//!
 //! # Features
 //!
 //! This crate supports no-std solution via using "libm", a crate provides
