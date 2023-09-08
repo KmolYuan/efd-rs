@@ -1,4 +1,5 @@
 use crate::{Efd, EfdDim};
+use alloc::vec::Vec;
 
 /// Be able to calculate the distance between two instances.
 ///
@@ -57,10 +58,10 @@ impl<const N: usize> Distance for [f64; N] {
 
 impl<D: EfdDim> Distance for Efd<D> {
     fn err_buf(&self, rhs: &Self) -> Vec<f64> {
-        use std::cmp::Ordering::*;
+        use core::cmp::Ordering::*;
         let a = self.coeffs();
         let b = rhs.coeffs();
-        let padding = std::iter::repeat(&0.);
+        let padding = core::iter::repeat(&0.);
         match a.len().cmp(&b.len()) {
             Less => b
                 .iter()
