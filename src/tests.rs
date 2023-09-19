@@ -101,6 +101,7 @@ fn efd3d() {
 }
 
 #[cfg(test)]
+#[cfg(feature = "std")]
 fn get_area<const N: usize>(pts: &[[f64; N]]) -> [[f64; 2]; N] {
     pts.iter()
         .fold([[f64::INFINITY, f64::NEG_INFINITY]; N], |mut b, c| {
