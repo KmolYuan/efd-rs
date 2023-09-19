@@ -41,7 +41,7 @@ where
     C: Curve<[f64; DIM]>,
 {
     let c_ref = curve.as_curve();
-    (c_ref.len() > 1 && !c_ref.iter().flatten().any(|x| x.is_infinite())).then_some(curve)
+    (c_ref.len() > 2 && c_ref.iter().flatten().all(|x| x.is_finite())).then_some(curve)
 }
 
 macro_rules! impl_curve_diff {
