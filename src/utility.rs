@@ -39,15 +39,15 @@ pub fn valid_curve<C, const DIM: usize>(curve: C) -> Option<C>
 where
     C: Curve<[f64; DIM]>,
 {
-    let c_ref = curve.as_curve();
-    (c_ref.len() > 2 && c_ref.iter().flatten().all(|x| x.is_finite())).then_some(curve)
+    let c = curve.as_curve();
+    (c.len() > 2 && c.iter().flatten().all(|x| x.is_finite())).then_some(curve)
 }
 
 macro_rules! impl_curve_diff {
     ($($(#[$meta:meta])+ fn $name:ident($($arg:ident:$ty:ty),*) { ($($expr:expr),+) })+) => {$(
         $(#[$meta])+
         #[must_use]
-        pub fn $name<A: CoordHint>( a: &[A], b: &[A], $($arg:$ty),*) -> f64 {
+        pub fn $name<A: CoordHint>(a: &[A], b: &[A], $($arg:$ty),*) -> f64 {
             curve_diff_res_norm(a, b, $($expr),+)
         }
     )+};
