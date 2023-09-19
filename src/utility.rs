@@ -14,7 +14,6 @@ where
     S: na::Storage<f64, R, C>,
     na::DefaultAllocator: na::allocator::Allocator<f64, R, C>,
 {
-    let arr = arr.into_owned();
     let head = arr.columns_range(..arr.ncols() - 1);
     let tail = arr.columns_range(1..);
     tail - head
