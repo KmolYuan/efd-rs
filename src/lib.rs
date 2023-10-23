@@ -2,12 +2,18 @@
 //!
 //! # Features
 //!
-//! This crate supports no-std solution via using "libm", a crate provides
-//! pure-rust math functions. Disable the "std" feature will automatically
+//! This crate supports no-std solution. Disable the "std" feature will
 //! enable it.
 //!
 //! ```toml
 //! default-features = false
+//! ```
+//!
+//! An extra `curve_diff` features provides some functions to calculate the
+//! difference between two curves. Requires the `interp` crate.
+//!
+//! ```toml
+//! features = ["curve_diff"]
 //! ```
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
