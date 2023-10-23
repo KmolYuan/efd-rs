@@ -97,12 +97,11 @@ fn impl_coeff<T: Trans>(
     harmonic: usize,
     is_open: bool,
 ) -> (MatrixRxX<CCDim<T>>, Transform<T>) {
-    let curve_arr = if is_open {
+    let dxyz = diff(if is_open || curve.first() == curve.last() {
         to_mat(curve)
     } else {
         to_mat(curve.closed_lin())
-    };
-    let dxyz = diff(curve_arr);
+    });
     let dt = dxyz.map(pow2).row_sum().map(f64::sqrt);
     let t = cumsum(dt.clone()).insert_column(0, 0.);
     let zt = t[t.len() - 1];
