@@ -47,7 +47,7 @@ fn efd2d() {
     let path = PATH
         .iter()
         .cycle()
-        .skip(0)
+        .skip(PATH.len() / 2)
         .take(PATH.len())
         .copied()
         .collect::<Vec<_>>();
