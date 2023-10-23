@@ -94,18 +94,20 @@ impl<D: EfdDim> Efd<D> {
     /// of itself. For example,
     ///
     /// ```no_run
-    /// Efd2::from_curve(path_open, true)
+    /// # let path_open = [];
+    /// let efd = efd::Efd2::from_curve(path_open, true);
     /// ```
     ///
     /// is equivalent to
     ///
     /// ```no_run
+    /// # let path_open = [];
     /// let path_closed = path_open
     ///     .iter()
     ///     .chain(path_open.iter().rev().skip(1))
     ///     .cloned()
     ///     .collect::<Vec<_>>();
-    /// Efd2::from_curve(path_closed, false)
+    /// let efd = efd::Efd2::from_curve(path_closed, false);
     /// ```
     ///
     /// but not actually increase the data size.

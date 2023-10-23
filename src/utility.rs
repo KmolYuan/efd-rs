@@ -2,12 +2,14 @@
 use crate::*;
 use alloc::vec::Vec;
 
-#[inline(always)]
+// Only used in "map" methods
+#[inline]
 pub(crate) fn pow2(x: f64) -> f64 {
     x * x
 }
 
-pub(crate) fn diff<R, C, S>(arr: na::Matrix<f64, R, C, S>) -> na::OMatrix<f64, R, na::Dyn>
+/// Differentiate an array.
+pub fn diff<R, C, S>(arr: na::Matrix<f64, R, C, S>) -> na::OMatrix<f64, R, na::Dyn>
 where
     R: na::DimName,
     C: na::Dim,
@@ -19,7 +21,8 @@ where
     tail - head
 }
 
-pub(crate) fn cumsum<R, C, S>(arr: na::Matrix<f64, R, C, S>) -> na::OMatrix<f64, R, C>
+/// Cumulative sum of an array. (Integral)
+pub fn cumsum<R, C, S>(arr: na::Matrix<f64, R, C, S>) -> na::OMatrix<f64, R, C>
 where
     R: na::Dim,
     C: na::Dim,

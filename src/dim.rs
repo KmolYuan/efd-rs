@@ -109,21 +109,20 @@ fn impl_coeff<T: Trans>(
     let phi = &t * TAU / zt * if is_open { 0.5 } else { 1. };
     // Coefficients (2dim * N)
     // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
+    let mut n = 0.;
     let mut coeffs = MatrixRxX::<CCDim<T>>::zeros(harmonic);
-    for (i, mut c) in coeffs.column_iter_mut().enumerate() {
-        let n = (i + 1) as f64;
+    for mut c in coeffs.column_iter_mut() {
+        n += 1.;
         let phi = &phi * n;
-        let phi_front = phi.columns_range(..phi.len() - 1);
-        let phi_back = phi.columns_range(1..);
         let scalar = scalar / (n * n);
-        let cos_phi = (phi_back.map(f64::cos) - phi_front.map(f64::cos)).component_div(&dt);
+        let cos_phi = diff(phi.map(f64::cos)).component_div(&dt);
         dxyz.row_iter()
             .zip(c.iter_mut().take(dxyz.nrows()))
             .for_each(|(d, c)| *c = scalar * d.component_mul(&cos_phi).sum());
         if is_open {
             continue;
         }
-        let sin_phi = (phi_back.map(f64::sin) - phi_front.map(f64::sin)).component_div(&dt);
+        let sin_phi = diff(phi.map(f64::sin)).component_div(&dt);
         dxyz.row_iter()
             .zip(c.iter_mut().skip(dxyz.nrows()))
             .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
