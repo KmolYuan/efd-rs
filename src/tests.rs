@@ -40,7 +40,6 @@ fn efd2d_open() {
 #[test]
 fn efd2d() {
     use crate::*;
-    use alloc::vec::Vec;
     use approx::assert_abs_diff_eq;
     let efd = Efd2::from_curve(PATH, false);
     // Test starting point
@@ -50,7 +49,7 @@ fn efd2d() {
         .skip(PATH.len() / 2)
         .take(PATH.len())
         .copied()
-        .collect::<Vec<_>>();
+        .collect::<alloc::vec::Vec<_>>();
     let efd_half = Efd2::from_curve(path, false);
     assert!(efd.l1_norm(&efd_half) < EPS);
     assert_eq!(efd.harmonic(), 8);
@@ -71,7 +70,6 @@ fn efd2d() {
 #[test]
 fn efd3d() {
     use crate::*;
-    use alloc::vec::Vec;
     use approx::assert_abs_diff_eq;
     let efd = Efd3::from_curve(PATH3D, false);
     // Test starting point
@@ -81,7 +79,7 @@ fn efd3d() {
         .skip(PATH3D.len() / 2)
         .take(PATH3D.len())
         .copied()
-        .collect::<Vec<_>>();
+        .collect::<alloc::vec::Vec<_>>();
     let efd_half = Efd3::from_curve_nyquist(path, false);
     assert!(efd.l1_norm(&efd_half) < EPS);
     assert_eq!(efd.harmonic(), 5);
