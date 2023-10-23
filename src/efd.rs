@@ -83,6 +83,33 @@ impl<D: EfdDim> Efd<D> {
     /// 1. The initial harmonic number is the same as the curve point.
     /// 1. Fourier Power Anaysis (FPA) uses 99.99% threshold.
     ///
+    /// # Tail End Closed
+    ///
+    /// If `curve.first() != curve.last()`, the curve will be automatically
+    /// closed when `is_open` is false.
+    ///
+    /// # Open Curve Option
+    ///
+    /// The open curve option is for the curve that duplicated a reversed part
+    /// of itself. For example,
+    ///
+    /// ```no_run
+    /// Efd2::from_curve(path_open, true)
+    /// ```
+    ///
+    /// is equivalent to
+    ///
+    /// ```no_run
+    /// let path_closed = path_open
+    ///     .iter()
+    ///     .chain(path_open.iter().rev().skip(1))
+    ///     .cloned()
+    ///     .collect::<Vec<_>>();
+    /// Efd2::from_curve(path_closed, false)
+    /// ```
+    ///
+    /// but not actually increase the data size.
+    ///
     /// # Panics
     ///
     /// Panics if the curve length is not greater than 2 in debug mode. This
