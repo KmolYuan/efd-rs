@@ -6,17 +6,10 @@ use core::f64::consts::{PI, TAU};
 pub const EPS: f64 = 2.2e-14;
 pub const RES: usize = 1000;
 
+/// Error between two curves, the length of the curves must be the same.
 pub fn curve_diff<const N: usize>(a: &[[f64; N]], b: &[[f64; N]]) -> f64 {
-    a.iter()
-        .zip(b)
-        .map(|(a, b)| {
-            a.iter()
-                .zip(b)
-                .map(|(a, b)| (a - b).powi(2))
-                .sum::<f64>()
-                .sqrt()
-        })
-        .sum::<f64>()
+    use crate::dist::Distance as _;
+    a.iter().zip(b).map(|(a, b)| a.l2_norm(b)).sum()
 }
 
 #[test]
@@ -44,10 +37,10 @@ fn efd2d_open() {
     assert_abs_diff_eq!(trans.scale(), 33.930916934329495);
     // Test normalized
     let norm = efd.generate_norm_in(NORM_OPEN.len(), PI);
-    assert!(curve_diff(&norm, NORM_OPEN) < EPS);
+    assert_abs_diff_eq!(curve_diff(&norm, NORM_OPEN), 0.);
     // Test reconstruction
     let target = efd.generate_half(TARGET_OPEN.len());
-    assert!(curve_diff(&target, TARGET_OPEN) < EPS);
+    assert_abs_diff_eq!(curve_diff(&target, TARGET_OPEN), 0.);
 }
 
 #[test]
@@ -64,7 +57,7 @@ fn efd2d() {
         .copied()
         .collect::<alloc::vec::Vec<_>>();
     let efd_half = Efd2::from_curve(path, false);
-    assert!(efd.l1_norm(&efd_half) < EPS);
+    assert_abs_diff_eq!(efd.l1_norm(&efd_half), 0., epsilon = 1e-12);
     assert_eq!(efd.harmonic(), 8);
     // Test transformation
     let trans = efd.as_trans();
@@ -74,10 +67,10 @@ fn efd2d() {
     assert_abs_diff_eq!(trans.scale(), 48.16765830752243);
     // Test normalized
     let norm = efd.generate_norm_in(NORM.len(), TAU);
-    assert!(curve_diff(&norm, NORM) < EPS);
+    assert_abs_diff_eq!(curve_diff(&norm, NORM), 0.);
     // Test reconstruction
     let target = efd.generate(TARGET.len());
-    assert!(curve_diff(&target, TARGET) < EPS);
+    assert_abs_diff_eq!(curve_diff(&target, TARGET), 0.);
 }
 
 #[test]
@@ -94,7 +87,7 @@ fn efd3d() {
         .copied()
         .collect::<alloc::vec::Vec<_>>();
     let efd_half = Efd3::from_curve_nyquist(path, false);
-    assert!(efd.l1_norm(&efd_half) < EPS);
+    assert_abs_diff_eq!(efd.l1_norm(&efd_half), 0., epsilon = 1e-12);
     assert_eq!(efd.harmonic(), 5);
     // Test transformation
     let trans = efd.as_trans();
@@ -105,10 +98,10 @@ fn efd3d() {
     assert_abs_diff_eq!(trans.scale(), 0.5629099155595344);
     // Test normalized
     let norm = efd.generate_norm_in(NORM3D.len(), TAU);
-    assert!(curve_diff(&norm, NORM3D) < EPS);
+    assert_abs_diff_eq!(curve_diff(&norm, NORM3D), 0.);
     // Test reconstruction
     let target = efd.generate(NORM3D.len());
-    assert!(curve_diff(&target, TARGET3D) < EPS);
+    assert_abs_diff_eq!(curve_diff(&target, TARGET3D), 0.);
 }
 
 #[cfg(test)]

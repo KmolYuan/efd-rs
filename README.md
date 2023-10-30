@@ -23,7 +23,7 @@ let curve = vec![
     [2., 2.],
     [1., 1.],
 ];
-assert!(efd::valid_curve(&curve).is_some());
+assert!(efd::util::valid_curve(&curve).is_some());
 let described_curve = efd::Efd2::from_curve(curve, false).generate(20);
 ```
 

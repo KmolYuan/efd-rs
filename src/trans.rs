@@ -1,4 +1,4 @@
-//! Transformation type.
+//! Transformation type, the geomatric invariant.
 use crate::*;
 use alloc::vec::Vec;
 

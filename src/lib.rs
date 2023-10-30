@@ -24,12 +24,13 @@ pub extern crate nalgebra as na;
 
 pub use crate::efd::*;
 #[doc(no_inline)]
-pub use crate::{curve::*, dim::*, distance::*, transform::*, utility::*};
+pub use crate::{curve::*, dim::*, trans::*};
+pub use dist::Distance;
 
 pub mod curve;
 pub mod dim;
-pub mod distance;
+mod dist;
 mod efd;
 pub mod tests;
-pub mod transform;
-pub mod utility;
+pub mod trans;
+pub mod util;

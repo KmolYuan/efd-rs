@@ -1,5 +1,5 @@
 //! Dimension specific implementation.
-use crate::*;
+use crate::{util::*, *};
 use core::f64::consts::{PI, TAU};
 
 /// 2D EFD dimension marker.
