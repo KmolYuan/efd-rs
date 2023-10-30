@@ -6,6 +6,19 @@ use core::f64::consts::{PI, TAU};
 pub const EPS: f64 = 2.2e-14;
 pub const RES: usize = 1000;
 
+pub fn curve_diff<const N: usize>(a: &[[f64; N]], b: &[[f64; N]]) -> f64 {
+    a.iter()
+        .zip(b)
+        .map(|(a, b)| {
+            a.iter()
+                .zip(b)
+                .map(|(a, b)| (a - b).powi(2))
+                .sum::<f64>()
+                .sqrt()
+        })
+        .sum::<f64>()
+}
+
 #[test]
 fn error() {
     use crate::*;

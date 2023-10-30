@@ -1,6 +1,5 @@
 //! Utility functions for the library.
 use crate::*;
-use alloc::vec::Vec;
 #[cfg(feature = "curve_diff")]
 pub use curve_diff::*;
 
@@ -85,7 +84,10 @@ mod curve_diff {
         let a = to_mat(a.closed_lin());
         let b = to_mat(b.closed_lin());
         let at = get_time(&a, norm);
-        let bt = get_time(&b, norm).iter().copied().collect::<Vec<_>>();
+        let bt = get_time(&b, norm)
+            .iter()
+            .copied()
+            .collect::<alloc::vec::Vec<_>>();
         let bzt = *bt.last().unwrap();
         let err = (0..res)
             .map(|v| at.add_scalar(v as f64 / res as f64).map(|x| x % bzt))
@@ -94,7 +96,7 @@ mod curve_diff {
                 (0..b.nrows())
                     .map(|i| {
                         let ax = a.row(i);
-                        let bx = b.row(i).iter().copied().collect::<Vec<_>>();
+                        let bx = b.row(i).iter().copied().collect::<alloc::vec::Vec<_>>();
                         let bx = interp::interp_slice(&bt, &bx, t);
                         (ax - na::Matrix1xX::from_vec(bx)).map(pow2)
                     })

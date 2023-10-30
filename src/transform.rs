@@ -227,7 +227,7 @@ impl<T: Trans> Transform<T> {
     /// It can be used on a not normalized contour `a` transforming to `b`.
     ///
     /// ```
-    /// use efd::{curve_diff, tests::*, Efd2};
+    /// use efd::{tests::*, Efd2};
     /// # use efd::Curve as _;
     /// # let path1 = PATH;
     /// # let path2 = PATH;
@@ -247,7 +247,7 @@ impl<T: Trans> Transform<T> {
     /// Same as `rhs * self`.
     ///
     /// ```
-    /// use efd::{curve_diff, tests::*, Efd2};
+    /// use efd::{tests::*, Efd2};
     /// # use efd::Curve as _;
     /// # let path1 = PATH;
     /// # let path2 = PATH;
@@ -265,7 +265,7 @@ impl<T: Trans> Transform<T> {
     /// Inverse matrices.
     ///
     /// ```
-    /// use efd::{curve_diff, tests::*, Efd2};
+    /// use efd::{tests::*, Efd2};
     /// # use efd::Curve as _;
     /// # let path = PATH;
     ///
