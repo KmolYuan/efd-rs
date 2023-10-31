@@ -1,6 +1,8 @@
 use crate::{util::*, *};
 use alloc::vec::Vec;
 use core::f64::consts::{PI, TAU};
+#[cfg(not(feature = "std"))]
+use num_traits::*;
 
 /// 2D EFD coefficients type.
 pub type Efd2 = Efd<D2>;

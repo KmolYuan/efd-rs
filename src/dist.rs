@@ -1,6 +1,8 @@
 //! Distance trait.
 use crate::{Efd, EfdDim};
 use alloc::vec::Vec;
+#[cfg(not(feature = "std"))]
+use num_traits::*;
 
 /// Be able to calculate the distance between two instances.
 ///

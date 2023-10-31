@@ -12,10 +12,10 @@ categories = ["algorithm", "no-std"]
 
 [features]
 default = ["std"]
-std = ["nalgebra/std"]
+std = ["nalgebra/std", "num-traits/std"]
 
 [dependencies]
-num-traits = "0.2"
+num-traits = { version = "0.2", default-features = false, features = ["libm"] }
 
 [dependencies.nalgebra]
 version = "0.32"

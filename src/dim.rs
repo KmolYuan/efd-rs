@@ -1,6 +1,9 @@
 //! Dimension specific implementation.
 use crate::{util::*, *};
 use core::f64::consts::{PI, TAU};
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use num_traits::*;
 
 /// 2D EFD dimension marker.
 pub enum D2 {}
