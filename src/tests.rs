@@ -104,8 +104,55 @@ fn efd3d() {
     assert_abs_diff_eq!(curve_diff(&target, TARGET3D), 0.);
 }
 
-#[cfg(test)]
+#[test]
 #[cfg(feature = "std")]
+fn plot2d_closed() -> Result<(), Box<dyn std::error::Error>> {
+    #[rustfmt::skip]
+    let coeff = crate::Coeff2::from_column_slice(&[
+        12., 35., 35., 13.,
+        5., 21., 21., 5.,
+        1., 12., 12., 1.,
+    ]);
+    plot2d(coeff, "img/2d.svg")
+}
+
+#[test]
+#[cfg(feature = "std")]
+fn plot2d_open() -> Result<(), Box<dyn std::error::Error>> {
+    #[rustfmt::skip]
+    let coeff = crate::Coeff2::from_column_slice(&[
+        35., 8., 0., 0.,
+        10., 24., 0., 0.,
+        5., -8., 0., 0.,
+    ]);
+    plot2d(coeff, "img/2d_open.svg")
+}
+
+#[test]
+#[cfg(feature = "std")]
+fn plot3d_closed() -> Result<(), Box<dyn std::error::Error>> {
+    #[rustfmt::skip]
+    let coeff = crate::Coeff3::from_column_slice(&[
+        12., 35., 20., 22., 5., 21.,
+        21., 5., 1., 12., 12., 1.,
+        3., 7., 12., 3., 5., 21.,
+    ]);
+    plot3d(coeff, "img/3d.svg")
+}
+
+#[test]
+#[cfg(feature = "std")]
+fn plot3d_open() -> Result<(), Box<dyn std::error::Error>> {
+    #[rustfmt::skip]
+    let coeff = crate::Coeff3::from_column_slice(&[
+        12., 35., 27., 0., 0., 0.,
+        21., 8., 16., 0., 0., 0.,
+        3., 7., 12., 0., 0., 0.,
+    ]);
+    plot3d(coeff, "img/3d_open.svg")
+}
+
+#[cfg(all(test, feature = "std"))]
 fn get_area<const N: usize>(pts: &[[f64; N]]) -> [[f64; 2]; N] {
     pts.iter()
         .fold([[f64::INFINITY, f64::NEG_INFINITY]; N], |mut b, c| {
@@ -116,9 +163,8 @@ fn get_area<const N: usize>(pts: &[[f64; N]]) -> [[f64; 2]; N] {
         })
 }
 
-#[test]
-#[cfg(feature = "std")]
-fn plot2d() -> Result<(), Box<dyn std::error::Error>> {
+#[cfg(all(test, feature = "std"))]
+fn plot2d(coeff: crate::Coeff2, path: &str) -> Result<(), Box<dyn std::error::Error>> {
     use crate::*;
     use plotters::prelude::*;
 
@@ -139,20 +185,14 @@ fn plot2d() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    #[rustfmt::skip]
-    let coeff = Coeff2::from_column_slice(&[
-        12., 35., 35., 13.,
-        5., 21., 21., 5.,
-        1., 12., 12., 1.,
-    ]);
     let efd = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
-    let path = efd.generate(360);
-    let [x_min, x_max, y_min, y_max] = bounding_box(&path);
-    let b = SVGBackend::new("img/2d.svg", (1200, 1200));
+    let curve = efd.generate(360);
+    let [x_min, x_max, y_min, y_max] = bounding_box(&curve);
+    let b = SVGBackend::new(path, (1200, 1200));
     let root = b.into_drawing_area();
     root.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&root).build_cartesian_2d(x_min..x_max, y_min..y_max)?;
-    let p0 = path[0];
+    let p0 = curve[0];
     chart.draw_series([Circle::new((p0[0], p0[1]), 3, BLACK.filled())])?;
     for (p, color) in [((10., 0.), RED), ((0., 10.), BLUE)] {
         chart.draw_series(LineSeries::new([(0., 0.), p], color.stroke_width(10)))?;
@@ -180,15 +220,14 @@ fn plot2d() -> Result<(), Box<dyn std::error::Error>> {
         chart.draw_series(LineSeries::new(ellipse, RED.stroke_width(7)))?;
     }
     chart.draw_series(LineSeries::new(
-        path.into_iter().map(|[x, y]| (x, y)),
+        curve.into_iter().map(|[x, y]| (x, y)),
         BLACK.stroke_width(10),
     ))?;
     Ok(())
 }
 
-#[test]
-#[cfg(feature = "std")]
-fn plot3d() -> Result<(), Box<dyn std::error::Error>> {
+#[cfg(all(test, feature = "std"))]
+fn plot3d(coeff: crate::Coeff3, path: &str) -> Result<(), Box<dyn std::error::Error>> {
     use crate::*;
     use plotters::prelude::*;
 
@@ -208,16 +247,10 @@ fn plot3d() -> Result<(), Box<dyn std::error::Error>> {
         [x_min, x_max, y_min, y_max, z_min, z_max]
     }
 
-    #[rustfmt::skip]
-    let coeff = Coeff3::from_column_slice(&[
-        12., 35., 20., 22., 5., 21.,
-        21., 5., 1., 12., 12., 1.,
-        3., 7., 12., 3., 5., 21.,
-    ]);
     let efd = Efd3::try_from_coeffs_unnorm(coeff).unwrap();
-    let path = efd.generate(360);
-    let [x_min, x_max, y_min, y_max, z_min, z_max] = bounding_box(&path);
-    let b = SVGBackend::new("img/3d.svg", (1200, 1200));
+    let curve = efd.generate(360);
+    let [x_min, x_max, y_min, y_max, z_min, z_max] = bounding_box(&curve);
+    let b = SVGBackend::new(path, (1200, 1200));
     let root = b.into_drawing_area();
     root.fill(&WHITE)?;
     let mut chart =
@@ -227,7 +260,7 @@ fn plot3d() -> Result<(), Box<dyn std::error::Error>> {
         pb.scale = 1.4;
         pb.into_matrix()
     });
-    let p0 = path[0];
+    let p0 = curve[0];
     chart.draw_series([Circle::new((p0[0], p0[1], p0[2]), 3, BLACK.filled())])?;
     for (p, color) in [
         ((10., 0., 0.), RED),
@@ -259,7 +292,7 @@ fn plot3d() -> Result<(), Box<dyn std::error::Error>> {
         chart.draw_series(LineSeries::new(ellipse, RED.stroke_width(7)))?;
     }
     chart.draw_series(LineSeries::new(
-        path.into_iter().map(|c| c.into()),
+        curve.into_iter().map(|c| c.into()),
         BLACK.stroke_width(10),
     ))?;
     Ok(())
