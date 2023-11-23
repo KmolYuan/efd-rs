@@ -48,7 +48,16 @@ Kuhl, FP and Giardina, CR (1982). Elliptic Fourier features of a closed contour.
 
 ## Example Images
 
+2D and 3D closed curve:
+
 <div>
 <img width="40%" alt="2d" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2d.svg"/>
 <img width="40%" alt="3d" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/3d.svg"/>
+</div>
+
+2D and 3D open curve:
+
+<div>
+<img width="40%" alt="2d" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2d_open.svg"/>
+<img width="40%" alt="3d" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/3d_open.svg"/>
 </div>
