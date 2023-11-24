@@ -22,12 +22,7 @@ pub trait Distance: Sized {
     #[must_use]
     fn l0_norm(&self, rhs: &Self) -> f64 {
         let err_buf = self.err_buf(rhs);
-        let len = err_buf.len();
-        err_buf
-            .into_iter()
-            .filter(|x| x.abs() < f64::EPSILON)
-            .count() as f64
-            / len as f64
+        err_buf.iter().filter(|x| x.abs() < f64::EPSILON).count() as f64 / err_buf.len() as f64
     }
 
     /// Calculate the L1 norm of the error.
