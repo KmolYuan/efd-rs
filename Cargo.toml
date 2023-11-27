@@ -29,3 +29,6 @@ approx = "0.5"
 [lints.rust]
 missing-docs = "warn"
 unsafe-code = "forbid"
+
+[workspace.lints.clippy]
+semicolon-if-nothing-returned = "warn"
