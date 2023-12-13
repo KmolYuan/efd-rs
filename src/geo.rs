@@ -1,4 +1,4 @@
-//! Transformation type, the geomatric invariant.
+//! Geometric types, the geometric invariant.
 use crate::*;
 use alloc::vec::Vec;
 
@@ -6,15 +6,15 @@ use alloc::vec::Vec;
 pub type T2 = na::Similarity2<f64>;
 /// 3D transformation inner type.
 pub type T3 = na::Similarity3<f64>;
-/// 2D transformation type.
-pub type Transform2 = Transform<T2>;
-/// 3D transformation type.
-pub type Transform3 = Transform<T3>;
+/// 2D geometric type.
+pub type GeoVar2 = GeoVar<T2>;
+/// 3D geometric type.
+pub type GeoVar3 = GeoVar<T3>;
 
 type Sim<R, const DIM: usize> = na::Similarity<f64, R, DIM>;
 
-/// A trait used in inner type of [`Transform`].
-pub trait Trans {
+/// A trait used in inner type of [`GeoVar`].
+pub trait Transform {
     /// Coordinate/Translation type.
     type Coord: CoordHint;
     /// Rotation angle type.
@@ -30,7 +30,7 @@ pub trait Trans {
     fn apply(&self, rhs: &Self) -> Self;
     /// Inverse matrices.
     fn inverse(&self) -> Self;
-    /// Transformation property.
+    /// Translation property.
     fn trans(&self) -> Self::Coord;
     /// Rotation property.
     fn rot(&self) -> &Self::Rot;
@@ -82,7 +82,7 @@ where
     }
 }
 
-impl<R, const DIM: usize> Trans for Sim<R, DIM>
+impl<R, const DIM: usize> Transform for Sim<R, DIM>
 where
     R: na::AbstractRotation<f64, DIM> + Default + 'static,
     na::Const<DIM>: na::DimNameMul<na::U2>,
@@ -127,21 +127,21 @@ where
     }
 }
 
-/// Transform type.
+/// Geometric variables.
 ///
 /// This type record the information of raw coefficients.
 #[derive(Clone)]
-pub struct Transform<T: Trans> {
+pub struct GeoVar<T: Transform> {
     inner: T,
 }
 
-impl<T: Trans> Default for Transform<T> {
+impl<T: Transform> Default for GeoVar<T> {
     fn default() -> Self {
         Self::identity()
     }
 }
 
-impl<T: Trans> core::fmt::Debug for Transform<T>
+impl<T: Transform> core::fmt::Debug for GeoVar<T>
 where
     T::Coord: core::fmt::Debug,
     T::Rot: core::fmt::Debug,
@@ -155,7 +155,7 @@ where
     }
 }
 
-impl<T: Trans> Transform<T> {
+impl<T: Transform> GeoVar<T> {
     /// Create a new transform type.
     #[must_use]
     pub fn new(trans: T::Coord, rot: T::Rot, scale: f64) -> Self {
@@ -185,9 +185,9 @@ impl<T: Trans> Transform<T> {
     /// # let target = TARGET;
     /// # let efd = Efd2::from_curve(PATH, false);
     /// # let path = efd.generate_norm_in(target.len(), std::f64::consts::TAU);
-    /// let path1 = efd.as_trans().transform(&path);
-    /// # let trans = efd.as_trans();
-    /// let path1_inv = trans.inverse().transform(&path1);
+    /// let path1 = efd.as_geo().transform(&path);
+    /// # let geo = efd.as_geo();
+    /// let path1_inv = geo.inverse().transform(&path1);
     /// # assert!(curve_diff(&path1, TARGET) < EPS);
     /// # assert!(curve_diff(&path1_inv, &path) < EPS);
     /// ```
@@ -234,8 +234,8 @@ impl<T: Trans> Transform<T> {
     ///
     /// let a = Efd2::from_curve(path1, false);
     /// let b = Efd2::from_curve(path2, false);
-    /// let trans = a.as_trans().to(b.as_trans());
-    /// assert!(curve_diff(&trans.transform(path1), path2) < EPS);
+    /// let geo = a.as_geo().to(b.as_geo());
+    /// assert!(curve_diff(&geo.transform(path1), path2) < EPS);
     /// ```
     #[must_use]
     pub fn to(&self, rhs: &Self) -> Self {
@@ -254,8 +254,8 @@ impl<T: Trans> Transform<T> {
     ///
     /// let a = Efd2::from_curve(path1, false);
     /// let b = Efd2::from_curve(path2, false);
-    /// let trans = b.as_trans() * a.as_trans().inverse();
-    /// assert!(curve_diff(&trans.transform(path1), path2) < EPS);
+    /// let geo = b.as_geo() * a.as_geo().inverse();
+    /// assert!(curve_diff(&geo.transform(path1), path2) < EPS);
     /// ```
     #[must_use]
     pub fn apply(&self, rhs: &Self) -> Self {
@@ -272,7 +272,7 @@ impl<T: Trans> Transform<T> {
     /// let efd = Efd2::from_curve(path, false);
     /// let path = efd.generate(path.len());
     /// let path_norm = efd.generate_norm_in(path.len(), std::f64::consts::TAU);
-    /// let path = efd.as_trans().inverse().transform(path);
+    /// let path = efd.as_geo().inverse().transform(path);
     /// # assert!(curve_diff(&path, &path_norm) < EPS);
     /// ```
     #[must_use]
@@ -301,8 +301,8 @@ impl<T: Trans> Transform<T> {
 
 macro_rules! impl_mul {
     ($ty1:ty, $ty2:ty) => {
-        impl<T: Trans> core::ops::Mul<$ty2> for $ty1 {
-            type Output = Transform<T>;
+        impl<T: Transform> core::ops::Mul<$ty2> for $ty1 {
+            type Output = GeoVar<T>;
             #[must_use]
             fn mul(self, rhs: $ty2) -> Self::Output {
                 rhs.apply(&self)
@@ -311,7 +311,7 @@ macro_rules! impl_mul {
     };
 }
 
-impl_mul!(Transform<T>, Self);
-impl_mul!(&Transform<T>, Self);
-impl_mul!(Transform<T>, &Self);
-impl_mul!(&Transform<T>, Transform<T>);
+impl_mul!(GeoVar<T>, Self);
+impl_mul!(&GeoVar<T>, Self);
+impl_mul!(GeoVar<T>, &Self);
+impl_mul!(&GeoVar<T>, GeoVar<T>);

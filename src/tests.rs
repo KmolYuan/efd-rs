@@ -30,11 +30,11 @@ fn efd2d_open() {
     let efd = Efd2::from_curve(PATH_OPEN, true);
     assert_eq!(efd.harmonic(), 14);
     // Test transformation
-    let trans = efd.as_trans();
-    assert_abs_diff_eq!(trans.trans()[0], 43.03456791427352);
-    assert_abs_diff_eq!(trans.trans()[1], 48.107208358019015);
-    assert_abs_diff_eq!(trans.rot().angle(), 2.7330524299596815);
-    assert_abs_diff_eq!(trans.scale(), 33.930916934329495);
+    let geo = efd.as_geo();
+    assert_abs_diff_eq!(geo.trans()[0], 43.03456791427352);
+    assert_abs_diff_eq!(geo.trans()[1], 48.107208358019015);
+    assert_abs_diff_eq!(geo.rot().angle(), 2.7330524299596815);
+    assert_abs_diff_eq!(geo.scale(), 33.930916934329495);
     // Test normalized
     let norm = efd.generate_norm_in(NORM_OPEN.len(), PI);
     assert_abs_diff_eq!(curve_diff(&norm, NORM_OPEN), 0.);
@@ -60,11 +60,11 @@ fn efd2d() {
     assert_abs_diff_eq!(efd.l1_norm(&efd_half), 0., epsilon = 1e-12);
     assert_eq!(efd.harmonic(), 8);
     // Test transformation
-    let trans = efd.as_trans();
-    assert_abs_diff_eq!(trans.trans()[0], -1.248409055632358);
-    assert_abs_diff_eq!(trans.trans()[1], 55.26080122817753);
-    assert_abs_diff_eq!(trans.rot().angle(), 0.6423416350347734);
-    assert_abs_diff_eq!(trans.scale(), 48.16765830752243);
+    let geo = efd.as_geo();
+    assert_abs_diff_eq!(geo.trans()[0], -1.248409055632358);
+    assert_abs_diff_eq!(geo.trans()[1], 55.26080122817753);
+    assert_abs_diff_eq!(geo.rot().angle(), 0.6423416350347734);
+    assert_abs_diff_eq!(geo.scale(), 48.16765830752243);
     // Test normalized
     let norm = efd.generate_norm_in(NORM.len(), TAU);
     assert_abs_diff_eq!(curve_diff(&norm, NORM), 0.);
@@ -90,12 +90,12 @@ fn efd3d() {
     assert_abs_diff_eq!(efd.l1_norm(&efd_half), 0., epsilon = 1e-12);
     assert_eq!(efd.harmonic(), 5);
     // Test transformation
-    let trans = efd.as_trans();
-    assert_abs_diff_eq!(trans.trans()[0], 0.7239345388499508);
-    assert_abs_diff_eq!(trans.trans()[1], 0.09100107896533066);
-    assert_abs_diff_eq!(trans.trans()[2], 0.49979194975846675);
-    assert_abs_diff_eq!(trans.rot().angle(), 2.9160714030359416);
-    assert_abs_diff_eq!(trans.scale(), 0.5629099155595344);
+    let geo = efd.as_geo();
+    assert_abs_diff_eq!(geo.trans()[0], 0.7239345388499508);
+    assert_abs_diff_eq!(geo.trans()[1], 0.09100107896533066);
+    assert_abs_diff_eq!(geo.trans()[2], 0.49979194975846675);
+    assert_abs_diff_eq!(geo.rot().angle(), 2.9160714030359416);
+    assert_abs_diff_eq!(geo.scale(), 0.5629099155595344);
     // Test normalized
     let norm = efd.generate_norm_in(NORM3D.len(), TAU);
     assert_abs_diff_eq!(curve_diff(&norm, NORM3D), 0.);
@@ -197,10 +197,10 @@ fn plot2d(coeff: crate::Coeff2, path: &str) -> Result<(), Box<dyn std::error::Er
     for (p, color) in [((10., 0.), RED), ((0., 10.), BLUE)] {
         chart.draw_series(LineSeries::new([(0., 0.), p], color.stroke_width(10)))?;
     }
-    let trans0 = efd.as_trans();
+    let geo0 = efd.as_geo();
     let mut c0 = [0.; 2];
     for m in efd.coeffs_iter() {
-        let trans = trans0 * Transform2::new(c0, na::UnitComplex::new(0.), 1.);
+        let geo = geo0 * GeoVar2::new(c0, na::UnitComplex::new(0.), 1.);
         const N: usize = 100;
         const N_F: f64 = N as f64;
         let ellipse = (0..N)
@@ -208,13 +208,13 @@ fn plot2d(coeff: crate::Coeff2, path: &str) -> Result<(), Box<dyn std::error::Er
                 let t = i as f64 * std::f64::consts::TAU / N_F;
                 m * na::matrix![t.cos(); t.sin()]
             })
-            .map(|c| trans.transform_pt(&c.data.0[0]).into());
+            .map(|c| geo.transform_pt(&c.data.0[0]).into());
         let p1 = c0;
         c0.iter_mut()
             .zip(m.column(0).iter())
             .for_each(|(c, u)| *c += u);
-        let p1 = trans0.transform_pt(&p1).into();
-        let p2 = trans0.transform_pt(&c0).into();
+        let p1 = geo0.transform_pt(&p1).into();
+        let p2 = geo0.transform_pt(&c0).into();
         chart.draw_series([Circle::new(p2, 5, RED.filled())])?;
         chart.draw_series(LineSeries::new([p1, p2], RED.stroke_width(5)))?;
         chart.draw_series(LineSeries::new(ellipse, RED.stroke_width(7)))?;
@@ -269,10 +269,10 @@ fn plot3d(coeff: crate::Coeff3, path: &str) -> Result<(), Box<dyn std::error::Er
     ] {
         chart.draw_series(LineSeries::new([(0., 0., 0.), p], color.stroke_width(10)))?;
     }
-    let trans0 = efd.as_trans();
+    let geo0 = efd.as_geo();
     let mut c0 = [0.; 3];
     for m in efd.coeffs_iter() {
-        let trans = trans0 * Transform3::new(c0, na::UnitQuaternion::identity(), 1.);
+        let geo = geo0 * GeoVar3::new(c0, na::UnitQuaternion::identity(), 1.);
         const N: usize = 100;
         const N_F: f64 = N as f64;
         let ellipse = (0..N)
@@ -280,13 +280,13 @@ fn plot3d(coeff: crate::Coeff3, path: &str) -> Result<(), Box<dyn std::error::Er
                 let t = i as f64 * std::f64::consts::TAU / N_F;
                 m * na::matrix![t.cos(); t.sin()]
             })
-            .map(|c| trans.transform_pt(&c.data.0[0]).into());
+            .map(|c| geo.transform_pt(&c.data.0[0]).into());
         let p1 = c0;
         c0.iter_mut()
             .zip(m.column(0).iter())
             .for_each(|(c, u)| *c += u);
-        let p1 = trans0.transform_pt(&p1).into();
-        let p2 = trans0.transform_pt(&c0).into();
+        let p1 = geo0.transform_pt(&p1).into();
+        let p2 = geo0.transform_pt(&c0).into();
         chart.draw_series([Circle::new(p2, 5, RED.filled())])?;
         chart.draw_series(LineSeries::new([p1, p2], RED.stroke_width(5)))?;
         chart.draw_series(LineSeries::new(ellipse, RED.stroke_width(7)))?;

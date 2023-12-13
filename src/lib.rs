@@ -22,13 +22,13 @@ pub extern crate nalgebra as na;
 
 pub use crate::efd::*;
 #[doc(no_inline)]
-pub use crate::{curve::*, dim::*, trans::*};
+pub use crate::{curve::*, dim::*, geo::*};
 pub use dist::Distance;
 
 pub mod curve;
 pub mod dim;
 mod dist;
 mod efd;
+pub mod geo;
 pub mod tests;
-pub mod trans;
 pub mod util;

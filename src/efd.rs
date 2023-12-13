@@ -35,7 +35,7 @@ pub type Efd3 = Efd<D3>;
 #[derive(Clone)]
 pub struct Efd<D: EfdDim> {
     coeffs: Coeff<D>,
-    trans: Transform<D::Trans>,
+    geo: GeoVar<D::Trans>,
 }
 
 impl<D: EfdDim> Efd<D> {
@@ -46,10 +46,7 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// Return none if the harmonic is zero.
     pub fn try_from_coeffs(mut coeffs: Coeff<D>) -> Option<Self> {
-        (coeffs.ncols() != 0).then(|| {
-            let trans = D::coeff_norm(&mut coeffs);
-            Self { coeffs, trans }
-        })
+        (coeffs.ncols() != 0).then(|| Self { geo: D::coeff_norm(&mut coeffs), coeffs })
     }
 
     /// Create object from a 2D array with boundary check.
@@ -59,7 +56,7 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// Return none if the harmonic is zero.
     pub fn try_from_coeffs_unnorm(coeffs: Coeff<D>) -> Option<Self> {
-        (coeffs.ncols() != 0).then_some(Self { coeffs, trans: Transform::identity() })
+        (coeffs.ncols() != 0).then_some(Self { coeffs, geo: GeoVar::identity() })
     }
 
     /// Create object from a 2D array directly.
@@ -77,7 +74,7 @@ impl<D: EfdDim> Efd<D> {
     /// assert_eq!(path.len(), 0);
     /// ```
     pub fn from_coeffs_unchecked(coeffs: Coeff<D>) -> Self {
-        Self { coeffs, trans: Transform::identity() }
+        Self { coeffs, geo: GeoVar::identity() }
     }
 
     /// Fully automated coefficient calculation.
@@ -165,8 +162,8 @@ impl<D: EfdDim> Efd<D> {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         let curve = curve.as_curve();
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (coeffs, trans) = D::get_coeff(curve, harmonic, is_open);
-        Self { coeffs, trans }
+        let (coeffs, geo) = D::get_coeff(curve, harmonic, is_open);
+        Self { coeffs, geo }
     }
 
     /// Same as [`Efd::from_curve_harmonic()`] but without normalization.
@@ -178,14 +175,14 @@ impl<D: EfdDim> Efd<D> {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         let curve = curve.as_curve();
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (coeffs, trans) = D::get_coeff_unnorm(curve, harmonic, is_open);
-        Self { coeffs, trans }
+        let (coeffs, geo) = D::get_coeff_unnorm(curve, harmonic, is_open);
+        Self { coeffs, geo }
     }
 
-    /// A builder method for changing transformation type.
+    /// A builder method for changing geometric variables.
     #[must_use]
-    pub fn with_trans(self, trans: Transform<D::Trans>) -> Self {
-        Self { trans, ..self }
+    pub fn with_geo(self, geo: GeoVar<D::Trans>) -> Self {
+        Self { geo, ..self }
     }
 
     /// Use Fourier Power Anaysis (FPA) to reduce the harmonic number.
@@ -226,9 +223,9 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// Panics if the harmonic is zero.
     pub fn normalized(self) -> Self {
-        let Self { mut coeffs, trans } = self;
+        let Self { mut coeffs, geo } = self;
         let trans_new = D::coeff_norm(&mut coeffs);
-        Self { coeffs, trans: trans.apply(&trans_new) }
+        Self { coeffs, geo: geo.apply(&trans_new) }
     }
 
     /// Consume self and return a raw array of the coefficients.
@@ -263,16 +260,16 @@ impl<D: EfdDim> Efd<D> {
             .map(|c| CKernelMut::<D>::from_slice(c.data.into_slice_mut()))
     }
 
-    /// Get the reference of transformation type.
+    /// Get the reference of geometric variables.
     #[must_use]
-    pub fn as_trans(&self) -> &Transform<D::Trans> {
-        &self.trans
+    pub fn as_geo(&self) -> &GeoVar<D::Trans> {
+        &self.geo
     }
 
-    /// Get the mutable reference of transformation type.
+    /// Get the mutable reference of geometric variables.
     #[must_use]
-    pub fn as_trans_mut(&mut self) -> &mut Transform<D::Trans> {
-        &mut self.trans
+    pub fn as_geo_mut(&mut self) -> &mut GeoVar<D::Trans> {
+        &mut self.geo
     }
 
     /// Get the harmonic number of the coefficients.
@@ -344,7 +341,7 @@ impl<D: EfdDim> Efd<D> {
     #[must_use]
     pub fn generate_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
         let mut curve = self.generate_norm_in(n, theta);
-        self.trans.transform_inplace(&mut curve);
+        self.geo.transform_inplace(&mut curve);
         curve
     }
 
@@ -377,12 +374,12 @@ impl<D: EfdDim> Efd<D> {
 
 impl<D: EfdDim> core::fmt::Debug for Efd<D>
 where
-    Transform<D::Trans>: core::fmt::Debug,
+    GeoVar<D::Trans>: core::fmt::Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("Efd")
             .field("coeff", &CoeffFmt::<D>(&self.coeffs))
-            .field("trans", &self.trans)
+            .field("geo", &self.geo)
             .field("dim", &D::Trans::dim())
             .field("harmonic", &self.harmonic())
             .finish()

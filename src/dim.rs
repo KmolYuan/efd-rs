@@ -29,19 +29,19 @@ pub type CKernelMut<'a, D> = na::MatrixViewMut<'a, f64, Dim<D>, na::U2>;
 type CCoeff<const DIM: usize> = na::OMatrix<f64, na::Const<DIM>, na::Dyn>;
 type CCKernel<'a, const DIM: usize> = na::MatrixView<'a, f64, na::Const<DIM>, na::U2>;
 type CCKernelMut<'a, const DIM: usize> = na::MatrixViewMut<'a, f64, na::Const<DIM>, na::U2>;
-type CCDim<T> = na::DimNameProd<<<T as Trans>::Coord as CoordHint>::Dim, na::U2>;
+type CCDim<T> = na::DimNameProd<<<T as Transform>::Coord as CoordHint>::Dim, na::U2>;
 
 /// Trait for EFD dimension.
 pub trait EfdDim {
     /// Transformation type of similarity matrix.
-    type Trans: Trans;
+    type Trans: Transform;
 
     /// Generate coefficients and similarity matrix.
     fn get_coeff(
         curve: &[Coord<Self>],
         harmonic: usize,
         is_open: bool,
-    ) -> (Coeff<Self>, Transform<Self::Trans>) {
+    ) -> (Coeff<Self>, GeoVar<Self::Trans>) {
         let (mut coeffs, trans1) = Self::get_coeff_unnorm(curve, harmonic, is_open);
         let trans2 = Self::coeff_norm(&mut coeffs);
         (coeffs, trans1 * trans2)
@@ -52,18 +52,18 @@ pub trait EfdDim {
         curve: &[Coord<Self>],
         harmonic: usize,
         is_open: bool,
-    ) -> (Coeff<Self>, Transform<Self::Trans>) {
+    ) -> (Coeff<Self>, GeoVar<Self::Trans>) {
         impl_coeff(curve, harmonic, is_open)
     }
 
     /// Normalize coefficients.
-    fn coeff_norm(coeffs: &mut Coeff<Self>) -> Transform<Self::Trans>;
+    fn coeff_norm(coeffs: &mut Coeff<Self>) -> GeoVar<Self::Trans>;
 }
 
 impl EfdDim for D2 {
     type Trans = T2;
 
-    fn coeff_norm(coeffs: &mut Coeff<Self>) -> Transform<Self::Trans> {
+    fn coeff_norm(coeffs: &mut Coeff<Self>) -> GeoVar<Self::Trans> {
         impl_norm(coeffs, |m| na::Rotation2::new(m[(1, 0)].atan2(m[(0, 0)])))
     }
 }
@@ -71,7 +71,7 @@ impl EfdDim for D2 {
 impl EfdDim for D3 {
     type Trans = T3;
 
-    fn coeff_norm(coeffs: &mut Coeff<Self>) -> Transform<Self::Trans> {
+    fn coeff_norm(coeffs: &mut Coeff<Self>) -> GeoVar<Self::Trans> {
         impl_norm(coeffs, |coeffs| {
             let m1 = CCKernel::<3>::from_slice(coeffs.column(0).data.into_slice());
             let u = m1.column(0).normalize();
@@ -95,11 +95,11 @@ impl EfdDim for D3 {
     }
 }
 
-fn impl_coeff<T: Trans>(
+fn impl_coeff<T: Transform>(
     curve: &[T::Coord],
     harmonic: usize,
     is_open: bool,
-) -> (MatrixRxX<CCDim<T>>, Transform<T>) {
+) -> (MatrixRxX<CCDim<T>>, GeoVar<T>) {
     let dxyz = diff(if is_open || curve.first() == curve.last() {
         to_mat(curve)
     } else {
@@ -139,17 +139,17 @@ fn impl_coeff<T: Trans>(
             let xi = cumsum(dxyz) - dxyz.component_mul(&tdt);
             *oxyz += (dxyz.component_mul(&c) + xi.component_mul(&dt)).sum() / zt;
         });
-    (coeffs, Transform::new(center, Default::default(), 1.))
+    (coeffs, GeoVar::new(center, Default::default(), 1.))
 }
 
 fn impl_norm<T, const DIM: usize, const CDIM: usize>(
     coeffs: &mut CCoeff<CDIM>,
     get_psi: impl FnOnce(&CCoeff<CDIM>) -> na::Rotation<f64, DIM>,
-) -> Transform<T>
+) -> GeoVar<T>
 where
     // const-generic assertion
     na::Const<CDIM>: na::DimNameDiv<na::U2, Output = na::Const<DIM>>,
-    T: Trans,
+    T: Transform,
     T::Rot: From<na::Rotation<f64, DIM>>,
 {
     // Angle of starting point
@@ -183,5 +183,5 @@ where
     // |u1| == a1 (after rotation)
     let scale = coeffs[(0, 0)].abs();
     *coeffs /= scale;
-    Transform::new(Default::default(), psi.into(), scale)
+    GeoVar::new(Default::default(), psi.into(), scale)
 }

@@ -1,9 +1,9 @@
 //! Curve trait and its implementations.
-use crate::{CoordHint, EfdDim, Trans};
+use crate::{CoordHint, EfdDim, Transform};
 use alloc::vec::Vec;
 
 /// Alias for evaluate `EfdDim::Trans::Coord` from `D`.
-pub type Coord<D> = <<D as EfdDim>::Trans as Trans>::Coord;
+pub type Coord<D> = <<D as EfdDim>::Trans as Transform>::Coord;
 
 pub(crate) type MatrixRxX<R> = na::OMatrix<f64, R, na::Dyn>;
 
