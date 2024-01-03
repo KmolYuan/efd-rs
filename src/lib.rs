@@ -20,9 +20,9 @@
 extern crate alloc;
 pub extern crate nalgebra as na;
 
-pub use crate::efd::*;
 #[doc(no_inline)]
 pub use crate::{curve::*, dim::*, geo::*};
+pub use crate::{efd::*, pose::*};
 pub use dist::Distance;
 
 pub mod curve;
@@ -30,5 +30,6 @@ pub mod dim;
 mod dist;
 mod efd;
 pub mod geo;
+mod pose;
 pub mod tests;
 pub mod util;

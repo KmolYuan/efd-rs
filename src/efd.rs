@@ -4,9 +4,9 @@ use core::f64::consts::{PI, TAU};
 #[cfg(not(feature = "std"))]
 use num_traits::*;
 
-/// 2D EFD coefficients type.
+/// A 2D shape described by EFD.
 pub type Efd2 = Efd<D2>;
-/// 3D EFD coefficients type.
+/// A 3D shape described by EFD.
 pub type Efd3 = Efd<D3>;
 
 /// Elliptical Fourier Descriptor coefficients.
@@ -32,7 +32,6 @@ pub type Efd3 = Efd<D3>;
 /// [`Efd::try_from_coeffs()`] to input the coefficients externally.
 ///
 /// Use [`Efd::into_inner()`] to get the matrix of the coefficients.
-#[derive(Clone)]
 pub struct Efd<D: EfdDim> {
     coeffs: Coeff<D>,
     geo: GeoVar<D::Trans>,
@@ -369,6 +368,12 @@ impl<D: EfdDim> Efd<D> {
             .column_iter()
             .map(Coord::<D>::to_coord)
             .collect()
+    }
+}
+
+impl<D: EfdDim> Clone for Efd<D> {
+    fn clone(&self) -> Self {
+        Self { coeffs: self.coeffs.clone(), geo: self.geo.clone() }
     }
 }
 

@@ -14,7 +14,7 @@ pub type GeoVar3 = GeoVar<T3>;
 type Sim<R, const DIM: usize> = na::Similarity<f64, R, DIM>;
 
 /// A trait used in inner type of [`GeoVar`].
-pub trait Transform {
+pub trait Transform: Clone {
     /// Coordinate/Translation type.
     type Coord: CoordHint;
     /// Rotation angle type.
