@@ -314,7 +314,7 @@ impl<D: EfdDim> Efd<D> {
         self
     }
 
-    /// Generate the described curve. (`theta=TAU`)
+    /// Generate (reconstruct) the described curve. (`theta=TAU`)
     ///
     /// # Panics
     ///
@@ -324,7 +324,7 @@ impl<D: EfdDim> Efd<D> {
         self.generate_in(n, TAU)
     }
 
-    /// Generate a half of the described curve. (`theta=PI`)
+    /// Generate (reconstruct) a half of the described curve. (`theta=PI`)
     ///
     /// # Panics
     ///
@@ -334,7 +334,8 @@ impl<D: EfdDim> Efd<D> {
         self.generate_in(n, PI)
     }
 
-    /// Generate the described curve in a specific angle `theta` (`0..=TAU`).
+    /// Generate (reconstruct) the described curve in a specific angle `theta`
+    /// (`0..=TAU`).
     ///
     /// # Panics
     ///
@@ -346,7 +347,8 @@ impl<D: EfdDim> Efd<D> {
         curve
     }
 
-    /// Generate a normalized curve in a specific angle `theta` (`0..=TAU`).
+    /// Generate (reconstruct) a normalized curve in a specific angle `theta`
+    /// (`0..=TAU`).
     ///
     /// Normalized curve is **without** transformation.
     ///

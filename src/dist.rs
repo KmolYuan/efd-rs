@@ -1,8 +1,13 @@
 //! Distance trait.
-use crate::{Efd, EfdDim};
+use crate::{Efd, EfdDim, PosedEfd};
 use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
 use num_traits::*;
+
+#[inline]
+fn cmp((a, b): (&f64, &f64)) -> f64 {
+    a - b
+}
 
 /// Be able to calculate the distance between two instances.
 ///
@@ -50,28 +55,30 @@ pub trait Distance: Sized {
 
 impl<const N: usize> Distance for [f64; N] {
     fn err_buf(&self, rhs: &Self) -> Vec<f64> {
-        self.iter().zip(rhs.iter()).map(|(a, b)| a - b).collect()
+        self.iter().zip(rhs).map(cmp).collect()
     }
 }
 
 impl<D: EfdDim> Distance for Efd<D> {
     fn err_buf(&self, rhs: &Self) -> Vec<f64> {
-        use core::cmp::Ordering::*;
-        let a = self.coeffs();
-        let b = rhs.coeffs();
+        let a = self.coeffs().iter();
+        let b = rhs.coeffs().iter();
         let padding = core::iter::repeat(&0.);
-        match a.len().cmp(&b.len()) {
-            Less => b
-                .iter()
-                .zip(a.iter().chain(padding))
-                .map(|(b, a)| a - b)
-                .collect(),
-            Equal => a.iter().zip(b.iter()).map(|(a, b)| a - b).collect(),
-            Greater => a
-                .iter()
-                .zip(b.iter().chain(padding))
-                .map(|(a, b)| a - b)
-                .collect(),
+        match self.harmonic() >= rhs.harmonic() {
+            true => a.zip(b.chain(padding)).map(cmp).collect(),
+            false => a.chain(padding).zip(b).map(cmp).collect(),
+        }
+    }
+}
+
+impl<D: EfdDim> Distance for PosedEfd<D> {
+    fn err_buf(&self, rhs: &Self) -> Vec<f64> {
+        let a = self.coeffs().iter().chain(self.pose_coeffs().iter());
+        let b = rhs.coeffs().iter().chain(rhs.pose_coeffs().iter());
+        let padding = core::iter::repeat(&0.);
+        match self.harmonic() >= rhs.harmonic() {
+            true => a.zip(b.chain(padding)).map(cmp).collect(),
+            false => a.chain(padding).zip(b).map(cmp).collect(),
         }
     }
 }
