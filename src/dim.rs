@@ -23,16 +23,30 @@ pub type CoordView<'a, D> = na::MatrixView<'a, f64, Dim<D>, na::U1>;
 /// Alias for the dimension.
 pub type Dim<D> = <Coord<D> as CoordHint>::Dim;
 /// Alias for the coefficient number. (DIM * 2)
-pub type CDim<D> = CCDim<<D as EfdDim>::Trans>;
+pub type CDim<D> = TCDim<<D as EfdDim>::Trans>;
 /// A matrix view of specific coefficients. (DIM * 2)
 pub type CKernel<'a, D> = na::MatrixView<'a, f64, Dim<D>, na::U2>;
 /// A mutable matrix view of specific coefficients. (DIM * 2)
 pub type CKernelMut<'a, D> = na::MatrixViewMut<'a, f64, Dim<D>, na::U2>;
 
-type CCoeff<const DIM: usize> = na::OMatrix<f64, na::Const<DIM>, na::Dyn>;
-type CCKernel<'a, const DIM: usize> = na::MatrixView<'a, f64, na::Const<DIM>, na::U2>;
-type CCKernelMut<'a, const DIM: usize> = na::MatrixViewMut<'a, f64, na::Const<DIM>, na::U2>;
-type CCDim<T> = na::DimNameProd<<<T as Transform>::Coord as CoordHint>::Dim, na::U2>;
+type TCoeff<T> = MatrixRxX<TCDim<T>>;
+type TCKernel<'a, T> = na::MatrixView<'a, f64, TDim<T>, na::U2>;
+type TCKernelMut<'a, T> = na::MatrixViewMut<'a, f64, TDim<T>, na::U2>;
+type TCDim<T> = na::DimNameProd<TDim<T>, na::U2>;
+type TDim<T> = <<T as Transform>::Coord as CoordHint>::Dim;
+
+macro_rules! impl_rot {
+    ($m:ident, $rot:expr) => {{
+        let rot = $rot;
+        for mut c in $m.column_iter_mut() {
+            for mut v in CKernelMut::<Self>::from_slice(c.as_mut_slice()).column_iter_mut() {
+                let rotated = rot.inverse() * &v;
+                v.copy_from(&rotated);
+            }
+        }
+        rot
+    }};
+}
 
 /// Trait for EFD dimension.
 pub trait EfdDim {
@@ -77,7 +91,9 @@ impl EfdDim for D2 {
     type Trans = T2;
 
     fn coeff_norm(coeffs: &mut Coeff<Self>) -> GeoVar<Self::Trans> {
-        impl_norm(coeffs, |m| na::Rotation2::new(m[(1, 0)].atan2(m[(0, 0)])))
+        impl_norm::<Self::Trans>(coeffs, |m| {
+            impl_rot!(m, na::UnitComplex::new(m[(1, 0)].atan2(m[(0, 0)])))
+        })
     }
 }
 
@@ -85,25 +101,26 @@ impl EfdDim for D3 {
     type Trans = T3;
 
     fn coeff_norm(coeffs: &mut Coeff<Self>) -> GeoVar<Self::Trans> {
-        impl_norm(coeffs, |coeffs| {
-            let m1 = CCKernel::<3>::from_slice(coeffs.column(0).data.into_slice());
+        impl_norm::<Self::Trans>(coeffs, |m| {
+            let m1 = CKernel::<Self>::from_slice(m.column(0).data.into_slice());
             let u = m1.column(0).normalize();
-            if let Some(v) = m1.column(1).try_normalize(f64::EPSILON) {
+            let rot = if let Some(v) = m1.column(1).try_normalize(f64::EPSILON) {
                 // Closed curve, use `u` and `v` plane as basis
                 let w = u.cross(&v);
-                na::Rotation3::from_basis_unchecked(&[u, v, w])
-            } else if coeffs.ncols() > 1 {
+                na::UnitQuaternion::from_basis_unchecked(&[u, v, w])
+            } else if m.ncols() > 1 {
                 // Open curve, `v` is zero vector, use `u1` and `u2` plane as basis
-                let m2 = CCKernel::<3>::from_slice(coeffs.column(1).data.into_slice());
+                let m2 = CKernel::<Self>::from_slice(m.column(1).data.into_slice());
                 // `w` is orthogonal to `u` and `u2`
                 let w = u.cross(&m2.column(0)).normalize();
                 let u2 = w.cross(&u);
-                na::Rotation3::from_basis_unchecked(&[u, u2, w])
+                na::UnitQuaternion::from_basis_unchecked(&[u, u2, w])
             } else {
                 // Open curve, one harmonic, just rotate `u` to x-axis
                 let (u, v) = (na::Vector3::x(), u);
-                na::Rotation3::from_scaled_axis(u.cross(&v).normalize() * u.dot(&v).acos())
-            }
+                na::UnitQuaternion::from_scaled_axis(u.cross(&v).normalize() * u.dot(&v).acos())
+            };
+            impl_rot!(m, rot)
         })
     }
 }
@@ -112,7 +129,7 @@ fn impl_coeff<T: Transform>(
     curve: &[T::Coord],
     harmonic: usize,
     is_open: bool,
-) -> (MatrixRxX<CCDim<T>>, GeoVar<T>) {
+) -> (TCoeff<T>, GeoVar<T>) {
     let dxyz = diff(if is_open || curve.first() == curve.last() {
         to_mat(curve)
     } else {
@@ -126,7 +143,7 @@ fn impl_coeff<T: Transform>(
     // Coefficients (2dim * N)
     // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
     let mut n = 0.;
-    let mut coeffs = MatrixRxX::<CCDim<T>>::zeros(harmonic);
+    let mut coeffs = MatrixRxX::<TCDim<T>>::zeros(harmonic);
     for mut c in coeffs.column_iter_mut() {
         n += 1.;
         let phi = &phi * n;
@@ -155,27 +172,25 @@ fn impl_coeff<T: Transform>(
     (coeffs, GeoVar::new(center, Default::default(), 1.))
 }
 
-fn impl_norm<T, const DIM: usize, const CDIM: usize>(
-    coeffs: &mut CCoeff<CDIM>,
-    get_psi: impl FnOnce(&CCoeff<CDIM>) -> na::Rotation<f64, DIM>,
+fn impl_norm<T: Transform>(
+    coeffs: &mut TCoeff<T>,
+    get_and_rot: impl FnOnce(&mut TCoeff<T>) -> T::Rot,
 ) -> GeoVar<T>
 where
-    // const-generic assertion
-    na::Const<CDIM>: na::DimNameDiv<na::U2, Output = na::Const<DIM>>,
-    T: Transform,
-    T::Rot: From<na::Rotation<f64, DIM>>,
+    na::DefaultAllocator:
+        na::allocator::Allocator<f64, TDim<T>> + na::allocator::Allocator<f64, TDim<T>, na::U2>,
 {
     // Angle of starting point
     // m = m * theta
     let theta = {
-        let c = CCKernel::<DIM>::from_slice(coeffs.column(0).data.into_slice());
+        let c = TCKernel::<T>::from_slice(coeffs.column(0).data.into_slice());
         let dy = 2. * c.column_product().sum();
         let dx = c.map(pow2).row_sum();
         0.5 * dy.atan2(dx[0] - dx[1])
     };
     for (i, mut c) in coeffs.column_iter_mut().enumerate() {
         let theta = na::Rotation2::new((i + 1) as f64 * theta);
-        let mut m = CCKernelMut::<DIM>::from_slice(c.as_mut_slice());
+        let mut m = TCKernelMut::<T>::from_slice(c.as_mut_slice());
         m.copy_from(&(&m * theta));
     }
     // Normalize coefficients sign
@@ -187,14 +202,10 @@ where
     }
     // Rotation angle
     // m = psi' * m
-    let psi = get_psi(coeffs);
-    for mut c in coeffs.column_iter_mut() {
-        let mut m = CCKernelMut::<DIM>::from_slice(c.as_mut_slice());
-        m.tr_mul(psi.matrix()).transpose_to(&mut m);
-    }
+    let psi = get_and_rot(coeffs);
     // Scale factor
     // |u1| == a1 (after rotation)
     let scale = coeffs[(0, 0)].abs();
     *coeffs /= scale;
-    GeoVar::new(Default::default(), psi.into(), scale)
+    GeoVar::new(Default::default(), psi, scale)
 }
