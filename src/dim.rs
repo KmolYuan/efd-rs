@@ -5,10 +5,13 @@ use core::f64::consts::{PI, TAU};
 #[allow(unused_imports)]
 use num_traits::*;
 
+/// 1D EFD dimension marker.
+pub enum D1 {}
 /// 2D EFD dimension marker.
 pub enum D2 {}
 /// 3D EFD dimension marker.
 pub enum D3 {}
+
 /// 2D Coefficient type.
 pub type Coeff2 = Coeff<D2>;
 /// 3D Coefficient type.
@@ -58,6 +61,16 @@ pub trait EfdDim {
 
     /// Normalize coefficients.
     fn coeff_norm(coeffs: &mut Coeff<Self>) -> GeoVar<Self::Trans>;
+}
+
+impl EfdDim for D1 {
+    type Trans = T1;
+
+    fn coeff_norm(coeffs: &mut Coeff<Self>) -> GeoVar<Self::Trans> {
+        impl_norm(coeffs, |_| {
+            na::Rotation::from_matrix_unchecked(na::matrix![1.])
+        })
+    }
 }
 
 impl EfdDim for D2 {

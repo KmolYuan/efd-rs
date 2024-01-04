@@ -4,6 +4,8 @@ use core::f64::consts::{PI, TAU};
 #[cfg(not(feature = "std"))]
 use num_traits::*;
 
+/// A 1D shape described by EFD.
+pub type Efd1 = Efd<D1>;
 /// A 2D shape described by EFD.
 pub type Efd2 = Efd<D2>;
 /// A 3D shape described by EFD.

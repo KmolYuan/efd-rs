@@ -2,6 +2,8 @@
 use crate::*;
 use alloc::vec::Vec;
 
+/// 1D transformation inner type.
+pub type T1 = na::Similarity<f64, na::Rotation<f64, 1>, 1>;
 /// 2D transformation inner type.
 pub type T2 = na::Similarity2<f64>;
 /// 3D transformation inner type.
