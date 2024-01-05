@@ -10,6 +10,10 @@ pub type PosedEfd2 = PosedEfd<2>;
 /// A 3D shape with a pose described by EFD.
 pub type PosedEfd3 = PosedEfd<3>;
 
+/// Unit vector type of the posed EFD.
+pub type UVector<const D: usize> =
+    na::Unit<na::Vector<f64, na::Const<D>, na::ArrayStorage<f64, D, 1>>>;
+
 /// A shape with a pose described by EFD.
 ///
 /// These are the same as [`Efd`] except that it has a pose, and the data are
@@ -33,7 +37,68 @@ where
     U<D>: EfdDim<D>,
     na::Const<D>: na::DimNameMul<na::U2>,
 {
-    // TODO
+    /// Create a new [`PosedEfd`] from a [`Efd`] and a pose coefficients.
+    pub fn from_parts_unchecked(efd: Efd<D>, pose: Coeff<D>) -> Self {
+        Self { efd, pose }
+    }
+
+    /// Calculate the coefficients from two series of points.
+    ///
+    /// The second series is the pose series, the `curve2[i]` has the same time
+    /// as `curve[i]`.
+    pub fn from_series<C1, C2>(curve: C1, curve2: C2, is_open: bool) -> Self
+    where
+        C1: Curve<Coord<D>>,
+        C2: Curve<Coord<D>>,
+    {
+        let len = curve.len().min(curve2.len());
+        Self::from_series_harmonic(curve, curve2, is_open, if is_open { len } else { len / 2 })
+    }
+
+    /// Calculate the coefficients from two series of points.
+    ///
+    /// The `harmonic` is the number of the coefficients to be calculated.
+    pub fn from_series_harmonic<C1, C2>(
+        curve: C1,
+        curve2: C2,
+        is_open: bool,
+        harmonic: usize,
+    ) -> Self
+    where
+        C1: Curve<Coord<D>>,
+        C2: Curve<Coord<D>>,
+    {
+        let curve = curve.as_curve();
+        let vectors = curve
+            .iter()
+            .zip(curve2.as_curve())
+            .map(|(a, b)| na::Point::from(*b) - na::Point::from(*a))
+            .map(UVector::new_normalize)
+            .collect::<Vec<_>>();
+        Self::from_vectors_harmonic(curve, vectors, is_open, harmonic)
+    }
+
+    /// Calculate the coefficients from a curve and its vector of each point.
+    pub fn from_vectors<C, V>(curve: C, vectors: V, is_open: bool) -> Self
+    where
+        C: Curve<Coord<D>>,
+        V: Curve<UVector<D>>,
+    {
+        let len = curve.len().min(vectors.len());
+        Self::from_vectors_harmonic(curve, vectors, is_open, if is_open { len } else { len / 2 })
+    }
+
+    /// Calculate the coefficients from a curve and its vector of each point.
+    ///
+    /// The `harmonic` is the number of the coefficients to be calculated.
+    #[allow(unused_variables)]
+    pub fn from_vectors_harmonic<C, V>(curve: C, vectors: V, is_open: bool, harmonic: usize) -> Self
+    where
+        C: Curve<Coord<D>>,
+        V: Curve<UVector<D>>,
+    {
+        todo!() // TODO
+    }
 
     /// Consume self and return a raw array of the coefficients.
     /// The first is the EFD coefficients, and the second is the pose

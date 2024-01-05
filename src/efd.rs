@@ -130,7 +130,7 @@ where
     where
         C: Curve<Coord<D>>,
     {
-        let len = curve.as_curve().len();
+        let len = curve.len();
         Self::from_curve_harmonic(curve, is_open, if is_open { len * 2 } else { len })
             .fourier_power_anaysis(None)
     }
@@ -147,7 +147,7 @@ where
     where
         C: Curve<Coord<D>>,
     {
-        let len = curve.as_curve().len();
+        let len = curve.len();
         Self::from_curve_harmonic(curve, is_open, if is_open { len } else { len / 2 })
             .fourier_power_anaysis(None)
     }

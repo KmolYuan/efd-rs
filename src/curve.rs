@@ -23,6 +23,16 @@ pub trait Curve<A: Clone>: Sized {
     #[must_use]
     fn as_curve(&self) -> &[A];
 
+    /// Length of the curve.
+    fn len(&self) -> usize {
+        self.as_curve().len()
+    }
+
+    /// Check if the curve is empty.
+    fn is_empty(&self) -> bool {
+        self.as_curve().is_empty()
+    }
+
     /// Close the curve by the first element.
     ///
     /// # Panics
