@@ -1,5 +1,5 @@
 //! Distance trait.
-use crate::{Efd, EfdDim, PosedEfd};
+use crate::*;
 use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
 use num_traits::*;
@@ -59,7 +59,11 @@ impl<const N: usize> Distance for [f64; N] {
     }
 }
 
-impl<D: EfdDim> Distance for Efd<D> {
+impl<const D: usize> Distance for Efd<D>
+where
+    U<D>: EfdDim<D>,
+    na::Const<D>: na::DimNameMul<na::U2>,
+{
     fn err_buf(&self, rhs: &Self) -> Vec<f64> {
         let a = self.coeffs().iter();
         let b = rhs.coeffs().iter();
@@ -71,7 +75,11 @@ impl<D: EfdDim> Distance for Efd<D> {
     }
 }
 
-impl<D: EfdDim> Distance for PosedEfd<D> {
+impl<const D: usize> Distance for PosedEfd<D>
+where
+    U<D>: EfdDim<D>,
+    na::Const<D>: na::DimNameMul<na::U2>,
+{
     fn err_buf(&self, rhs: &Self) -> Vec<f64> {
         let a = self.coeffs().iter().chain(self.pose_coeffs().iter());
         let b = rhs.coeffs().iter().chain(rhs.pose_coeffs().iter());

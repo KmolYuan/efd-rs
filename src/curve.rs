@@ -1,19 +1,16 @@
 //! Curve trait and its implementations.
-use crate::{CoordHint, EfdDim, Transform};
 use alloc::vec::Vec;
 
 /// Alias for evaluate `EfdDim::Trans::Coord` from `D`.
-pub type Coord<D> = <<D as EfdDim>::Trans as Transform>::Coord;
+pub type Coord<const D: usize> = [f64; D];
+pub(crate) type MatrixRxX<const D: usize> = na::OMatrix<f64, na::Const<D>, na::Dyn>;
 
-pub(crate) type MatrixRxX<R> = na::OMatrix<f64, R, na::Dyn>;
-
-pub(crate) fn to_mat<A, C>(curve: C) -> MatrixRxX<A::Dim>
+pub(crate) fn to_mat<C, const D: usize>(curve: C) -> MatrixRxX<D>
 where
-    A: CoordHint,
-    C: Curve<A>,
+    C: Curve<Coord<D>>,
 {
     let curve = curve.to_curve();
-    MatrixRxX::<A::Dim>::from_iterator(curve.len(), curve.into_iter().flat_map(A::flat))
+    MatrixRxX::from_iterator(curve.len(), curve.into_iter().flatten())
 }
 
 /// Copy-on-write curve type.

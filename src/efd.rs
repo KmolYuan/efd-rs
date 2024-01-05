@@ -5,11 +5,11 @@ use core::f64::consts::{PI, TAU};
 use num_traits::*;
 
 /// A 1D shape described by EFD.
-pub type Efd1 = Efd<D1>;
+pub type Efd1 = Efd<1>;
 /// A 2D shape described by EFD.
-pub type Efd2 = Efd<D2>;
+pub type Efd2 = Efd<2>;
 /// A 3D shape described by EFD.
-pub type Efd3 = Efd<D3>;
+pub type Efd3 = Efd<3>;
 
 /// Elliptical Fourier Descriptor coefficients.
 /// Provide transformation between discrete points and coefficients.
@@ -34,12 +34,20 @@ pub type Efd3 = Efd<D3>;
 /// [`Efd::try_from_coeffs()`] to input the coefficients externally.
 ///
 /// Use [`Efd::into_inner()`] to get the matrix of the coefficients.
-pub struct Efd<D: EfdDim> {
+pub struct Efd<const D: usize>
+where
+    U<D>: EfdDim<D>,
+    na::Const<D>: na::DimNameMul<na::U2>,
+{
     coeffs: Coeff<D>,
-    geo: GeoVar<D::Trans>,
+    geo: GeoVar<Rot<D>, D>,
 }
 
-impl<D: EfdDim> Efd<D> {
+impl<const D: usize> Efd<D>
+where
+    U<D>: EfdDim<D>,
+    na::Const<D>: na::DimNameMul<na::U2>,
+{
     /// Create object from a 2D array with boundary check and normalization.
     ///
     /// The array size is (harmonic) x (dimension x 2). The dimension is
@@ -47,7 +55,7 @@ impl<D: EfdDim> Efd<D> {
     ///
     /// Return none if the harmonic is zero.
     pub fn try_from_coeffs(mut coeffs: Coeff<D>) -> Option<Self> {
-        (coeffs.ncols() != 0).then(|| Self { geo: D::coeff_norm(&mut coeffs), coeffs })
+        (coeffs.ncols() != 0).then(|| Self { geo: U::<D>::coeff_norm(&mut coeffs), coeffs })
     }
 
     /// Create object from a 2D array with boundary check.
@@ -163,7 +171,7 @@ impl<D: EfdDim> Efd<D> {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         let curve = curve.as_curve();
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (coeffs, geo) = D::get_coeff(curve, harmonic, is_open);
+        let (coeffs, geo) = U::<D>::get_coeff(curve, harmonic, is_open);
         Self { coeffs, geo }
     }
 
@@ -176,13 +184,13 @@ impl<D: EfdDim> Efd<D> {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         let curve = curve.as_curve();
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (coeffs, geo) = D::get_coeff_unnorm(curve, harmonic, is_open);
+        let (coeffs, geo) = U::<D>::get_coeff_unnorm(curve, harmonic, is_open);
         Self { coeffs, geo }
     }
 
     /// A builder method for changing geometric variables.
     #[must_use]
-    pub fn with_geo(self, geo: GeoVar<D::Trans>) -> Self {
+    pub fn with_geo(self, geo: GeoVar<Rot<D>, D>) -> Self {
         Self { geo, ..self }
     }
 
@@ -225,7 +233,7 @@ impl<D: EfdDim> Efd<D> {
     /// Panics if the harmonic is zero.
     pub fn normalized(self) -> Self {
         let Self { mut coeffs, geo } = self;
-        let trans_new = D::coeff_norm(&mut coeffs);
+        let trans_new = U::<D>::coeff_norm(&mut coeffs);
         Self { coeffs, geo: geo.apply(&trans_new) }
     }
 
@@ -263,13 +271,13 @@ impl<D: EfdDim> Efd<D> {
 
     /// Get the reference of geometric variables.
     #[must_use]
-    pub fn as_geo(&self) -> &GeoVar<D::Trans> {
+    pub fn as_geo(&self) -> &GeoVar<Rot<D>, D> {
         &self.geo
     }
 
     /// Get the mutable reference of geometric variables.
     #[must_use]
-    pub fn as_geo_mut(&mut self) -> &mut GeoVar<D::Trans> {
+    pub fn as_geo_mut(&mut self) -> &mut GeoVar<Rot<D>, D> {
         &mut self.geo
     }
 
@@ -300,7 +308,7 @@ impl<D: EfdDim> Efd<D> {
     pub fn reverse_inplace(&mut self) {
         self.coeffs
             .row_iter_mut()
-            .skip(D::Trans::dim())
+            .skip(D)
             .for_each(|mut c| c *= -1.);
     }
 
@@ -368,36 +376,46 @@ impl<D: EfdDim> Efd<D> {
                 CKernel::<D>::from_slice(c.as_slice()) * t
             })
             .reduce(|a, b| a + b)
-            .unwrap_or_else(|| na::OMatrix::<f64, Dim<D>, na::Dyn>::from_vec(Vec::new()))
+            .unwrap_or_else(|| MatrixRxX::<D>::from_vec(Vec::new()))
             .column_iter()
-            .map(Coord::<D>::to_coord)
+            .map(|row| core::array::from_fn(|i| row[i]))
             .collect()
     }
 }
 
-impl<D: EfdDim> Clone for Efd<D> {
+impl<const D: usize> Clone for Efd<D>
+where
+    U<D>: EfdDim<D>,
+    na::Const<D>: na::DimNameMul<na::U2>,
+{
     fn clone(&self) -> Self {
         Self { coeffs: self.coeffs.clone(), geo: self.geo.clone() }
     }
 }
 
-impl<D: EfdDim> core::fmt::Debug for Efd<D>
+impl<const D: usize> core::fmt::Debug for Efd<D>
 where
-    GeoVar<D::Trans>: core::fmt::Debug,
+    U<D>: EfdDim<D>,
+    na::Const<D>: na::DimNameMul<na::U2>,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("Efd")
-            .field("coeff", &CoeffFmt::<D>(&self.coeffs))
+            .field("coeff", &CoeffFmt(&self.coeffs))
             .field("geo", &self.geo)
-            .field("dim", &D::Trans::dim())
+            .field("dim", &D)
             .field("harmonic", &self.harmonic())
             .finish()
     }
 }
 
-struct CoeffFmt<'a, D: EfdDim>(&'a Coeff<D>);
+struct CoeffFmt<'a, const D: usize>(&'a Coeff<D>)
+where
+    na::Const<D>: na::DimNameMul<na::U2>;
 
-impl<D: EfdDim> core::fmt::Debug for CoeffFmt<'_, D> {
+impl<const D: usize> core::fmt::Debug for CoeffFmt<'_, D>
+where
+    na::Const<D>: na::DimNameMul<na::U2>,
+{
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let entries = self
             .0

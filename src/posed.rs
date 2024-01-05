@@ -6,9 +6,9 @@ use core::f64::consts::{PI, TAU};
 use num_traits::*;
 
 /// A 2D shape with a pose described by EFD.
-pub type PosedEfd2 = PosedEfd<D2>;
+pub type PosedEfd2 = PosedEfd<2>;
 /// A 3D shape with a pose described by EFD.
-pub type PosedEfd3 = PosedEfd<D3>;
+pub type PosedEfd3 = PosedEfd<3>;
 
 /// A shape with a pose described by EFD.
 ///
@@ -18,12 +18,21 @@ pub type PosedEfd3 = PosedEfd<D3>;
 /// # Pose Representation
 /// Pose is represented by an unit vector, which is rotated by the rotation
 /// of the original shape.
-pub struct PosedEfd<D: EfdDim> {
+#[derive(Clone)]
+pub struct PosedEfd<const D: usize>
+where
+    U<D>: EfdDim<D>,
+    na::Const<D>: na::DimNameMul<na::U2>,
+{
     efd: Efd<D>,
     pose: Coeff<D>,
 }
 
-impl<D: EfdDim> PosedEfd<D> {
+impl<const D: usize> PosedEfd<D>
+where
+    U<D>: EfdDim<D>,
+    na::Const<D>: na::DimNameMul<na::U2>,
+{
     // TODO
 
     /// Consume self and return a raw array of the coefficients.
@@ -99,22 +108,20 @@ impl<D: EfdDim> PosedEfd<D> {
                 CKernel::<D>::from_slice(c.as_slice()) * t
             })
             .reduce(|a, b| a + b)
-            .unwrap_or_else(|| na::OMatrix::<f64, Dim<D>, na::Dyn>::from_vec(Vec::new()))
+            .unwrap_or_else(|| MatrixRxX::<D>::from_vec(Vec::new()))
             .column_iter()
-            .map(Coord::<D>::to_coord)
+            .map(|row| core::array::from_fn(|i| row[i]))
             .collect::<Vec<_>>();
         self.as_geo().transform_inplace(&mut curve);
         curve
     }
 }
 
-impl<D: EfdDim> Clone for PosedEfd<D> {
-    fn clone(&self) -> Self {
-        Self { efd: self.efd.clone(), pose: self.pose.clone() }
-    }
-}
-
-impl<D: EfdDim> core::ops::Deref for PosedEfd<D> {
+impl<const D: usize> core::ops::Deref for PosedEfd<D>
+where
+    U<D>: EfdDim<D>,
+    na::Const<D>: na::DimNameMul<na::U2>,
+{
     type Target = Efd<D>;
 
     fn deref(&self) -> &Self::Target {
