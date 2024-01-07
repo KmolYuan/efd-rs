@@ -209,7 +209,7 @@ where
     where
         Option<f64>: From<T>,
     {
-        let lut = cumsum(self.coeffs.map(pow2).row_sum());
+        let lut = self.coeffs.map(pow2).row_sum();
         self.set_harmonic(fourier_power_anaysis(lut, threshold));
         self
     }
@@ -370,21 +370,7 @@ where
     /// Panics if the number of the points `n` is less than 2.
     #[must_use]
     pub fn generate_norm_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
-        assert!(n > 1, "n ({n}) must larger than 1");
-        let t = na::Matrix1xX::from_fn(n, |_, i| i as f64 / (n - 1) as f64 * theta);
-        self.coeffs
-            .column_iter()
-            .enumerate()
-            .map(|(i, c)| {
-                let t = &t * (i + 1) as f64;
-                let t = na::Matrix2xX::from_rows(&[t.map(f64::cos), t.map(f64::sin)]);
-                CKernel::<D>::from_slice(c.as_slice()) * t
-            })
-            .reduce(|a, b| a + b)
-            .unwrap_or_else(|| MatrixRxX::<D>::from_vec(Vec::new()))
-            .column_iter()
-            .map(|row| core::array::from_fn(|i| row[i]))
-            .collect()
+        U::<D>::reconstruct(&self.coeffs, n, theta)
     }
 }
 
@@ -430,17 +416,23 @@ where
     }
 }
 
-pub(crate) fn fourier_power_anaysis<T>(mut lut: na::Matrix1xX<f64>, threshold: T) -> usize
+pub(crate) fn fourier_power_anaysis<T>(lut: na::Matrix1xX<f64>, threshold: T) -> usize
 where
     Option<f64>: From<T>,
 {
     let threshold = Option::from(threshold).unwrap_or(0.9999);
     assert!((0.0..1.0).contains(&threshold), "threshold must in 0..1");
-    lut /= lut[lut.len() - 1];
-    match lut
-        .as_slice()
-        .binary_search_by(|x| x.partial_cmp(&threshold).unwrap())
-    {
-        Ok(h) | Err(h) => h + 1,
+    let target = lut.sum() * threshold;
+    // Binary search
+    let mut left = 0;
+    let mut right = lut.len();
+    while left < right {
+        let mid = left + (right - left) / 2;
+        if lut.row_part(0, mid + 1).sum() < target {
+            left = mid + 1;
+        } else {
+            right = mid;
+        }
     }
+    left + 1
 }

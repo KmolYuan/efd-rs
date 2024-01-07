@@ -116,7 +116,7 @@ where
     where
         Option<f64>: From<T>,
     {
-        let lut = cumsum((self.coeffs().map(pow2) + self.pose.map(pow2)).row_sum());
+        let lut = (self.coeffs().map(pow2) + self.pose.map(pow2)).row_sum();
         self.set_harmonic(fourier_power_anaysis(lut, threshold));
         self
     }
@@ -197,22 +197,7 @@ where
     /// Panics if the number of the points `n` is less than 2.
     #[must_use]
     pub fn generate_pose_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
-        assert!(n > 1, "n ({n}) must larger than 1");
-        let t = na::Matrix1xX::from_fn(n, |_, i| i as f64 / (n - 1) as f64 * theta);
-        let mut curve = self
-            .pose
-            .column_iter()
-            .enumerate()
-            .map(|(i, c)| {
-                let t = &t * (i + 1) as f64;
-                let t = na::Matrix2xX::from_rows(&[t.map(f64::cos), t.map(f64::sin)]);
-                CKernel::<D>::from_slice(c.as_slice()) * t
-            })
-            .reduce(|a, b| a + b)
-            .unwrap_or_else(|| MatrixRxX::<D>::from_vec(Vec::new()))
-            .column_iter()
-            .map(|row| core::array::from_fn(|i| row[i]))
-            .collect::<Vec<_>>();
+        let mut curve = U::<D>::reconstruct(&self.pose, n, theta);
         self.as_geo().transform_inplace(&mut curve);
         curve
     }

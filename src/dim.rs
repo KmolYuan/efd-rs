@@ -1,5 +1,6 @@
 //! Dimension specific implementation.
 use crate::{util::*, *};
+use alloc::vec::Vec;
 use core::f64::consts::{PI, TAU};
 #[cfg(not(feature = "std"))]
 #[allow(unused_imports)]
@@ -128,6 +129,25 @@ where
         let scale = coeffs[(0, 0)].abs();
         *coeffs /= scale;
         GeoVar::new([0.; D], psi, scale)
+    }
+
+    /// Reconstruct the curve from the coefficients.
+    fn reconstruct(coeffs: &Coeff<D>, n: usize, theta: f64) -> Vec<Coord<D>> {
+        assert!(n > 1, "n ({n}) must larger than 1");
+        let t = na::Matrix1xX::from_fn(n, |_, i| i as f64 / (n - 1) as f64 * theta);
+        coeffs
+            .column_iter()
+            .enumerate()
+            .map(|(i, c)| {
+                let t = &t * (i + 1) as f64;
+                let t = na::Matrix2xX::from_rows(&[t.map(f64::cos), t.map(f64::sin)]);
+                CKernel::<D>::from_slice(c.as_slice()) * t
+            })
+            .reduce(|a, b| a + b)
+            .unwrap_or_else(|| MatrixRxX::<D>::from_vec(Vec::new()))
+            .column_iter()
+            .map(|row| core::array::from_fn(|i| row[i]))
+            .collect()
     }
 
     /// Get the rotation matrix from the coefficients.
