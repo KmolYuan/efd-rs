@@ -209,18 +209,23 @@ where
     where
         Option<f64>: From<T>,
     {
-        let threshold = Option::from(threshold).unwrap_or(0.9999);
-        debug_assert!((0.0..1.0).contains(&threshold), "threshold must in 0..1");
-        let mut lut = cumsum(self.coeffs.map(pow2).row_sum());
-        lut /= lut[lut.len() - 1];
-        let harmonic = match lut
-            .as_slice()
-            .binary_search_by(|x| x.partial_cmp(&threshold).unwrap())
-        {
-            Ok(h) | Err(h) => h + 1,
-        };
-        self.coeffs.resize_horizontally_mut(harmonic, 0.);
+        let lut = cumsum(self.coeffs.map(pow2).row_sum());
+        self.set_harmonic(fourier_power_anaysis(lut, threshold));
         self
+    }
+
+    /// Set the harmonic number of the coefficients.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the harmonic is zero or greater than the current harmonic.
+    pub fn set_harmonic(&mut self, harmonic: usize) {
+        let current = self.harmonic();
+        assert!(
+            (1..current).contains(&harmonic),
+            "harmonic must in 1..={current}"
+        );
+        self.coeffs.resize_horizontally_mut(harmonic, 0.);
     }
 
     /// Force normalize the coefficients.
@@ -422,5 +427,20 @@ where
             .column_iter()
             .map(|c| c.iter().copied().collect::<Vec<_>>());
         f.debug_list().entries(entries).finish()
+    }
+}
+
+pub(crate) fn fourier_power_anaysis<T>(mut lut: na::Matrix1xX<f64>, threshold: T) -> usize
+where
+    Option<f64>: From<T>,
+{
+    let threshold = Option::from(threshold).unwrap_or(0.9999);
+    assert!((0.0..1.0).contains(&threshold), "threshold must in 0..1");
+    lut /= lut[lut.len() - 1];
+    match lut
+        .as_slice()
+        .binary_search_by(|x| x.partial_cmp(&threshold).unwrap())
+    {
+        Ok(h) | Err(h) => h + 1,
     }
 }

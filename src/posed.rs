@@ -1,4 +1,4 @@
-use crate::*;
+use crate::{util::*, *};
 use alloc::vec::Vec;
 use core::f64::consts::{PI, TAU};
 #[cfg(not(feature = "std"))]
@@ -53,6 +53,7 @@ where
     {
         let len = curve.len().min(curve2.len());
         Self::from_series_harmonic(curve, curve2, is_open, if is_open { len } else { len / 2 })
+            .fourier_power_anaysis(None)
     }
 
     /// Calculate the coefficients from two series of points.
@@ -86,6 +87,7 @@ where
     {
         let len = curve.len().min(vectors.len());
         Self::from_vectors_harmonic(curve, vectors, is_open, if is_open { len } else { len / 2 })
+            .fourier_power_anaysis(None)
     }
 
     /// Calculate the coefficients from a curve and its vector of each point.
@@ -98,6 +100,40 @@ where
         V: Curve<UVector<D>>,
     {
         todo!() // TODO
+    }
+
+    /// Use Fourier Power Anaysis (FPA) to reduce the harmonic number.
+    ///
+    /// The default threshold is 99.99%.
+    ///
+    /// See also [`Efd::fourier_power_anaysis()`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if the threshold is not in 0..1, or the harmonic is zero.
+    #[must_use]
+    pub fn fourier_power_anaysis<T>(mut self, threshold: T) -> Self
+    where
+        Option<f64>: From<T>,
+    {
+        let lut = cumsum((self.coeffs().map(pow2) + self.pose.map(pow2)).row_sum());
+        self.set_harmonic(fourier_power_anaysis(lut, threshold));
+        self
+    }
+
+    /// Set the harmonic number of the coefficients.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the harmonic is zero or greater than the current harmonic.
+    pub fn set_harmonic(&mut self, harmonic: usize) {
+        let current = self.harmonic();
+        assert!(
+            (1..current).contains(&harmonic),
+            "harmonic must in 1..={current}"
+        );
+        self.efd.set_harmonic(harmonic);
+        self.pose.resize_horizontally_mut(harmonic, 0.);
     }
 
     /// Consume self and return a raw array of the coefficients.
