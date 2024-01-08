@@ -28,13 +28,22 @@ pub type Rot<const D: usize> = <U<D> as EfdDim<D>>::Rot;
 
 /// Trait for EFD dimension.
 ///
-/// **This trait is sealed and cannot be implemented outside of this crate.**
+/// This trait allows to implement with different rotation types.
 pub trait EfdDim<const D: usize>
 where
     na::Const<D>: na::DimNameMul<na::U2>,
 {
     /// Rotation type.
+    ///
+    /// For the memory efficiency, the generic rotation matrix [`na::Rotation`]
+    /// is not used.
     type Rot: RotHint<D>;
+
+    /// Get the rotation matrix from the coefficients.
+    ///
+    /// In different dimensions, the rotation needs to be calculated
+    /// differently. So only the specific dimension can implement this trait.
+    fn get_rot(coeffs: &Coeff<D>) -> Self::Rot;
 
     /// Generate coefficients and similarity matrix.
     fn get_coeff(
@@ -149,9 +158,6 @@ where
             .map(|row| core::array::from_fn(|i| row[i]))
             .collect()
     }
-
-    /// Get the rotation matrix from the coefficients.
-    fn get_rot(coeffs: &Coeff<D>) -> Self::Rot;
 }
 
 impl EfdDim<1> for U<1> {

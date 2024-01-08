@@ -26,7 +26,7 @@ pub type Efd3 = Efd<3>;
 /// Secondly, the data is rotated with respect to the major axis. Thirdly,
 /// the coefficients are normalized with regard to the absolute value of A₁.
 ///
-/// Please see [`Transform`] for more information.
+/// Please see [`GeoVar`] for more information.
 ///
 /// # Raw Coefficients
 ///
@@ -50,8 +50,7 @@ where
 {
     /// Create object from a 2D array with boundary check and normalization.
     ///
-    /// The array size is (harmonic) x (dimension x 2). The dimension is
-    /// [`CoordHint::Dim`].
+    /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
     ///
     /// Return none if the harmonic is zero.
     pub fn try_from_coeffs(mut coeffs: Coeff<D>) -> Option<Self> {
@@ -60,8 +59,7 @@ where
 
     /// Create object from a 2D array with boundary check.
     ///
-    /// The array size is (harmonic) x (dimension x 2). The dimension is
-    /// [`CoordHint::Dim`].
+    /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
     ///
     /// Return none if the harmonic is zero.
     pub fn try_from_coeffs_unnorm(coeffs: Coeff<D>) -> Option<Self> {
@@ -70,8 +68,7 @@ where
 
     /// Create object from a 2D array directly.
     ///
-    /// The array size is (harmonic) x (dimension x 2). The dimension is
-    /// [`CoordHint::Dim`].
+    /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
     ///
     /// Zero harmonic is allowed but meaningless. If the harmonic is zero, some
     /// operations will panic.
