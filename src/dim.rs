@@ -28,7 +28,8 @@ pub type Rot<const D: usize> = <U<D> as EfdDim<D>>::Rot;
 
 /// Trait for EFD dimension.
 ///
-/// This trait allows to implement with different rotation types.
+/// This trait allows to implement with different rotation types, and the
+/// implemented type is unrelated to the implementation.
 pub trait EfdDim<const D: usize>
 where
     na::Const<D>: na::DimNameMul<na::U2>,
@@ -48,10 +49,10 @@ where
     /// Generate coefficients and similarity matrix.
     fn get_coeff(
         curve: &[Coord<D>],
-        harmonic: usize,
         is_open: bool,
+        harmonic: usize,
     ) -> (Coeff<D>, GeoVar<Self::Rot, D>) {
-        let (mut coeffs, trans1) = Self::get_coeff_unnorm(curve, harmonic, is_open);
+        let (mut coeffs, trans1) = Self::get_coeff_unnorm(curve, is_open, harmonic);
         let trans2 = Self::coeff_norm(&mut coeffs);
         (coeffs, trans1 * trans2)
     }
@@ -59,8 +60,8 @@ where
     /// Generate coefficients and similarity matrix **without** normalization.
     fn get_coeff_unnorm(
         curve: &[Coord<D>],
-        harmonic: usize,
         is_open: bool,
+        harmonic: usize,
     ) -> (Coeff<D>, GeoVar<Self::Rot, D>) {
         let dxyz = diff(if is_open || curve.first() == curve.last() {
             to_mat(curve)
@@ -101,6 +102,18 @@ where
         });
         let rot = na::AbstractRotation::identity();
         (coeffs, GeoVar::new(center, rot, 1.))
+    }
+
+    /// Get the posed coefficients.
+    #[allow(unused_variables)]
+    fn get_posed(
+        curve: &[Coord<D>],
+        vectors: MatrixRxX<D>,
+        is_open: bool,
+        harmonic: usize,
+    ) -> (Coeff<D>, Coeff<D>, GeoVar<Self::Rot, D>) {
+        // TODO
+        todo!()
     }
 
     /// Normalize coefficients.

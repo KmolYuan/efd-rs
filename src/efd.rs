@@ -74,13 +74,13 @@ where
     /// operations will panic.
     ///
     /// ```
-    /// use efd::{Coeff2, Efd2};
+    /// use efd::{Coeff2, Efd2, GeoVar};
     /// let coeff = Coeff2::from_column_slice(&[]);
-    /// let path = Efd2::from_coeffs_unchecked(coeff).generate(20);
+    /// let path = Efd2::from_parts_unchecked(coeff, GeoVar::identity()).generate(20);
     /// assert_eq!(path.len(), 0);
     /// ```
-    pub fn from_coeffs_unchecked(coeffs: Coeff<D>) -> Self {
-        Self { coeffs, geo: GeoVar::identity() }
+    pub fn from_parts_unchecked(coeffs: Coeff<D>, geo: GeoVar<Rot<D>, D>) -> Self {
+        Self { coeffs, geo }
     }
 
     /// Fully automated coefficient calculation.
@@ -168,7 +168,7 @@ where
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         let curve = curve.as_curve();
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (coeffs, geo) = U::<D>::get_coeff(curve, harmonic, is_open);
+        let (coeffs, geo) = U::<D>::get_coeff(curve, is_open, harmonic);
         Self { coeffs, geo }
     }
 
@@ -181,7 +181,7 @@ where
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         let curve = curve.as_curve();
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (coeffs, geo) = U::<D>::get_coeff_unnorm(curve, harmonic, is_open);
+        let (coeffs, geo) = U::<D>::get_coeff_unnorm(curve, is_open, harmonic);
         Self { coeffs, geo }
     }
 

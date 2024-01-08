@@ -13,7 +13,7 @@ fn cmp((a, b): (&f64, &f64)) -> f64 {
 ///
 /// Each data number has the same weight by default, but you can change it by
 /// implementing [`Self::err_buf()`].
-pub trait Distance: Sized {
+pub trait Distance {
     /// Calculate the error between each pair of datas.
     fn err_buf(&self, rhs: &Self) -> Vec<f64>;
 
@@ -53,9 +53,9 @@ pub trait Distance: Sized {
     }
 }
 
-impl<const N: usize> Distance for [f64; N] {
+impl<S: AsRef<[f64]>> Distance for S {
     fn err_buf(&self, rhs: &Self) -> Vec<f64> {
-        self.iter().zip(rhs).map(cmp).collect()
+        self.as_ref().iter().zip(rhs.as_ref()).map(cmp).collect()
     }
 }
 

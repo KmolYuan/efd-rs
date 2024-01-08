@@ -99,7 +99,17 @@ where
         C: Curve<Coord<D>>,
         V: Curve<UVector<D>>,
     {
-        todo!() // TODO
+        debug_assert!(harmonic != 0, "harmonic must not be 0");
+        let curve = curve.as_curve();
+        debug_assert!(curve.len() > 2, "the curve length must greater than 2");
+        let columns = vectors
+            .to_curve()
+            .into_iter()
+            .map(|v| v.into_inner())
+            .collect::<Vec<_>>();
+        let vectors = MatrixRxX::from_columns(&columns);
+        let (coeff, pose, geo) = U::<D>::get_posed(curve, vectors, is_open, harmonic);
+        Self { efd: Efd::from_parts_unchecked(coeff, geo), pose }
     }
 
     /// Use Fourier Power Anaysis (FPA) to reduce the harmonic number.
