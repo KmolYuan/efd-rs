@@ -26,11 +26,14 @@ pub type CKernelMut<'a, const D: usize> = na::MatrixViewMut<'a, f64, na::Const<D
 /// Rotation type of the EFD.
 pub type Rot<const D: usize> = <U<D> as EfdDim<D>>::Rot;
 
+trait Sealed {}
+impl<const D: usize> Sealed for U<D> {}
+
 /// Trait for EFD dimension.
 ///
-/// This trait allows to implement with different rotation types, and the
-/// implemented type is unrelated to the implementation.
-pub trait EfdDim<const D: usize>
+/// **This trait is sealed and cannot be implemented outside of this crate.**
+#[allow(private_bounds)]
+pub trait EfdDim<const D: usize>: Sealed
 where
     na::Const<D>: na::DimNameMul<na::U2>,
 {
