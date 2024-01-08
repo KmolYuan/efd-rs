@@ -254,21 +254,23 @@ where
     /// Get a view to the specific coefficients. (`0..self.harmonic()`)
     #[must_use]
     pub fn coeff(&self, harmonic: usize) -> CKernel<D> {
-        CKernel::<D>::from_slice(self.coeffs.column(harmonic).data.into_slice())
+        self.coeffs
+            .column(harmonic)
+            .reshape_generic(na::Const, na::U2)
     }
 
     /// Get an iterator over all the coefficients per harmonic.
     pub fn coeffs_iter(&self) -> impl Iterator<Item = CKernel<D>> {
         self.coeffs
             .column_iter()
-            .map(|c| CKernel::<D>::from_slice(c.data.into_slice()))
+            .map(|c| c.reshape_generic(na::Const, na::U2))
     }
 
     /// Get a mutable iterator over all the coefficients per harmonic.
     pub fn coeffs_iter_mut(&mut self) -> impl Iterator<Item = CKernelMut<D>> {
         self.coeffs
             .column_iter_mut()
-            .map(|c| CKernelMut::<D>::from_slice(c.data.into_slice_mut()))
+            .map(|c| c.reshape_generic(na::Const, na::U2))
     }
 
     /// Get the reference of geometric variables.

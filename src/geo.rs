@@ -218,7 +218,7 @@ macro_rules! impl_mul {
             type Output = GeoVar<R, D>;
             #[must_use]
             fn mul(self, rhs: $ty2) -> Self::Output {
-                rhs.apply(&self)
+                GeoVar { inner: &self.inner * &rhs.inner }
             }
         }
     };

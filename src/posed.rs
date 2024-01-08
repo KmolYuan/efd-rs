@@ -105,9 +105,9 @@ where
         let columns = vectors
             .to_curve()
             .into_iter()
-            .map(|v| v.into_inner())
+            .flat_map(|v| v.into_inner().data.0[0])
             .collect::<Vec<_>>();
-        let vectors = MatrixRxX::from_columns(&columns);
+        let vectors = MatrixRxX::from_vec(columns);
         let (coeff, pose, geo) = U::<D>::get_posed(curve, vectors, is_open, harmonic);
         Self { efd: Efd::from_parts_unchecked(coeff, geo), pose }
     }
@@ -171,14 +171,16 @@ where
     /// Get a view to the specific pose coefficients. (`0..self.harmonic()`)
     #[must_use]
     pub fn pose_coeff(&self, harmonic: usize) -> CKernel<D> {
-        CKernel::<D>::from_slice(self.pose.column(harmonic).data.into_slice())
+        self.pose
+            .column(harmonic)
+            .reshape_generic(na::Const, na::U2)
     }
 
     /// Get an iterator over all the pose coefficients per harmonic.
     pub fn coeffs_iter(&self) -> impl Iterator<Item = CKernel<D>> {
         self.pose
             .column_iter()
-            .map(|c| CKernel::<D>::from_slice(c.data.into_slice()))
+            .map(|c| c.reshape_generic(na::Const, na::U2))
     }
 
     /// Generate (reconstruct) the pose series.

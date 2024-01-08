@@ -124,14 +124,14 @@ where
         // Angle of starting point
         // m = m * theta
         let theta = {
-            let c = CKernel::<D>::from_slice(coeffs.column(0).data.into_slice());
+            let c = coeffs.column(0).reshape_generic(na::Const::<D>, na::U2);
             let dy = 2. * c.column_product().sum();
             let dx = c.map(pow2).row_sum();
             0.5 * dy.atan2(dx[0] - dx[1])
         };
-        for (i, mut c) in coeffs.column_iter_mut().enumerate() {
+        for (i, c) in coeffs.column_iter_mut().enumerate() {
             let theta = na::Rotation2::new((i + 1) as f64 * theta);
-            let mut m = CKernelMut::<D>::from_slice(c.as_mut_slice());
+            let mut m = c.reshape_generic(na::Const::<D>, na::U2);
             m.copy_from(&(&m * theta));
         }
         // Normalize coefficients sign
@@ -146,7 +146,7 @@ where
         let psi = Self::get_rot(coeffs);
         let psi_mat = psi.clone().matrix();
         for c in coeffs.column_iter_mut() {
-            let mut m = CKernelMut::<D>::from_slice(c.data.into_slice_mut());
+            let mut m = c.reshape_generic(na::Const::<D>, na::U2);
             m.tr_mul(&psi_mat).transpose_to(&mut m);
         }
         // Scale factor
@@ -166,7 +166,7 @@ where
             .map(|(i, c)| {
                 let t = &t * (i + 1) as f64;
                 let t = na::Matrix2xX::from_rows(&[t.map(f64::cos), t.map(f64::sin)]);
-                CKernel::<D>::from_slice(c.as_slice()) * t
+                c.reshape_generic(na::Const::<D>, na::U2) * t
             })
             .reduce(|a, b| a + b)
             .unwrap_or_else(|| MatrixRxX::<D>::from_vec(Vec::new()))
@@ -196,7 +196,7 @@ impl EfdDim<3> for U<3> {
     type Rot = na::UnitQuaternion<f64>;
 
     fn get_rot(m: &Coeff<3>) -> Self::Rot {
-        let m1 = CKernel::<3>::from_slice(m.column(0).data.into_slice());
+        let m1 = m.column(0).reshape_generic(na::Const::<3>, na::U2);
         let u = m1.column(0).normalize();
         if let Some(v) = m1.column(1).try_normalize(f64::EPSILON) {
             // Closed curve, use `u` and `v` plane as basis
@@ -204,7 +204,7 @@ impl EfdDim<3> for U<3> {
             na::UnitQuaternion::from_basis_unchecked(&[u, v, w])
         } else if m.ncols() > 1 {
             // Open curve, `v` is zero vector, use `u1` and `u2` plane as basis
-            let m2 = CKernel::<3>::from_slice(m.column(1).data.into_slice());
+            let m2 = m.column(1).reshape_generic(na::Const::<3>, na::U2);
             // `w` is orthogonal to `u` and `u2`
             let w = u.cross(&m2.column(0)).normalize();
             let u2 = w.cross(&u);
