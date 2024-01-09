@@ -92,23 +92,25 @@ where
     /// Calculate the coefficients from a curve and its vector of each point.
     ///
     /// The `harmonic` is the number of the coefficients to be calculated.
-    #[allow(unused_variables)]
     pub fn from_vectors_harmonic<C, V>(curve: C, vectors: V, is_open: bool, harmonic: usize) -> Self
     where
         C: Curve<Coord<D>>,
         V: Curve<UVector<D>>,
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
-        let curve = curve.as_curve();
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
+        let curve = curve.as_curve();
         let vectors = vectors
             .to_curve()
             .into_iter()
             .map(|v| v.into_inner().data.0[0])
             .collect::<Vec<_>>();
-        let (coeff1, coeff2, geo1, geo2) = U::<D>::get_posed(curve, &vectors, is_open, harmonic);
-        let curve = Efd::from_parts_unchecked(coeff1, geo1);
-        let pose = Efd::from_parts_unchecked(coeff2, geo2);
+        let [curve, pose] = U::<D>::get_coeff_unnorm([curve, &vectors], is_open, harmonic).map(
+            |(mut coeffs, geo1)| {
+                let geo2 = U::<D>::coeff_norm(&mut coeffs);
+                Efd::from_parts_unchecked(coeffs, geo1 * geo2)
+            },
+        );
         Self { curve, pose }
     }
 

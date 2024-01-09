@@ -9,12 +9,12 @@ use num_traits::*;
 /// EFD dimension marker.
 pub enum U<const N: usize> {}
 
-/// 2D Coefficient type.
-pub type Coeff2 = Coeff<2>;
-/// 3D Coefficient type.
-pub type Coeff3 = Coeff<3>;
-/// Coefficient type.
-pub type Coeff<const D: usize> = na::OMatrix<f64, CDim<D>, na::Dyn>;
+/// 2D Coefficients type.
+pub type Coeffs2 = Coeffs<2>;
+/// 3D Coefficients type.
+pub type Coeffs3 = Coeffs<3>;
+/// Coefficients type.
+pub type Coeffs<const D: usize> = na::OMatrix<f64, CDim<D>, na::Dyn>;
 /// Coordinate view used in the conversion method.
 pub type CoordView<'a, const D: usize> = na::MatrixView<'a, f64, CDim<D>, na::U1>;
 /// Alias for the coefficient number. (DIM * 2)
@@ -47,56 +47,64 @@ where
     ///
     /// In different dimensions, the rotation needs to be calculated
     /// differently. So only the specific dimension can implement this trait.
-    fn get_rot(coeffs: &Coeff<D>) -> Self::Rot;
+    fn get_rot(coeff: &Coeffs<D>) -> Self::Rot;
 
     /// Obtain coefficients and similarity matrix **without** normalization.
-    fn get_coeff_unnorm(
-        curve: &[Coord<D>],
+    ///
+    /// **Where `series.len()` must greater than 1.**
+    fn get_coeff_unnorm<const N: usize>(
+        series: [&[Coord<D>]; N],
         is_open: bool,
         harmonic: usize,
-    ) -> (Coeff<D>, GeoVar<Self::Rot, D>) {
-        let dxyz = diff(if is_open || curve.first() == curve.last() {
-            to_mat(curve)
-        } else {
-            to_mat(curve.closed_lin())
-        });
+    ) -> [(Coeffs<D>, GeoVar<Self::Rot, D>); N] {
+        let wrap_curve = |curve: &[_]| {
+            diff(if is_open || curve.first() == curve.last() {
+                to_mat(curve)
+            } else {
+                to_mat(curve.closed_lin())
+            })
+        };
+        let dxyz = wrap_curve(series[0]);
         let dt = dxyz.map(pow2).row_sum().map(f64::sqrt);
         let t = cumsum(dt.clone()).insert_column(0, 0.);
         let zt = t[t.len() - 1];
         let scalar = zt / (PI * PI) * if is_open { 2. } else { 0.5 };
         let phi = &t * TAU / zt * if is_open { 0.5 } else { 1. };
-        // Coefficients (2dim * N)
-        // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
-        let mut coeffs = Coeff::<D>::zeros(harmonic);
-        for (n, mut c) in coeffs.column_iter_mut().enumerate() {
-            let n = (n + 1) as f64;
-            let phi = &phi * n;
-            let scalar = scalar / pow2(n);
-            let cos_phi = diff(phi.map(f64::cos)).component_div(&dt);
-            dxyz.row_iter()
-                .zip(&mut c.rows_range_mut(..D))
-                .for_each(|(d, c)| *c = scalar * d.component_mul(&cos_phi).sum());
-            if is_open {
-                continue;
-            }
-            let sin_phi = diff(phi.map(f64::sin)).component_div(&dt);
-            dxyz.row_iter()
-                .zip(&mut c.rows_range_mut(D..))
-                .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
-        }
         let tdt = t.columns_range(1..).component_div(&dt);
-        let scalar = 0.5 * diff(t.map(pow2)).component_div(&dt);
-        let mut center = curve[0];
-        dxyz.row_iter().zip(&mut center).for_each(|(dxyz, oxyz)| {
-            let xi = cumsum(dxyz) - dxyz.component_mul(&tdt);
-            *oxyz += (dxyz.component_mul(&scalar) + xi.component_mul(&dt)).sum() / zt;
-        });
-        let rot = na::AbstractRotation::identity();
-        (coeffs, GeoVar::new(center, rot, 1.))
+        let scalar2 = 0.5 * diff(t.map(pow2)).component_div(&dt);
+        series.map(|curve| {
+            let dxyz = wrap_curve(curve);
+            // Coefficients (2dim * N)
+            // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
+            let mut coeff = Coeffs::<D>::zeros(harmonic);
+            for (n, mut c) in coeff.column_iter_mut().enumerate() {
+                let n = (n + 1) as f64;
+                let phi = &phi * n;
+                let scalar = scalar / pow2(n);
+                let cos_phi = diff(phi.map(f64::cos)).component_div(&dt);
+                dxyz.row_iter()
+                    .zip(&mut c.rows_range_mut(..D))
+                    .for_each(|(d, c)| *c = scalar * d.component_mul(&cos_phi).sum());
+                if is_open {
+                    continue;
+                }
+                let sin_phi = diff(phi.map(f64::sin)).component_div(&dt);
+                dxyz.row_iter()
+                    .zip(&mut c.rows_range_mut(D..))
+                    .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
+            }
+            let mut center = curve[0];
+            dxyz.row_iter().zip(&mut center).for_each(|(dxyz, oxyz)| {
+                let xi = cumsum(dxyz) - dxyz.component_mul(&tdt);
+                *oxyz += (dxyz.component_mul(&scalar2) + xi.component_mul(&dt)).sum() / zt;
+            });
+            let rot_eye = na::AbstractRotation::identity();
+            (coeff, GeoVar::new(center, rot_eye, 1.))
+        })
     }
 
     /// Normalize the coefficients.
-    fn coeff_norm(coeffs: &mut Coeff<D>) -> GeoVar<Self::Rot, D> {
+    fn coeff_norm(coeffs: &mut Coeffs<D>) -> GeoVar<Self::Rot, D> {
         // Angle of starting point
         // m = m * theta
         let theta = {
@@ -132,26 +140,9 @@ where
         GeoVar::new([0.; D], psi, scale)
     }
 
-    /// Obtain the coefficients and its combined vector's coefficients.
-    #[allow(unused_variables)]
-    fn get_posed(
-        curve: &[Coord<D>],
-        vectors: &[Coord<D>],
-        is_open: bool,
-        harmonic: usize,
-    ) -> (
-        Coeff<D>,
-        Coeff<D>,
-        GeoVar<Self::Rot, D>,
-        GeoVar<Self::Rot, D>,
-    ) {
-        // TODO
-        todo!()
-    }
-
     /// Reconstruct the curve from the coefficients.
-    fn reconstruct(coeffs: &Coeff<D>, n: usize, theta: f64) -> Vec<Coord<D>> {
-        assert!(n > 1, "n ({n}) must larger than 1");
+    fn reconstruct(coeffs: &Coeffs<D>, n: usize, theta: f64) -> Vec<Coord<D>> {
+        debug_assert!(n > 1, "n ({n}) must larger than 1");
         let t = na::Matrix1xX::from_fn(n, |_, i| i as f64 / (n - 1) as f64 * theta);
         coeffs
             .column_iter()
@@ -172,7 +163,7 @@ where
 impl EfdDim<1> for U<1> {
     type Rot = na::Rotation<f64, 1>;
 
-    fn get_rot(_coeffs: &Coeff<1>) -> Self::Rot {
+    fn get_rot(_coeffs: &Coeffs<1>) -> Self::Rot {
         na::Rotation::from_matrix_unchecked(na::matrix![1.])
     }
 }
@@ -180,7 +171,7 @@ impl EfdDim<1> for U<1> {
 impl EfdDim<2> for U<2> {
     type Rot = na::UnitComplex<f64>;
 
-    fn get_rot(m: &Coeff<2>) -> Self::Rot {
+    fn get_rot(m: &Coeffs<2>) -> Self::Rot {
         na::UnitComplex::new(m[(1, 0)].atan2(m[(0, 0)]))
     }
 }
@@ -188,7 +179,7 @@ impl EfdDim<2> for U<2> {
 impl EfdDim<3> for U<3> {
     type Rot = na::UnitQuaternion<f64>;
 
-    fn get_rot(m: &Coeff<3>) -> Self::Rot {
+    fn get_rot(m: &Coeffs<3>) -> Self::Rot {
         let m1 = m.column(0).reshape_generic(na::U3, na::U2);
         let u = m1.column(0).normalize();
         if let Some(v) = m1.column(1).try_normalize(f64::EPSILON) {

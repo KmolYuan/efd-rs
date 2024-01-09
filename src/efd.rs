@@ -39,7 +39,7 @@ where
     U<D>: EfdDim<D>,
     na::Const<D>: na::DimNameMul<na::U2>,
 {
-    coeffs: Coeff<D>,
+    coeffs: Coeffs<D>,
     geo: GeoVar<Rot<D>, D>,
 }
 
@@ -53,7 +53,7 @@ where
     /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
     ///
     /// Return none if the harmonic is zero.
-    pub fn try_from_coeffs(mut coeffs: Coeff<D>) -> Option<Self> {
+    pub fn try_from_coeffs(mut coeffs: Coeffs<D>) -> Option<Self> {
         (coeffs.ncols() != 0).then(|| Self { geo: U::<D>::coeff_norm(&mut coeffs), coeffs })
     }
 
@@ -62,7 +62,7 @@ where
     /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
     ///
     /// Return none if the harmonic is zero.
-    pub fn try_from_coeffs_unnorm(coeffs: Coeff<D>) -> Option<Self> {
+    pub fn try_from_coeffs_unnorm(coeffs: Coeffs<D>) -> Option<Self> {
         (coeffs.ncols() != 0).then_some(Self { coeffs, geo: GeoVar::identity() })
     }
 
@@ -74,12 +74,12 @@ where
     /// operations will panic.
     ///
     /// ```
-    /// use efd::{Coeff2, Efd2, GeoVar};
-    /// let coeff = Coeff2::from_column_slice(&[]);
-    /// let path = Efd2::from_parts_unchecked(coeff, GeoVar::identity()).generate(20);
+    /// use efd::{Coeffs2, Efd2, GeoVar};
+    /// let coeffs = Coeffs2::from_column_slice(&[]);
+    /// let path = Efd2::from_parts_unchecked(coeffs, GeoVar::identity()).generate(20);
     /// assert_eq!(path.len(), 0);
     /// ```
-    pub fn from_parts_unchecked(coeffs: Coeff<D>, geo: GeoVar<Rot<D>, D>) -> Self {
+    pub fn from_parts_unchecked(coeffs: Coeffs<D>, geo: GeoVar<Rot<D>, D>) -> Self {
         Self { coeffs, geo }
     }
 
@@ -166,11 +166,11 @@ where
         C: Curve<Coord<D>>,
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
-        let curve = curve.as_curve();
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (mut coeffs, trans1) = U::<D>::get_coeff_unnorm(curve, is_open, harmonic);
-        let trans2 = U::<D>::coeff_norm(&mut coeffs);
-        Self { coeffs, geo: trans1 * trans2 }
+        let curve = curve.as_curve();
+        let [(mut coeffs, geo1)] = U::<D>::get_coeff_unnorm([curve], is_open, harmonic);
+        let geo2 = U::<D>::coeff_norm(&mut coeffs);
+        Self { coeffs, geo: geo1 * geo2 }
     }
 
     /// Same as [`Efd::from_curve_harmonic()`] but without normalization.
@@ -180,9 +180,9 @@ where
         C: Curve<Coord<D>>,
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
-        let curve = curve.as_curve();
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (coeffs, geo) = U::<D>::get_coeff_unnorm(curve, is_open, harmonic);
+        let curve = curve.as_curve();
+        let [(coeffs, geo)] = U::<D>::get_coeff_unnorm([curve], is_open, harmonic);
         Self { coeffs, geo }
     }
 
@@ -242,13 +242,13 @@ where
 
     /// Consume self and return a raw array of the coefficients.
     #[must_use]
-    pub fn into_inner(self) -> (Coeff<D>, GeoVar<Rot<D>, D>) {
+    pub fn into_inner(self) -> (Coeffs<D>, GeoVar<Rot<D>, D>) {
         (self.coeffs, self.geo)
     }
 
     /// Get a reference to the coefficients.
     #[must_use]
-    pub fn coeffs(&self) -> &Coeff<D> {
+    pub fn coeffs(&self) -> &Coeffs<D> {
         &self.coeffs
     }
 
@@ -399,7 +399,7 @@ where
     }
 }
 
-struct CoeffFmt<'a, const D: usize>(&'a Coeff<D>)
+struct CoeffFmt<'a, const D: usize>(&'a Coeffs<D>)
 where
     na::Const<D>: na::DimNameMul<na::U2>;
 

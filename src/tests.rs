@@ -15,9 +15,9 @@ pub fn curve_diff<const N: usize>(a: &[[f64; N]], b: &[[f64; N]]) -> f64 {
 #[test]
 fn error() {
     use crate::*;
-    let coeff = Coeff2::from_column_slice(&[10., 20., 20., 10., 3., 4., 4., 3.]);
+    let coeff = Coeffs2::from_column_slice(&[10., 20., 20., 10., 3., 4., 4., 3.]);
     let a = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
-    let coeff = Coeff2::from_column_slice(&[10., 20., 20., 10.]);
+    let coeff = Coeffs2::from_column_slice(&[10., 20., 20., 10.]);
     let b = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
     assert_eq!(a.square_err(&b), 50.);
     assert_eq!(b.square_err(&a), 50.);
@@ -108,7 +108,7 @@ fn efd3d() {
 #[cfg(feature = "std")]
 fn plot2d_closed() -> Result<(), Box<dyn std::error::Error>> {
     #[rustfmt::skip]
-    let coeff = crate::Coeff2::from_column_slice(&[
+    let coeff = crate::Coeffs2::from_column_slice(&[
         12., 35., 35., 13.,
         5., 21., 21., 5.,
         1., 12., 12., 1.,
@@ -120,7 +120,7 @@ fn plot2d_closed() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(feature = "std")]
 fn plot2d_open() -> Result<(), Box<dyn std::error::Error>> {
     #[rustfmt::skip]
-    let coeff = crate::Coeff2::from_column_slice(&[
+    let coeff = crate::Coeffs2::from_column_slice(&[
         35., 8., 0., 0.,
         10., 24., 0., 0.,
         5., -8., 0., 0.,
@@ -132,7 +132,7 @@ fn plot2d_open() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(feature = "std")]
 fn plot3d_closed() -> Result<(), Box<dyn std::error::Error>> {
     #[rustfmt::skip]
-    let coeff = crate::Coeff3::from_column_slice(&[
+    let coeff = crate::Coeffs3::from_column_slice(&[
         12., 35., 20., 22., 5., 21.,
         21., 5., 1., 12., 12., 1.,
         3., 7., 12., 3., 5., 21.,
@@ -144,7 +144,7 @@ fn plot3d_closed() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(feature = "std")]
 fn plot3d_open() -> Result<(), Box<dyn std::error::Error>> {
     #[rustfmt::skip]
-    let coeff = crate::Coeff3::from_column_slice(&[
+    let coeff = crate::Coeffs3::from_column_slice(&[
         16., 35., 27., 0., 0., 0.,
         21., 8., 16., 0., 0., 0.,
         3., 7., 12., 0., 0., 0.,
@@ -164,7 +164,7 @@ fn get_area<const N: usize>(pts: &[[f64; N]]) -> [[f64; 2]; N] {
 }
 
 #[cfg(all(test, feature = "std"))]
-fn plot2d(coeff: crate::Coeff2, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn plot2d(coeff: crate::Coeffs2, path: &str) -> Result<(), Box<dyn std::error::Error>> {
     use crate::*;
     use plotters::prelude::*;
 
@@ -227,7 +227,7 @@ fn plot2d(coeff: crate::Coeff2, path: &str) -> Result<(), Box<dyn std::error::Er
 }
 
 #[cfg(all(test, feature = "std"))]
-fn plot3d(coeff: crate::Coeff3, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn plot3d(coeff: crate::Coeffs3, path: &str) -> Result<(), Box<dyn std::error::Error>> {
     use crate::*;
     use plotters::prelude::*;
 
