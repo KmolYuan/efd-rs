@@ -49,17 +49,6 @@ where
     /// differently. So only the specific dimension can implement this trait.
     fn get_rot(coeffs: &Coeff<D>) -> Self::Rot;
 
-    /// Generate coefficients and similarity matrix.
-    fn get_coeff(
-        curve: &[Coord<D>],
-        is_open: bool,
-        harmonic: usize,
-    ) -> (Coeff<D>, GeoVar<Self::Rot, D>) {
-        let (mut coeffs, trans1) = Self::get_coeff_unnorm(curve, is_open, harmonic);
-        let trans2 = Self::coeff_norm(&mut coeffs);
-        (coeffs, trans1 * trans2)
-    }
-
     /// Generate coefficients and similarity matrix **without** normalization.
     fn get_coeff_unnorm(
         curve: &[Coord<D>],
@@ -86,14 +75,14 @@ where
             let scalar = scalar / (n * n);
             let cos_phi = diff(phi.map(f64::cos)).component_div(&dt);
             dxyz.row_iter()
-                .zip(c.iter_mut().take(dxyz.nrows()))
+                .zip(&mut c.rows_range_mut(..dxyz.nrows()))
                 .for_each(|(d, c)| *c = scalar * d.component_mul(&cos_phi).sum());
             if is_open {
                 continue;
             }
             let sin_phi = diff(phi.map(f64::sin)).component_div(&dt);
             dxyz.row_iter()
-                .zip(c.iter_mut().skip(dxyz.nrows()))
+                .zip(&mut c.rows_range_mut(dxyz.nrows()..))
                 .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
         }
         let tdt = t.columns_range(1..).component_div(&dt);
@@ -196,7 +185,7 @@ impl EfdDim<3> for U<3> {
     type Rot = na::UnitQuaternion<f64>;
 
     fn get_rot(m: &Coeff<3>) -> Self::Rot {
-        let m1 = m.column(0).reshape_generic(na::Const::<3>, na::U2);
+        let m1 = m.column(0).reshape_generic(na::U3, na::U2);
         let u = m1.column(0).normalize();
         if let Some(v) = m1.column(1).try_normalize(f64::EPSILON) {
             // Closed curve, use `u` and `v` plane as basis
@@ -204,7 +193,7 @@ impl EfdDim<3> for U<3> {
             na::UnitQuaternion::from_basis_unchecked(&[u, v, w])
         } else if m.ncols() > 1 {
             // Open curve, `v` is zero vector, use `u1` and `u2` plane as basis
-            let m2 = m.column(1).reshape_generic(na::Const::<3>, na::U2);
+            let m2 = m.column(1).reshape_generic(na::U3, na::U2);
             // `w` is orthogonal to `u` and `u2`
             let w = u.cross(&m2.column(0)).normalize();
             let u2 = w.cross(&u);

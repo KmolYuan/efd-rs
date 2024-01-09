@@ -168,8 +168,9 @@ where
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         let curve = curve.as_curve();
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (coeffs, geo) = U::<D>::get_coeff(curve, is_open, harmonic);
-        Self { coeffs, geo }
+        let (mut coeffs, trans1) = U::<D>::get_coeff_unnorm(curve, is_open, harmonic);
+        let trans2 = U::<D>::coeff_norm(&mut coeffs);
+        Self { coeffs, geo: trans1 * trans2 }
     }
 
     /// Same as [`Efd::from_curve_harmonic()`] but without normalization.
