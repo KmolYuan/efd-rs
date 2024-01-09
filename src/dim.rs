@@ -139,7 +139,7 @@ where
             m.tr_mul(&psi_mat).transpose_to(&mut m);
         }
         // Scale factor
-        // |u1| == a1 (after rotation)
+        // |u1| == |a1| (after rotation)
         let scale = coeffs[(0, 0)].abs();
         *coeffs /= scale;
         GeoVar::new([0.; D], psi, scale)
