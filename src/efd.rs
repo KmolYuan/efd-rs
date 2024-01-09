@@ -242,8 +242,8 @@ where
 
     /// Consume self and return a raw array of the coefficients.
     #[must_use]
-    pub fn into_inner(self) -> Coeff<D> {
-        self.coeffs
+    pub fn into_inner(self) -> (Coeff<D>, GeoVar<Rot<D>, D>) {
+        (self.coeffs, self.geo)
     }
 
     /// Get a reference to the coefficients.

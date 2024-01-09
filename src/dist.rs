@@ -81,12 +81,10 @@ where
     na::Const<D>: na::DimNameMul<na::U2>,
 {
     fn err_buf(&self, rhs: &Self) -> Vec<f64> {
-        let a = self.coeffs().iter().chain(self.pose_coeffs().iter());
-        let b = rhs.coeffs().iter().chain(rhs.pose_coeffs().iter());
-        let padding = core::iter::repeat(&0.);
-        match self.harmonic() >= rhs.harmonic() {
-            true => a.zip(b.chain(padding)).map(cmp).collect(),
-            false => a.chain(padding).zip(b).map(cmp).collect(),
-        }
+        self.curve_efd()
+            .err_buf(rhs.curve_efd())
+            .into_iter()
+            .chain(self.pose_efd().err_buf(rhs.pose_efd()))
+            .collect()
     }
 }

@@ -49,7 +49,7 @@ where
     /// differently. So only the specific dimension can implement this trait.
     fn get_rot(coeffs: &Coeff<D>) -> Self::Rot;
 
-    /// Generate coefficients and similarity matrix **without** normalization.
+    /// Obtain coefficients and similarity matrix **without** normalization.
     fn get_coeff_unnorm(
         curve: &[Coord<D>],
         is_open: bool,
@@ -86,29 +86,17 @@ where
                 .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
         }
         let tdt = t.columns_range(1..).component_div(&dt);
-        let c = 0.5 * diff(t.map(pow2)).component_div(&dt);
+        let scalar = 0.5 * diff(t.map(pow2)).component_div(&dt);
         let mut center = curve[0];
         dxyz.row_iter().zip(&mut center).for_each(|(dxyz, oxyz)| {
             let xi = cumsum(dxyz) - dxyz.component_mul(&tdt);
-            *oxyz += (dxyz.component_mul(&c) + xi.component_mul(&dt)).sum() / zt;
+            *oxyz += (dxyz.component_mul(&scalar) + xi.component_mul(&dt)).sum() / zt;
         });
         let rot = na::AbstractRotation::identity();
         (coeffs, GeoVar::new(center, rot, 1.))
     }
 
-    /// Get the posed coefficients.
-    #[allow(unused_variables)]
-    fn get_posed(
-        curve: &[Coord<D>],
-        vectors: MatrixRxX<D>,
-        is_open: bool,
-        harmonic: usize,
-    ) -> (Coeff<D>, Coeff<D>, GeoVar<Self::Rot, D>) {
-        // TODO
-        todo!()
-    }
-
-    /// Normalize coefficients.
+    /// Normalize the coefficients.
     fn coeff_norm(coeffs: &mut Coeff<D>) -> GeoVar<Self::Rot, D> {
         // Angle of starting point
         // m = m * theta
@@ -143,6 +131,23 @@ where
         let scale = coeffs[(0, 0)].abs();
         *coeffs /= scale;
         GeoVar::new([0.; D], psi, scale)
+    }
+
+    /// Obtain the coefficients and its combined vector's coefficients.
+    #[allow(unused_variables)]
+    fn get_posed(
+        curve: &[Coord<D>],
+        vectors: &[Coord<D>],
+        is_open: bool,
+        harmonic: usize,
+    ) -> (
+        Coeff<D>,
+        Coeff<D>,
+        GeoVar<Self::Rot, D>,
+        GeoVar<Self::Rot, D>,
+    ) {
+        // TODO
+        todo!()
     }
 
     /// Reconstruct the curve from the coefficients.

@@ -1,6 +1,5 @@
 use crate::{util::*, *};
 use alloc::vec::Vec;
-use core::f64::consts::{PI, TAU};
 #[cfg(not(feature = "std"))]
 #[allow(unused_imports)]
 use num_traits::*;
@@ -28,8 +27,8 @@ where
     U<D>: EfdDim<D>,
     na::Const<D>: na::DimNameMul<na::U2>,
 {
-    efd: Efd<D>,
-    pose: Coeff<D>,
+    curve: Efd<D>,
+    pose: Efd<D>,
 }
 
 impl<const D: usize> PosedEfd<D>
@@ -38,8 +37,8 @@ where
     na::Const<D>: na::DimNameMul<na::U2>,
 {
     /// Create a new [`PosedEfd`] from a [`Efd`] and a pose coefficients.
-    pub fn from_parts_unchecked(efd: Efd<D>, pose: Coeff<D>) -> Self {
-        Self { efd, pose }
+    pub fn from_parts_unchecked(curve: Efd<D>, pose: Efd<D>) -> Self {
+        Self { curve, pose }
     }
 
     /// Calculate the coefficients from two series of points.
@@ -102,14 +101,15 @@ where
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         let curve = curve.as_curve();
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let columns = vectors
+        let vectors = vectors
             .to_curve()
             .into_iter()
-            .flat_map(|v| v.into_inner().data.0[0])
+            .map(|v| v.into_inner().data.0[0])
             .collect::<Vec<_>>();
-        let vectors = MatrixRxX::from_vec(columns);
-        let (coeff, pose, geo) = U::<D>::get_posed(curve, vectors, is_open, harmonic);
-        Self { efd: Efd::from_parts_unchecked(coeff, geo), pose }
+        let (coeff1, coeff2, geo1, geo2) = U::<D>::get_posed(curve, &vectors, is_open, harmonic);
+        let curve = Efd::from_parts_unchecked(coeff1, geo1);
+        let pose = Efd::from_parts_unchecked(coeff2, geo2);
+        Self { curve, pose }
     }
 
     /// Use Fourier Power Anaysis (FPA) to reduce the harmonic number.
@@ -126,7 +126,7 @@ where
     where
         Option<f64>: From<T>,
     {
-        let lut = (self.coeffs().map(pow2) + self.pose.map(pow2)).row_sum();
+        let lut = (self.curve.coeffs().map(pow2) + self.pose.coeffs().map(pow2)).row_sum() / 2.;
         self.set_harmonic(fourier_power_anaysis(lut, threshold));
         self
     }
@@ -142,16 +142,22 @@ where
             (1..current).contains(&harmonic),
             "harmonic must in 1..={current}"
         );
-        self.efd.set_harmonic(harmonic);
-        self.pose.resize_horizontally_mut(harmonic, 0.);
+        self.curve.set_harmonic(harmonic);
+        self.pose.set_harmonic(harmonic);
     }
 
     /// Consume self and return a raw array of the coefficients.
-    /// The first is the EFD coefficients, and the second is the pose
+    /// The first is the curve coefficients, and the second is the pose
     /// coefficients.
     #[must_use]
-    pub fn into_inner(self) -> (Coeff<D>, Coeff<D>) {
-        (self.efd.into_inner(), self.pose)
+    pub fn into_inner(self) -> (Efd<D>, Efd<D>) {
+        (self.curve, self.pose)
+    }
+
+    /// Get the harmonic number of the coefficients.
+    #[must_use]
+    pub fn harmonic(&self) -> usize {
+        self.curve.harmonic()
     }
 
     /// Calculate the L1 distance between two coefficient set.
@@ -162,67 +168,15 @@ where
         self.l1_norm(rhs)
     }
 
-    /// Get a reference to the pose coefficients.
+    /// Get a reference to the curve coefficients.
     #[must_use]
-    pub fn pose_coeffs(&self) -> &Coeff<D> {
+    pub fn curve_efd(&self) -> &Efd<D> {
+        &self.curve
+    }
+
+    /// Get a reference to the posed coefficients.
+    #[must_use]
+    pub fn pose_efd(&self) -> &Efd<D> {
         &self.pose
-    }
-
-    /// Get a view to the specific pose coefficients. (`0..self.harmonic()`)
-    #[must_use]
-    pub fn pose_coeff(&self, harmonic: usize) -> CKernel<D> {
-        self.pose
-            .column(harmonic)
-            .reshape_generic(na::Const, na::U2)
-    }
-
-    /// Get an iterator over all the pose coefficients per harmonic.
-    pub fn coeffs_iter(&self) -> impl Iterator<Item = CKernel<D>> {
-        self.pose
-            .column_iter()
-            .map(|c| c.reshape_generic(na::Const, na::U2))
-    }
-
-    /// Generate (reconstruct) the pose series.
-    #[must_use]
-    pub fn generate_pose(&self, n: usize) -> Vec<Coord<D>> {
-        self.generate_pose_in(n, TAU)
-    }
-
-    /// Generate (reconstruct) a half of the pose series. (`theta=PI`)
-    ///
-    /// # Panics
-    ///
-    /// Panics if the number of the points `n` is less than 2.
-    #[must_use]
-    pub fn generate_pose_half(&self, n: usize) -> Vec<Coord<D>> {
-        self.generate_in(n, PI)
-    }
-
-    /// Generate (reconstruct) a pose series in a specific angle `theta`
-    /// (`0..=TAU`).
-    ///
-    /// Normalized curve is **without** transformation.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the number of the points `n` is less than 2.
-    #[must_use]
-    pub fn generate_pose_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
-        let mut curve = U::<D>::reconstruct(&self.pose, n, theta);
-        self.as_geo().transform_inplace(&mut curve);
-        curve
-    }
-}
-
-impl<const D: usize> core::ops::Deref for PosedEfd<D>
-where
-    U<D>: EfdDim<D>,
-    na::Const<D>: na::DimNameMul<na::U2>,
-{
-    type Target = Efd<D>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.efd
     }
 }
