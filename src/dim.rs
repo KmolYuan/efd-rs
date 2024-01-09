@@ -67,22 +67,21 @@ where
         let phi = &t * TAU / zt * if is_open { 0.5 } else { 1. };
         // Coefficients (2dim * N)
         // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
-        let mut n = 0.;
         let mut coeffs = Coeff::<D>::zeros(harmonic);
-        for mut c in coeffs.column_iter_mut() {
-            n += 1.;
+        for (n, mut c) in coeffs.column_iter_mut().enumerate() {
+            let n = (n + 1) as f64;
             let phi = &phi * n;
-            let scalar = scalar / (n * n);
+            let scalar = scalar / pow2(n);
             let cos_phi = diff(phi.map(f64::cos)).component_div(&dt);
             dxyz.row_iter()
-                .zip(&mut c.rows_range_mut(..dxyz.nrows()))
+                .zip(&mut c.rows_range_mut(..D))
                 .for_each(|(d, c)| *c = scalar * d.component_mul(&cos_phi).sum());
             if is_open {
                 continue;
             }
             let sin_phi = diff(phi.map(f64::sin)).component_div(&dt);
             dxyz.row_iter()
-                .zip(&mut c.rows_range_mut(dxyz.nrows()..))
+                .zip(&mut c.rows_range_mut(D..))
                 .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
         }
         let tdt = t.columns_range(1..).component_div(&dt);
@@ -108,7 +107,7 @@ where
         };
         for (i, c) in coeffs.column_iter_mut().enumerate() {
             let theta = na::Rotation2::new((i + 1) as f64 * theta);
-            let mut m = c.reshape_generic(na::Const::<D>, na::U2);
+            let mut m = c.reshape_generic(na::Const, na::U2);
             m.copy_from(&(&m * theta));
         }
         // Normalize coefficients sign
@@ -123,7 +122,7 @@ where
         let psi = Self::get_rot(coeffs);
         let psi_mat = psi.clone().matrix();
         for c in coeffs.column_iter_mut() {
-            let mut m = c.reshape_generic(na::Const::<D>, na::U2);
+            let mut m = c.reshape_generic(na::Const, na::U2);
             m.tr_mul(&psi_mat).transpose_to(&mut m);
         }
         // Scale factor
