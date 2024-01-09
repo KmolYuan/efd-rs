@@ -421,17 +421,12 @@ where
 {
     let threshold = Option::from(threshold).unwrap_or(0.9999);
     assert!((0.0..1.0).contains(&threshold), "threshold must in 0..1");
-    let target = lut.sum() * threshold;
-    // Binary search
-    let mut left = 0;
-    let mut right = lut.len();
-    while left < right {
-        let mid = left + (right - left) / 2;
-        if lut.row_part(0, mid + 1).sum() < target {
-            left = mid + 1;
-        } else {
-            right = mid;
-        }
+    let lut = cumsum(lut);
+    let target = lut[lut.len() - 1] * threshold;
+    match lut
+        .as_slice()
+        .binary_search_by(|x| x.partial_cmp(&target).unwrap())
+    {
+        Ok(h) | Err(h) => h + 1,
     }
-    left + 1
 }
