@@ -81,10 +81,8 @@ where
     na::Const<D>: na::DimNameMul<na::U2>,
 {
     fn err_buf(&self, rhs: &Self) -> Vec<f64> {
-        self.curve_efd()
-            .err_buf(rhs.curve_efd())
-            .into_iter()
-            .chain(self.pose_efd().err_buf(rhs.pose_efd()))
-            .collect()
+        let mut buf = self.curve_efd().err_buf(rhs.curve_efd());
+        buf.extend(self.pose_efd().err_buf(rhs.pose_efd()));
+        buf
     }
 }

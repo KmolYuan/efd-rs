@@ -133,7 +133,7 @@ where
     where
         Option<f64>: From<T>,
     {
-        let lut = (self.curve.coeffs().map(pow2) + self.pose.coeffs().map(pow2)).row_sum() / 2.;
+        let lut = (self.curve.coeffs().map(pow2) + self.pose.coeffs().map(pow2)).row_sum();
         self.set_harmonic(fourier_power_anaysis(lut, threshold));
         self
     }
@@ -185,5 +185,19 @@ where
     #[must_use]
     pub fn pose_efd(&self) -> &Efd<D> {
         &self.pose
+    }
+
+    /// Obtain the curve and pose for visualization.
+    ///
+    /// The `len` is the length of the pose vector.
+    pub fn generate(&self, n: usize, len: f64) -> (Vec<Coord<D>>, Vec<Coord<D>>) {
+        let curve = self.curve.generate(n);
+        let pose = curve
+            .iter()
+            .zip(self.pose.generate(n))
+            .map(|(p, v)| na::Point::from(*p) + uvec(v).into_inner() * len)
+            .map(|p| p.coords.data.0[0])
+            .collect::<Vec<_>>();
+        (curve, pose)
     }
 }
