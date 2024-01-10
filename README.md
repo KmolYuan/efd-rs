@@ -67,5 +67,6 @@ Posed EFD combined a curve with a pose (unit vectors) to describe the orientatio
 2D + open curve and its full reconstruction:
 
 <div>
-<img width="40%" alt="3d" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/posed.svg"/>
+<img width="40%" alt="posed" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/posed.svg"/>
+<img width="40%" alt="posed-full" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/posed-full.svg"/>
 </div>
