@@ -56,7 +56,7 @@ where
         C2: Curve<Coord<D>>,
     {
         let len = curve1.len().min(curve2.len());
-        Self::from_series_harmonic(curve1, curve2, is_open, if is_open { len } else { len / 2 })
+        Self::from_series_harmonic(curve1, curve2, is_open, if is_open { len * 2 } else { len })
             .fourier_power_anaysis(None)
     }
 
@@ -90,7 +90,7 @@ where
         V: Curve<UVector<D>>,
     {
         let len = curve.len().min(vectors.len());
-        Self::from_vectors_harmonic(curve, vectors, is_open, if is_open { len } else { len / 2 })
+        Self::from_vectors_harmonic(curve, vectors, is_open, if is_open { len * 2 } else { len })
             .fourier_power_anaysis(None)
     }
 
