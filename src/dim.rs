@@ -54,7 +54,7 @@ where
     /// Obtain coefficients and similarity matrix **without** normalization.
     ///
     /// **Where `series.len()` must greater than 1.**
-    fn get_coeff_unnorm<const N: usize>(
+    fn get_coeff<const N: usize>(
         series: [&[Coord<D>]; N],
         is_open: bool,
         harmonic: usize,

@@ -168,7 +168,7 @@ where
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let curve = curve.as_curve();
-        let [(mut coeffs, geo1)] = U::<D>::get_coeff_unnorm([curve], is_open, harmonic);
+        let [(mut coeffs, geo1)] = U::<D>::get_coeff([curve], is_open, harmonic);
         let geo2 = U::<D>::coeff_norm(&mut coeffs);
         Self { coeffs, geo: geo1 * geo2 }
     }
@@ -182,7 +182,7 @@ where
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let curve = curve.as_curve();
-        let [(coeffs, geo)] = U::<D>::get_coeff_unnorm([curve], is_open, harmonic);
+        let [(coeffs, geo)] = U::<D>::get_coeff([curve], is_open, harmonic);
         Self { coeffs, geo }
     }
 
@@ -236,8 +236,8 @@ where
     /// Panics if the harmonic is zero.
     pub fn normalized(self) -> Self {
         let Self { mut coeffs, geo } = self;
-        let trans_new = U::<D>::coeff_norm(&mut coeffs);
-        Self { coeffs, geo: geo.apply(&trans_new) }
+        let geo_new = U::<D>::coeff_norm(&mut coeffs);
+        Self { coeffs, geo: geo.apply(&geo_new) }
     }
 
     /// Consume self and return a raw array of the coefficients.

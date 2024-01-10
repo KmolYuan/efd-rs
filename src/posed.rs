@@ -112,12 +112,11 @@ where
             .into_iter()
             .map(|v| v.into_inner().data.0[0])
             .collect::<Vec<_>>();
-        let [curve, pose] = U::<D>::get_coeff_unnorm([curve, &vectors], is_open, harmonic).map(
-            |(mut coeffs, geo1)| {
+        let [curve, pose] =
+            U::<D>::get_coeff([curve, &vectors], is_open, harmonic).map(|(mut coeffs, geo1)| {
                 let geo2 = U::<D>::coeff_norm(&mut coeffs);
                 Efd::from_parts_unchecked(coeffs, geo1 * geo2)
-            },
-        );
+            });
         Self { curve, pose }
     }
 
