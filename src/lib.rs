@@ -8,13 +8,6 @@
 //! ```toml
 //! default-features = false
 //! ```
-//!
-//! An extra `curve_diff` features provides some functions to calculate the
-//! difference between two curves. Requires the `interp` crate.
-//!
-//! ```toml
-//! features = ["curve_diff"]
-//! ```
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;

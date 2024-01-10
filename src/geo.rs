@@ -1,6 +1,6 @@
 //! Geometric types, the geometric invariant.
 use crate::*;
-use alloc::vec::Vec;
+use alloc::{format, vec::Vec};
 
 /// 1D geometric type.
 pub type GeoVar1 = GeoVar<na::Rotation<f64, 1>, 1>;
@@ -54,7 +54,7 @@ where
     R: core::fmt::Debug + RotHint<D>,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        f.debug_struct(&alloc::format!("{}{D}", core::any::type_name::<Self>()))
+        f.debug_struct(&format!("GeoVar{D}"))
             .field("translation", &self.trans())
             .field("rotation", self.rot())
             .field("scale", &self.scale())
