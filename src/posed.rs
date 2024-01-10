@@ -4,6 +4,8 @@ use alloc::vec::Vec;
 #[allow(unused_imports)]
 use num_traits::*;
 
+/// A 1D shape with a pose described by EFD.
+pub type PosedEfd1 = PosedEfd<1>;
 /// A 2D shape with a pose described by EFD.
 pub type PosedEfd2 = PosedEfd<2>;
 /// A 3D shape with a pose described by EFD.

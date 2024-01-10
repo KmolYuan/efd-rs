@@ -9,6 +9,8 @@ use num_traits::*;
 /// EFD dimension marker.
 pub enum U<const N: usize> {}
 
+/// 1D Coefficients type.
+pub type Coeffs1 = Coeffs<1>;
 /// 2D Coefficients type.
 pub type Coeffs2 = Coeffs<2>;
 /// 3D Coefficients type.
@@ -47,7 +49,7 @@ where
     ///
     /// In different dimensions, the rotation needs to be calculated
     /// differently. So only the specific dimension can implement this trait.
-    fn get_rot(coeff: &Coeffs<D>) -> Self::Rot;
+    fn get_rot(m: &Coeffs<D>) -> Self::Rot;
 
     /// Obtain coefficients and similarity matrix **without** normalization.
     ///
@@ -163,8 +165,8 @@ where
 impl EfdDim<1> for U<1> {
     type Rot = na::Rotation<f64, 1>;
 
-    fn get_rot(_coeffs: &Coeffs<1>) -> Self::Rot {
-        na::Rotation::from_matrix_unchecked(na::matrix![1.])
+    fn get_rot(m: &Coeffs<1>) -> Self::Rot {
+        na::Rotation::from_matrix_unchecked(na::matrix![m[(0, 0)].signum()])
     }
 }
 
