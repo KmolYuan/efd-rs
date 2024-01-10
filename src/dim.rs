@@ -57,14 +57,14 @@ where
         is_open: bool,
         harmonic: usize,
     ) -> [(Coeffs<D>, GeoVar<Self::Rot, D>); N] {
-        let wrap_curve = |curve: &[_]| {
+        let to_diff = |curve: &[_]| {
             diff(if is_open || curve.first() == curve.last() {
                 to_mat(curve)
             } else {
                 to_mat(curve.closed_lin())
             })
         };
-        let dxyz = wrap_curve(series[0]);
+        let dxyz = to_diff(series[0]);
         let dt = dxyz.map(pow2).row_sum().map(f64::sqrt);
         let t = cumsum(dt.clone()).insert_column(0, 0.);
         let zt = t[t.len() - 1];
@@ -73,7 +73,7 @@ where
         let tdt = t.columns_range(1..).component_div(&dt);
         let scalar2 = 0.5 * diff(t.map(pow2)).component_div(&dt);
         series.map(|curve| {
-            let dxyz = wrap_curve(curve);
+            let dxyz = to_diff(curve);
             // Coefficients (2dim * N)
             // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
             let mut coeff = Coeffs::<D>::zeros(harmonic);
