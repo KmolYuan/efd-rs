@@ -289,7 +289,7 @@ where
     /// Check if the descibed curve is open.
     #[must_use]
     pub fn is_open(&self) -> bool {
-        self.coeffs[(0, 1)] == 0.
+        self.coeffs[(1, 0)] == 0.
     }
 
     /// Get the harmonic number of the coefficients.
