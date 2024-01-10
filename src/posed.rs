@@ -13,6 +13,11 @@ pub type PosedEfd3 = PosedEfd<3>;
 pub type UVector<const D: usize> =
     na::Unit<na::Vector<f64, na::Const<D>, na::ArrayStorage<f64, D, 1>>>;
 
+/// Create a unit vector from a coordinate.
+pub fn uvec<const D: usize>(c: Coord<D>) -> UVector<D> {
+    na::Unit::new_normalize(na::Vector::from(c))
+}
+
 /// A shape with a pose described by EFD.
 ///
 /// These are the same as [`Efd`] except that it has a pose, and the data are
@@ -45,13 +50,13 @@ where
     ///
     /// The second series is the pose series, the `curve2[i]` has the same time
     /// as `curve[i]`.
-    pub fn from_series<C1, C2>(curve: C1, curve2: C2, is_open: bool) -> Self
+    pub fn from_series<C1, C2>(curve1: C1, curve2: C2, is_open: bool) -> Self
     where
         C1: Curve<Coord<D>>,
         C2: Curve<Coord<D>>,
     {
-        let len = curve.len().min(curve2.len());
-        Self::from_series_harmonic(curve, curve2, is_open, if is_open { len } else { len / 2 })
+        let len = curve1.len().min(curve2.len());
+        Self::from_series_harmonic(curve1, curve2, is_open, if is_open { len } else { len / 2 })
             .fourier_power_anaysis(None)
     }
 
@@ -59,7 +64,7 @@ where
     ///
     /// The `harmonic` is the number of the coefficients to be calculated.
     pub fn from_series_harmonic<C1, C2>(
-        curve: C1,
+        curve1: C1,
         curve2: C2,
         is_open: bool,
         harmonic: usize,
@@ -68,7 +73,7 @@ where
         C1: Curve<Coord<D>>,
         C2: Curve<Coord<D>>,
     {
-        let curve = curve.as_curve();
+        let curve = curve1.as_curve();
         let vectors = curve
             .iter()
             .zip(curve2.as_curve())
@@ -141,8 +146,8 @@ where
     pub fn set_harmonic(&mut self, harmonic: usize) {
         let current = self.harmonic();
         assert!(
-            (1..current).contains(&harmonic),
-            "harmonic must in 1..={current}"
+            (1..=current).contains(&harmonic),
+            "harmonic ({harmonic}) must in 1..={current}"
         );
         self.curve.set_harmonic(harmonic);
         self.pose.set_harmonic(harmonic);

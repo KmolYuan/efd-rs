@@ -220,7 +220,7 @@ where
     pub fn set_harmonic(&mut self, harmonic: usize) {
         let current = self.harmonic();
         assert!(
-            (1..current).contains(&harmonic),
+            (1..=current).contains(&harmonic),
             "harmonic must in 1..={current}"
         );
         self.coeffs.resize_horizontally_mut(harmonic, 0.);
