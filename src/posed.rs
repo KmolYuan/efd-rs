@@ -43,8 +43,8 @@ where
     U<D>: EfdDim<D>,
     na::Const<D>: na::DimNameMul<na::U2>,
 {
-    /// Create a new [`PosedEfd`] from a [`Efd`] and a pose coefficients.
-    pub fn from_parts_unchecked(curve: Efd<D>, pose: Efd<D>) -> Self {
+    /// Create a new [`PosedEfd`] from two [`Efd`]s. (`curve` and `pose`)
+    pub const fn from_parts_unchecked(curve: Efd<D>, pose: Efd<D>) -> Self {
         Self { curve, pose }
     }
 
@@ -163,6 +163,12 @@ where
         (self.curve, self.pose)
     }
 
+    /// Check if the described curve is open.
+    #[must_use]
+    pub fn is_open(&self) -> bool {
+        self.curve.is_open()
+    }
+
     /// Get the harmonic number of the coefficients.
     #[must_use]
     pub fn harmonic(&self) -> usize {
@@ -193,13 +199,32 @@ where
     ///
     /// The `len` is the length of the pose vector.
     pub fn generate(&self, n: usize, len: f64) -> (Vec<Coord<D>>, Vec<Coord<D>>) {
-        let curve = self.curve.generate(n);
-        let pose = curve
-            .iter()
-            .zip(self.pose.generate(n))
-            .map(|(p, v)| na::Point::from(*p) + uvec(v).into_inner() * len)
-            .map(|p| p.coords.data.0[0])
-            .collect::<Vec<_>>();
-        (curve, pose)
+        generate_pair(self.curve.generate(n), self.pose.generate(n), len)
     }
+
+    /// Obtain the curve and pose for visualization in half range.
+    ///
+    /// The `len` is the length of the pose vector.
+    pub fn generate_half(&self, n: usize, len: f64) -> (Vec<Coord<D>>, Vec<Coord<D>>) {
+        generate_pair(self.curve.generate_half(n), self.pose.generate_half(n), len)
+    }
+
+    /// Obtain the curve and pose for visualization from a series of time `t`.
+    pub fn generate_by(&self, t: &[f64], len: f64) -> (Vec<Coord<D>>, Vec<Coord<D>>) {
+        generate_pair(self.curve.generate_by(t), self.pose.generate_by(t), len)
+    }
+}
+
+fn generate_pair<const D: usize>(
+    curve: Vec<Coord<D>>,
+    pose: Vec<Coord<D>>,
+    len: f64,
+) -> (Vec<Coord<D>>, Vec<Coord<D>>) {
+    let pose = curve
+        .iter()
+        .zip(pose)
+        .map(|(p, v)| na::Point::from(*p) + uvec(v).into_inner() * len)
+        .map(|p| p.coords.data.0[0])
+        .collect();
+    (curve, pose)
 }

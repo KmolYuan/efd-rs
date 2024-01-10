@@ -79,7 +79,7 @@ where
     /// let path = Efd2::from_parts_unchecked(coeffs, GeoVar::identity()).generate(20);
     /// assert_eq!(path.len(), 0);
     /// ```
-    pub fn from_parts_unchecked(coeffs: Coeffs<D>, geo: GeoVar<Rot<D>, D>) -> Self {
+    pub const fn from_parts_unchecked(coeffs: Coeffs<D>, geo: GeoVar<Rot<D>, D>) -> Self {
         Self { coeffs, geo }
     }
 
@@ -286,6 +286,12 @@ where
         &mut self.geo
     }
 
+    /// Check if the descibed curve is open.
+    #[must_use]
+    pub fn is_open(&self) -> bool {
+        self.coeffs[(0, 1)] == 0.
+    }
+
     /// Get the harmonic number of the coefficients.
     #[must_use]
     pub fn harmonic(&self) -> usize {
@@ -327,7 +333,7 @@ where
         self
     }
 
-    /// Generate (reconstruct) the described curve. (`theta=TAU`)
+    /// Generate (reconstruct) the described curve. (`theta=0~TAU`)
     ///
     /// # Panics
     ///
@@ -337,7 +343,7 @@ where
         self.generate_in(n, TAU)
     }
 
-    /// Generate (reconstruct) a half of the described curve. (`theta=PI`)
+    /// Generate (reconstruct) a half of the described curve. (`theta=0~PI`)
     ///
     /// # Panics
     ///
@@ -347,21 +353,13 @@ where
         self.generate_in(n, PI)
     }
 
-    /// Generate (reconstruct) the described curve in a specific angle `theta`
-    /// (`0..=TAU`).
-    ///
-    /// # Panics
-    ///
-    /// Panics if the number of the points `n` is less than 2.
-    #[must_use]
-    pub fn generate_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
+    fn generate_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
         let mut curve = self.generate_norm_in(n, theta);
         self.geo.transform_inplace(&mut curve);
         curve
     }
 
-    /// Generate (reconstruct) a normalized curve in a specific angle `theta`
-    /// (`0..=TAU`).
+    /// Generate (reconstruct) the described curve. (`theta=0~TAU`)
     ///
     /// Normalized curve is **without** transformation.
     ///
@@ -369,8 +367,42 @@ where
     ///
     /// Panics if the number of the points `n` is less than 2.
     #[must_use]
-    pub fn generate_norm_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
-        U::<D>::reconstruct(&self.coeffs, n, theta)
+    pub fn generate_norm(&self, n: usize) -> Vec<Coord<D>> {
+        self.generate_norm_in(n, TAU)
+    }
+
+    /// Generate (reconstruct) a half of the described curve. (`t=0~PI`)
+    ///
+    /// Normalized curve is **without** transformation.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the number of the points `n` is less than 2.
+    #[must_use]
+    pub fn generate_norm_half(&self, n: usize) -> Vec<Coord<D>> {
+        self.generate_norm_in(n, PI)
+    }
+
+    fn generate_norm_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
+        debug_assert!(n > 2, "n ({n}) must larger than 2");
+        let t = na::Matrix1xX::from_fn(n, |_, i| i as f64 / (n - 1) as f64 * theta);
+        U::<D>::reconstruct(&self.coeffs, t)
+    }
+
+    /// Generate (reconstruct) a described curve in a series of time `t`.
+    #[must_use]
+    pub fn generate_by(&self, t: &[f64]) -> Vec<Coord<D>> {
+        let mut curve = U::<D>::reconstruct(&self.coeffs, na::Matrix1xX::from_column_slice(t));
+        self.geo.transform_inplace(&mut curve);
+        curve
+    }
+
+    /// Generate (reconstruct) a normalized curve in a series of time `t`.
+    ///
+    /// Normalized curve is **without** transformation.
+    #[must_use]
+    pub fn generate_norm_by(&self, t: &[f64]) -> Vec<Coord<D>> {
+        U::<D>::reconstruct(&self.coeffs, na::Matrix1xX::from_column_slice(t))
     }
 }
 
@@ -390,11 +422,34 @@ where
     na::Const<D>: na::DimNameMul<na::U2>,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        f.debug_struct("Efd")
-            .field("coeff", &CoeffFmt(&self.coeffs))
-            .field("geo", &self.geo)
-            .field("dim", &D)
+        if self.is_valid() {
+            f.debug_struct(&format!("Efd{D}"))
+                .field("is_open", &self.is_open())
+                .field("harmonic", &self.harmonic())
+                .field("geo", &self.geo)
+                .field("coeff", &CoeffFmt(&self.coeffs))
+                .finish()
+        } else {
+            f.debug_struct(&format!("Efd{D}"))
+                .field("is_valid", &false)
+                .finish()
+        }
+    }
+}
+
+impl<const D: usize> core::fmt::Debug for PosedEfd<D>
+where
+    U<D>: EfdDim<D>,
+    na::Const<D>: na::DimNameMul<na::U2>,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct(&format!("PosedEfd{D}"))
+            .field("is_open", &self.is_open())
             .field("harmonic", &self.harmonic())
+            .field("curve_geo", &self.curve_efd().geo)
+            .field("curve_coeff", &CoeffFmt(&self.curve_efd().coeffs))
+            .field("pose_geo", &self.pose_efd().geo)
+            .field("pose_coeff", &CoeffFmt(&self.pose_efd().coeffs))
             .finish()
     }
 }

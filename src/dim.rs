@@ -143,9 +143,7 @@ where
     }
 
     /// Reconstruct the curve from the coefficients.
-    fn reconstruct(coeffs: &Coeffs<D>, n: usize, theta: f64) -> Vec<Coord<D>> {
-        debug_assert!(n > 1, "n ({n}) must larger than 1");
-        let t = na::Matrix1xX::from_fn(n, |_, i| i as f64 / (n - 1) as f64 * theta);
+    fn reconstruct(coeffs: &Coeffs<D>, t: na::Matrix1xX<f64>) -> Vec<Coord<D>> {
         coeffs
             .column_iter()
             .enumerate()

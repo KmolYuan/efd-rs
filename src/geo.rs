@@ -94,7 +94,7 @@ where
     /// use efd::{tests::*, *};
     /// # let target = TARGET;
     /// # let efd = Efd2::from_curve(PATH, false);
-    /// # let path = efd.generate_norm_in(target.len(), std::f64::consts::TAU);
+    /// # let path = efd.generate_norm(target.len());
     /// let path1 = efd.as_geo().transform(&path);
     /// # let geo = efd.as_geo();
     /// let path1_inv = geo.inverse().transform(&path1);
@@ -181,7 +181,7 @@ where
     ///
     /// let efd = Efd2::from_curve(path, false);
     /// let path = efd.generate(path.len());
-    /// let path_norm = efd.generate_norm_in(path.len(), std::f64::consts::TAU);
+    /// let path_norm = efd.generate_norm(path.len());
     /// let path = efd.as_geo().inverse().transform(path);
     /// # assert!(curve_diff(&path, &path_norm) < EPS);
     /// ```

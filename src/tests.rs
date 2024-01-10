@@ -1,6 +1,4 @@
 #![doc(hidden)]
-#[cfg(test)]
-use core::f64::consts::{PI, TAU};
 
 /// Epsilon for curve difference.
 pub const EPS: f64 = 2.2e-14;
@@ -36,7 +34,7 @@ fn efd2d_open() {
     assert_abs_diff_eq!(geo.rot().angle(), 2.7330524299596815);
     assert_abs_diff_eq!(geo.scale(), 33.930916934329495);
     // Test normalized
-    let norm = efd.generate_norm_in(NORM_OPEN.len(), PI);
+    let norm = efd.generate_norm_half(NORM_OPEN.len());
     assert_abs_diff_eq!(curve_diff(&norm, NORM_OPEN), 0.);
     // Test reconstruction
     let target = efd.generate_half(TARGET_OPEN.len());
@@ -66,7 +64,7 @@ fn efd2d() {
     assert_abs_diff_eq!(geo.rot().angle(), 0.6423416350347734);
     assert_abs_diff_eq!(geo.scale(), 48.16765830752243);
     // Test normalized
-    let norm = efd.generate_norm_in(NORM.len(), TAU);
+    let norm = efd.generate_norm(NORM.len());
     assert_abs_diff_eq!(curve_diff(&norm, NORM), 0.);
     // Test reconstruction
     let target = efd.generate(TARGET.len());
@@ -97,7 +95,7 @@ fn efd3d() {
     assert_abs_diff_eq!(geo.rot().angle(), 2.9160714030359416);
     assert_abs_diff_eq!(geo.scale(), 0.5629099155595344);
     // Test normalized
-    let norm = efd.generate_norm_in(NORM3D.len(), TAU);
+    let norm = efd.generate_norm(NORM3D.len());
     assert_abs_diff_eq!(curve_diff(&norm, NORM3D), 0.);
     // Test reconstruction
     let target = efd.generate(NORM3D.len());
