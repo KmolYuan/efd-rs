@@ -80,7 +80,7 @@ where
 
     /// Transform a point.
     ///
-    /// Please see [`Self::transform()`] for more information.
+    /// Please see [`GeoVar::transform()`] for more information.
     #[must_use]
     pub fn transform_pt(&self, p: Coord<D>) -> Coord<D> {
         self.inner.transform_point(&na::Point::from(p)).into()

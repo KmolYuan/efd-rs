@@ -174,6 +174,15 @@ where
         self.curve.harmonic()
     }
 
+    /// Check if the coefficients are valid.
+    ///
+    /// It is only helpful if this object is constructed by
+    /// [`PosedEfd::from_parts_unchecked()`].
+    #[must_use]
+    pub fn is_valid(&self) -> bool {
+        self.curve.is_valid() && self.pose.is_valid()
+    }
+
     /// Calculate the L1 distance between two coefficient set.
     ///
     /// For more distance methods, please see [`Distance`].

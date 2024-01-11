@@ -299,6 +299,12 @@ where
     }
 
     /// Check if the coefficients are valid.
+    ///
+    /// + The harmonic number must be greater than 0.
+    /// + All the coefficients must not be `NaN` or zero.
+    ///
+    /// It is only helpful if this object is constructed by
+    /// [`Efd::from_parts_unchecked()`].
     #[must_use]
     pub fn is_valid(&self) -> bool {
         self.harmonic() > 0

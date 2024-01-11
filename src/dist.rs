@@ -12,7 +12,7 @@ fn cmp((a, b): (&f64, &f64)) -> f64 {
 /// Be able to calculate the distance between two instances.
 ///
 /// Each data number has the same weight by default, but you can change it by
-/// implementing [`Self::err_buf()`].
+/// implementing [`Distance::err_buf()`].
 pub trait Distance {
     /// Calculate the error between each pair of datas.
     fn err_buf(&self, rhs: &Self) -> Vec<f64>;

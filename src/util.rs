@@ -37,9 +37,9 @@ where
 }
 
 /// Check if the curve is valid.
-pub fn valid_curve<C, const DIM: usize>(curve: C) -> Option<C>
+pub fn valid_curve<C, const D: usize>(curve: C) -> Option<C>
 where
-    C: Curve<[f64; DIM]>,
+    C: Curve<Coord<D>>,
 {
     let c = curve.as_curve();
     (c.len() > 2 && c.iter().flatten().all(|x| x.is_finite())).then_some(curve)

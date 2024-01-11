@@ -19,11 +19,11 @@ pub type Coeffs3 = Coeffs<3>;
 pub type Coeffs<const D: usize> = na::OMatrix<f64, CDim<D>, na::Dyn>;
 /// Coordinate view used in the conversion method.
 pub type CoordView<'a, const D: usize> = na::MatrixView<'a, f64, CDim<D>, na::U1>;
-/// Alias for the coefficient number. (DIM * 2)
+/// Alias for the coefficient number. (D * 2)
 pub type CDim<const D: usize> = na::DimNameProd<na::Const<D>, na::U2>;
-/// A matrix view of specific coefficients. (DIM * 2)
+/// A matrix view of specific coefficients. (D * 2)
 pub type CKernel<'a, const D: usize> = na::MatrixView<'a, f64, na::Const<D>, na::U2>;
-/// A mutable matrix view of specific coefficients. (DIM * 2)
+/// A mutable matrix view of specific coefficients. (D * 2)
 pub type CKernelMut<'a, const D: usize> = na::MatrixViewMut<'a, f64, na::Const<D>, na::U2>;
 /// Rotation type of the EFD.
 pub type Rot<const D: usize> = <U<D> as EfdDim<D>>::Rot;
