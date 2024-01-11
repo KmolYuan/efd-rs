@@ -64,7 +64,7 @@ Kuhl, FP and Giardina, CR (1982). Elliptic Fourier features of a closed contour.
 
 Posed EFD combined a curve with a pose (unit vectors) to describe the orientation of each point.
 
-2D + open curve and its full reconstruction:
+2D open curve and its full reconstruction:
 
 <div>
 <img width="40%" alt="posed" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/posed.svg"/>
