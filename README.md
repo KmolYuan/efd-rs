@@ -10,8 +10,6 @@ Keyword Alias:
 + Elliptical Fourier Analysis (EFA)
 + Elliptical Fourier Function (EFF)
 
-This is an unofficial implementation.
-
 Example of re-describing a new closed curve:
 
 ```rust
@@ -25,25 +23,6 @@ let curve = vec![
 ];
 assert!(efd::util::valid_curve(&curve).is_some());
 let described_curve = efd::Efd2::from_curve(curve, false).generate(20);
-```
-
-## Bibliography
-
-```plain
-Kuhl, FP and Giardina, CR (1982). Elliptic Fourier features of a closed contour. Computer graphics and image processing, 18(3), 236-258.
-```
-
-```bibtex
-@article{kuhl1982elliptic,
-  title={Elliptic Fourier features of a closed contour},
-  author={Kuhl, Frank P and Giardina, Charles R},
-  journal={Computer graphics and image processing},
-  volume={18},
-  number={3},
-  pages={236--258},
-  year={1982},
-  publisher={Elsevier}
-}
 ```
 
 ## Example Images
@@ -70,3 +49,43 @@ Posed EFD combined a curve with a pose (unit vectors) to describe the orientatio
 <img width="40%" alt="posed" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/posed.svg"/>
 <img width="40%" alt="posed-full" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/posed-full.svg"/>
 </div>
+
+## Citations
+
+### Original
+
++ Kuhl, FP and Giardina, CR (1982). Elliptic Fourier features of a closed contour. Computer graphics and image processing, 18(3), 236-258. <https://doi.org/10.1016/0146-664X(82)90034-X>
+
+```bibtex
+@article{kuhl1982elliptic,
+  title={Elliptic Fourier features of a closed contour},
+  author={Kuhl, Frank P and Giardina, Charles R},
+  journal={Computer graphics and image processing},
+  volume={18},
+  number={3},
+  pages={236--258},
+  year={1982},
+  publisher={Elsevier}
+}
+```
+
+### My Applications
+
++ Chang, Y., Chang, JL., Lee, JJ. (2024). Atlas-Based Path Synthesis of Planar Four-Bar Linkages Using Elliptical Fourier Descriptors. In: Okada, M. (eds) Advances in Mechanism and Machine Science. IFToMM WC 2023. Mechanisms and Machine Science, vol 149. Springer, Cham. <https://doi.org/10.1007/978-3-031-45709-8_20>
+
+```bibtex
+@InProceedings {10.1007/978-3-031-45709-8_20,
+    author="Chang, Yuan
+    and Chang, Jia-Ling
+    and Lee, Jyh-Jone",
+    editor="Okada, Masafumi",
+    title="Atlas-Based Path Synthesis of Planar Four-Bar Linkages Using Elliptical Fourier Descriptors",
+    booktitle="Advances in Mechanism and Machine Science",
+    year="2024",
+    publisher="Springer Nature Switzerland",
+    address="Cham",
+    pages="198--207",
+    isbn="978-3-031-45709-8",
+    doi="https://doi.org/10.1007/978-3-031-45709-8_20"
+}
+```
