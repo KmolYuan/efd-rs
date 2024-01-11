@@ -48,7 +48,7 @@ where
     U<D>: EfdDim<D>,
     na::Const<D>: na::DimNameMul<na::U2>,
 {
-    /// Create object from a 2D array with boundary check and normalization.
+    /// Create object from a matrix with boundary check and normalization.
     ///
     /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
     ///
@@ -57,7 +57,7 @@ where
         (coeffs.ncols() != 0).then(|| Self { geo: U::<D>::coeff_norm(&mut coeffs), coeffs })
     }
 
-    /// Create object from a 2D array with boundary check.
+    /// Create object from a matrix with boundary check.
     ///
     /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
     ///
@@ -66,7 +66,7 @@ where
         (coeffs.ncols() != 0).then_some(Self { coeffs, geo: GeoVar::identity() })
     }
 
-    /// Create object from a 2D array directly.
+    /// Create object from a matrix directly.
     ///
     /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
     ///
