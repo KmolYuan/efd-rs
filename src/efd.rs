@@ -4,6 +4,24 @@ use core::f64::consts::{PI, TAU};
 #[cfg(not(feature = "std"))]
 use num_traits::*;
 
+/// Get the theta value of each point coordinate of the curve.
+///
+/// ```
+/// use efd::get_target_pos;
+///
+/// let path = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
+/// let theta = get_target_pos(path, true);
+/// assert_eq!(theta.len(), 4);
+/// ```
+pub fn get_target_pos<C, const D: usize>(curve: C, is_open: bool) -> Vec<f64>
+where
+    C: Curve<Coord<D>>,
+    U<D>: EfdDim<D>,
+    na::Const<D>: na::DimNameMul<na::U2>,
+{
+    U::<D>::get_coeff([curve.as_curve()], is_open, 0).0
+}
+
 /// A 1D shape described by EFD.
 pub type Efd1 = Efd<1>;
 /// A 2D shape described by EFD.
@@ -165,12 +183,32 @@ where
     where
         C: Curve<Coord<D>>,
     {
+        Self::from_curve_harmonic_and_get(curve, is_open, harmonic).0
+    }
+
+    /// Same as [`Efd::from_curve_harmonic()`] but get the the theta value of
+    /// each point coordinate of the curve.
+    ///
+    /// See also [`get_target_pos()`] if you want to ignore the coefficients.
+    ///
+    /// # Panics
+    ///
+    /// Please see [`Efd::from_curve_harmonic()`].
+    #[must_use]
+    pub fn from_curve_harmonic_and_get<C>(
+        curve: C,
+        is_open: bool,
+        harmonic: usize,
+    ) -> (Self, Vec<f64>)
+    where
+        C: Curve<Coord<D>>,
+    {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let curve = curve.as_curve();
-        let [(mut coeffs, geo1)] = U::<D>::get_coeff([curve], is_open, harmonic);
+        let (pos, [(mut coeffs, geo1)]) = U::<D>::get_coeff([curve], is_open, harmonic);
         let geo2 = U::<D>::coeff_norm(&mut coeffs);
-        Self { coeffs, geo: geo1 * geo2 }
+        (Self { coeffs, geo: geo1 * geo2 }, pos)
     }
 
     /// Same as [`Efd::from_curve_harmonic()`] but without normalization.
@@ -182,7 +220,7 @@ where
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let curve = curve.as_curve();
-        let [(coeffs, geo)] = U::<D>::get_coeff([curve], is_open, harmonic);
+        let (_, [(coeffs, geo)]) = U::<D>::get_coeff([curve], is_open, harmonic);
         Self { coeffs, geo }
     }
 

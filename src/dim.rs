@@ -54,11 +54,12 @@ where
     /// Obtain coefficients and similarity matrix **without** normalization.
     ///
     /// **Where `series.len()` must greater than 1.**
+    #[allow(clippy::type_complexity)]
     fn get_coeff<const N: usize>(
         series: [&[Coord<D>]; N],
         is_open: bool,
         harmonic: usize,
-    ) -> [(Coeffs<D>, GeoVar<Self::Rot, D>); N] {
+    ) -> (Vec<f64>, [(Coeffs<D>, GeoVar<Self::Rot, D>); N]) {
         let to_diff = |curve: &[_]| {
             diff(if is_open || curve.first() == curve.last() {
                 to_mat(curve)
@@ -74,7 +75,7 @@ where
         let phi = &t * TAU / zt * if is_open { 0.5 } else { 1. };
         let tdt = t.columns_range(1..).component_div(&dt);
         let scalar2 = 0.5 * diff(t.map(pow2)).component_div(&dt);
-        series.map(|curve| {
+        let arr = series.map(|curve| {
             let dxyz = to_diff(curve);
             // Coefficients (2dim * N)
             // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
@@ -102,7 +103,8 @@ where
             });
             let rot_eye = na::AbstractRotation::identity();
             (coeff, GeoVar::new(center, rot_eye, 1.))
-        })
+        });
+        (phi.data.into(), arr)
     }
 
     /// Normalize the coefficients.
