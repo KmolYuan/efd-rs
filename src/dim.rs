@@ -21,7 +21,7 @@ pub type CKernel<'a, const D: usize> = na::MatrixView<'a, f64, na::Const<D>, na:
 /// A mutable matrix view of specific coefficients. (Dx2)
 pub type CKernelMut<'a, const D: usize> = na::MatrixViewMut<'a, f64, na::Const<D>, na::U2>;
 /// Rotation type of the EFD.
-pub type Rot<const D: usize> = <U<D> as EfdDim<D>>::Rot;
+pub type Rot<const D: usize> = <U<D> as RotAlias<D>>::Rot;
 
 trait Sealed {}
 impl<const D: usize> Sealed for U<D> {}
@@ -30,16 +30,10 @@ impl<const D: usize> Sealed for U<D> {}
 ///
 /// **This trait is sealed and cannot be implemented outside of this crate.**
 #[allow(private_bounds)]
-pub trait EfdDim<const D: usize>: Sealed
+pub trait EfdDim<const D: usize>: RotAlias<D> + Sealed
 where
     na::Const<D>: na::DimNameMul<na::U2>,
 {
-    /// Rotation type of the dimension `D`.
-    ///
-    /// For the memory efficiency, the generic rotation matrix [`na::Rotation`]
-    /// is not used.
-    type Rot: RotHint<D>;
-
     #[doc(hidden)]
     fn get_rot(m: &Coeffs<D>) -> Self::Rot;
 
@@ -153,24 +147,18 @@ where
 }
 
 impl EfdDim<1> for U<1> {
-    type Rot = na::Rotation<f64, 1>;
-
     fn get_rot(m: &Coeffs<1>) -> Self::Rot {
         na::Rotation::from_matrix_unchecked(na::matrix![m[(0, 0)].signum()])
     }
 }
 
 impl EfdDim<2> for U<2> {
-    type Rot = na::UnitComplex<f64>;
-
     fn get_rot(m: &Coeffs<2>) -> Self::Rot {
         na::UnitComplex::new(m[(1, 0)].atan2(m[(0, 0)]))
     }
 }
 
 impl EfdDim<3> for U<3> {
-    type Rot = na::UnitQuaternion<f64>;
-
     fn get_rot(m: &Coeffs<3>) -> Self::Rot {
         let m1 = m.column(0).reshape_generic(na::U3, na::U2);
         let u = m1.column(0).normalize();

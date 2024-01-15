@@ -10,6 +10,24 @@ pub type GeoVar3 = GeoVar<na::UnitQuaternion<f64>, 3>;
 
 type Sim<R, const D: usize> = na::Similarity<f64, R, D>;
 
+/// Rotation type alias for [`GeoVar`].
+pub trait RotAlias<const D: usize> {
+    /// Rotation type of the dimension `D`.
+    ///
+    /// For the memory efficiency, the generic rotation matrix [`na::Rotation`]
+    /// is not used.
+    type Rot: RotHint<D>;
+}
+impl RotAlias<1> for U<1> {
+    type Rot = na::Rotation<f64, 1>;
+}
+impl RotAlias<2> for U<2> {
+    type Rot = na::UnitComplex<f64>;
+}
+impl RotAlias<3> for U<3> {
+    type Rot = na::UnitQuaternion<f64>;
+}
+
 /// Rotation hint for [`GeoVar`].
 pub trait RotHint<const D: usize>: na::AbstractRotation<f64, D> + core::fmt::Debug {
     /// Get the rotation matrix.
