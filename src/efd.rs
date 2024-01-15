@@ -13,13 +13,14 @@ use num_traits::*;
 /// let theta = get_target_pos(path, true);
 /// assert_eq!(theta.len(), 4);
 /// ```
-pub fn get_target_pos<C, const D: usize>(curve: C, is_open: bool) -> Vec<f64>
+pub fn get_target_pos<C, const D: usize>(curve: C, is_open: bool) -> (Vec<f64>, GeoVar<Rot<D>, D>)
 where
     C: Curve<Coord<D>>,
     U<D>: EfdDim<D>,
     na::Const<D>: na::DimNameMul<na::U2>,
 {
-    U::<D>::get_coeff([curve.as_curve()], is_open, 0).0
+    let (pos, [(mut coeff, geo)]) = U::<D>::get_coeff([curve.as_curve()], is_open, 1);
+    (pos, geo * U::<D>::coeff_norm(&mut coeff))
 }
 
 /// A 1D shape described by EFD.
