@@ -1,4 +1,3 @@
-//! Dimension specific implementation.
 use crate::{util::*, *};
 use alloc::vec::Vec;
 use core::f64::consts::{PI, TAU};
@@ -7,7 +6,7 @@ use core::f64::consts::{PI, TAU};
 use num_traits::*;
 
 /// EFD dimension marker.
-pub enum U<const N: usize> {}
+pub enum U<const D: usize> {}
 
 /// 1D Coefficients type.
 pub type Coeffs1 = Coeffs<1>;
@@ -16,14 +15,10 @@ pub type Coeffs2 = Coeffs<2>;
 /// 3D Coefficients type.
 pub type Coeffs3 = Coeffs<3>;
 /// Coefficients type.
-pub type Coeffs<const D: usize> = na::OMatrix<f64, CDim<D>, na::Dyn>;
-/// Coordinate view used in the conversion method.
-pub type CoordView<'a, const D: usize> = na::MatrixView<'a, f64, CDim<D>, na::U1>;
-/// Alias for the coefficient number. (D * 2)
-pub type CDim<const D: usize> = na::DimNameProd<na::Const<D>, na::U2>;
-/// A matrix view of specific coefficients. (D * 2)
+pub type Coeffs<const D: usize> = na::OMatrix<f64, na::DimNameProd<na::Const<D>, na::U2>, na::Dyn>;
+/// A matrix view of specific coefficients. (Dx2)
 pub type CKernel<'a, const D: usize> = na::MatrixView<'a, f64, na::Const<D>, na::U2>;
-/// A mutable matrix view of specific coefficients. (D * 2)
+/// A mutable matrix view of specific coefficients. (Dx2)
 pub type CKernelMut<'a, const D: usize> = na::MatrixViewMut<'a, f64, na::Const<D>, na::U2>;
 /// Rotation type of the EFD.
 pub type Rot<const D: usize> = <U<D> as EfdDim<D>>::Rot;
@@ -31,7 +26,7 @@ pub type Rot<const D: usize> = <U<D> as EfdDim<D>>::Rot;
 trait Sealed {}
 impl<const D: usize> Sealed for U<D> {}
 
-/// Trait for EFD dimension.
+/// Trait for the dimension [`U<D>`] of EFD.
 ///
 /// **This trait is sealed and cannot be implemented outside of this crate.**
 #[allow(private_bounds)]
@@ -39,21 +34,16 @@ pub trait EfdDim<const D: usize>: Sealed
 where
     na::Const<D>: na::DimNameMul<na::U2>,
 {
-    /// Rotation type.
+    /// Rotation type of the dimension `D`.
     ///
     /// For the memory efficiency, the generic rotation matrix [`na::Rotation`]
     /// is not used.
     type Rot: RotHint<D>;
 
-    /// Get the rotation matrix from the coefficients.
-    ///
-    /// In different dimensions, the rotation needs to be calculated
-    /// differently. So only the specific dimension can implement this trait.
+    #[doc(hidden)]
     fn get_rot(m: &Coeffs<D>) -> Self::Rot;
 
-    /// Obtain coefficients and similarity matrix **without** normalization.
-    ///
-    /// **Where `series.len()` must greater than 1.**
+    #[doc(hidden)]
     #[allow(clippy::type_complexity)]
     fn get_coeff<const N: usize>(
         series: [&[Coord<D>]; N],
@@ -107,7 +97,7 @@ where
         (phi.data.into(), arr)
     }
 
-    /// Normalize the coefficients.
+    #[doc(hidden)]
     fn coeff_norm(coeffs: &mut Coeffs<D>) -> GeoVar<Self::Rot, D> {
         // Angle of starting point
         // m = m * theta
@@ -144,7 +134,7 @@ where
         GeoVar::new([0.; D], psi, scale)
     }
 
-    /// Reconstruct the curve from the coefficients.
+    #[doc(hidden)]
     fn reconstruct(coeffs: &Coeffs<D>, t: na::Matrix1xX<f64>) -> Vec<Coord<D>> {
         coeffs
             .column_iter()

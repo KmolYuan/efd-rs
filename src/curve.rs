@@ -1,8 +1,8 @@
-//! Curve trait and its implementations.
 use alloc::vec::Vec;
 
-/// Alias for evaluate `EfdDim::Trans::Coord` from `D`.
+/// Coordinate type of the dimension `D`.
 pub type Coord<const D: usize> = [f64; D];
+
 pub(crate) type MatrixRxX<const D: usize> = na::OMatrix<f64, na::Const<D>, na::Dyn>;
 
 pub(crate) fn to_mat<C, const D: usize>(curve: C) -> MatrixRxX<D>
@@ -14,8 +14,11 @@ where
 }
 
 /// Copy-on-write curve type.
+///
+/// Instead of using [`Cow<A>`](std::borrow::Cow), this is a trait, which does
+/// not require any conversion.
 pub trait Curve<A: Clone>: Sized {
-    /// Move or copy curve type into owned type. (`Vec`)
+    /// Move or copy curve type into the owned type [`Vec`].
     #[must_use]
     fn to_curve(self) -> Vec<A>;
 

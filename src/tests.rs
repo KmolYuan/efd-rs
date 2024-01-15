@@ -1,18 +1,17 @@
 #![doc(hidden)]
+use crate::*;
 
 /// Epsilon for curve difference.
 pub const EPS: f64 = 2.2e-14;
 pub const RES: usize = 1000;
 
 /// Error between two curves, the length of the curves must be the same.
-pub fn curve_diff<const N: usize>(a: &[[f64; N]], b: &[[f64; N]]) -> f64 {
-    use crate::dist::Distance as _;
-    a.iter().zip(b).map(|(a, b)| a.l2_norm(b)).sum()
+pub fn curve_diff<const D: usize>(a: &[Coord<D>], b: &[Coord<D>]) -> f64 {
+    a.iter().zip(b).map(|(a, b)| a.l2_norm(b)).sum::<f64>() / a.len() as f64
 }
 
 #[test]
 fn error() {
-    use crate::*;
     let coeff = Coeffs2::from_column_slice(&[10., 20., 20., 10., 3., 4., 4., 3.]);
     let a = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
     let coeff = Coeffs2::from_column_slice(&[10., 20., 20., 10.]);
@@ -23,7 +22,6 @@ fn error() {
 
 #[test]
 fn efd2d_open() {
-    use crate::*;
     use approx::assert_abs_diff_eq;
     let efd = Efd2::from_curve(PATH_OPEN, true);
     assert_eq!(efd.harmonic(), 14);
@@ -43,7 +41,6 @@ fn efd2d_open() {
 
 #[test]
 fn efd2d() {
-    use crate::*;
     use approx::assert_abs_diff_eq;
     let efd = Efd2::from_curve(PATH, false);
     // Test starting point
@@ -73,7 +70,6 @@ fn efd2d() {
 
 #[test]
 fn efd3d() {
-    use crate::*;
     use approx::assert_abs_diff_eq;
     let efd = Efd3::from_curve(PATH3D, false);
     // Test starting point
@@ -151,9 +147,9 @@ fn plot3d_open() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[cfg(all(test, feature = "std"))]
-fn get_area<const N: usize>(pts: &[[f64; N]]) -> [[f64; 2]; N] {
+fn get_area<const D: usize>(pts: &[[f64; D]]) -> [[f64; 2]; D] {
     pts.iter()
-        .fold([[f64::INFINITY, f64::NEG_INFINITY]; N], |mut b, c| {
+        .fold([[f64::INFINITY, f64::NEG_INFINITY]; D], |mut b, c| {
             b.iter_mut()
                 .zip(c.iter())
                 .for_each(|(b, c)| *b = [b[0].min(*c), b[1].max(*c)]);
@@ -163,7 +159,6 @@ fn get_area<const N: usize>(pts: &[[f64; N]]) -> [[f64; 2]; N] {
 
 #[cfg(all(test, feature = "std"))]
 fn plot2d(coeff: crate::Coeffs2, path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::*;
     use plotters::prelude::*;
 
     fn bounding_box(pts: &[[f64; 2]]) -> [f64; 4] {
@@ -226,7 +221,6 @@ fn plot2d(coeff: crate::Coeffs2, path: &str) -> Result<(), Box<dyn std::error::E
 
 #[cfg(all(test, feature = "std"))]
 fn plot3d(coeff: crate::Coeffs3, path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::*;
     use plotters::prelude::*;
 
     fn bounding_box(pts: &[[f64; 3]]) -> [f64; 6] {

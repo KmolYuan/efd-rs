@@ -1,4 +1,3 @@
-//! Geometric types, the geometric invariant.
 use crate::*;
 use alloc::{format, vec::Vec};
 
@@ -51,7 +50,7 @@ impl<R: RotHint<D>, const D: usize> Default for GeoVar<R, D> {
 
 impl<R, const D: usize> core::fmt::Debug for GeoVar<R, D>
 where
-    R: core::fmt::Debug + RotHint<D>,
+    R: RotHint<D>,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct(&format!("GeoVar{D}"))
