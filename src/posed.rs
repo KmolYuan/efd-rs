@@ -20,13 +20,6 @@ where
     Vector::from(v).normalize().data.0[0]
 }
 
-fn uvec_scaled<V, const D: usize>(v: V, len: f64) -> Vector<D>
-where
-    Vector<D>: From<V>,
-{
-    Vector::from(v).normalize() * len
-}
-
 /// A shape with a pose described by EFD.
 ///
 /// These are the same as [`Efd`] except that it has a pose, and the data are
@@ -264,7 +257,7 @@ fn generate_pair<const D: usize>(
     let pose = curve
         .iter()
         .zip(pose)
-        .map(|(p, v)| na::Point::from(*p) + uvec_scaled(v, len))
+        .map(|(p, v)| na::Point::from(*p) + na::Vector::from(v) * len)
         .map(|p| p.coords.data.0[0])
         .collect();
     (curve, pose)
