@@ -71,6 +71,8 @@ where
     na::Const<D>: na::DimNameMul<na::U2>,
 {
     /// Create a new [`PosedEfd`] from two [`Efd`]s. (`curve` and `pose`)
+    ///
+    /// See also [`PosedEfd::into_inner()`].
     pub const fn from_parts_unchecked(curve: Efd<D>, pose: Efd<D>) -> Self {
         Self { curve, pose }
     }
@@ -107,6 +109,34 @@ where
             .zip(curve2.as_curve())
             .map(|(a, b)| uvec(na::Point::from(*b) - na::Point::from(*a)))
             .collect::<Vec<_>>();
+        Self::from_uvec_harmonic_unchecked(curve, vectors, is_open, harmonic)
+    }
+
+    /// Calculate the coefficients from a curve and its unit vectors from each
+    /// point.
+    ///
+    /// See also [`PosedEfd::from_uvec_unchecked()`] if you want to skip the
+    /// unit vector calculation.
+    pub fn from_uvec<C, V>(curve: C, vectors: V, is_open: bool) -> Self
+    where
+        C: Curve<D>,
+        V: Curve<D>,
+    {
+        let harmonic = harmonic!(is_open, curve, vectors);
+        Self::from_uvec_harmonic(curve, vectors, is_open, harmonic)
+    }
+
+    /// Calculate the coefficients from a curve and its unit vectors from each
+    /// point.
+    ///
+    /// See also [`PosedEfd::from_uvec_harmonic_unchecked()`] if you want to
+    /// skip the unit vector calculation.
+    pub fn from_uvec_harmonic<C, V>(curve: C, vectors: V, is_open: bool, harmonic: usize) -> Self
+    where
+        C: Curve<D>,
+        V: Curve<D>,
+    {
+        let vectors = vectors.to_curve().into_iter().map(uvec).collect::<Vec<_>>();
         Self::from_uvec_harmonic_unchecked(curve, vectors, is_open, harmonic)
     }
 
@@ -180,9 +210,10 @@ where
         self.pose.set_harmonic(harmonic);
     }
 
-    /// Consume self and return a raw array of the coefficients.
-    /// The first is the curve coefficients, and the second is the pose
-    /// coefficients.
+    /// Consume self and return the parts of this type. The first is the curve
+    /// coefficients, and the second is the pose coefficients.
+    ///
+    /// See also [`PosedEfd::from_parts_unchecked()`].
     #[must_use]
     pub fn into_inner(self) -> (Efd<D>, Efd<D>) {
         (self.curve, self.pose)

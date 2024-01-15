@@ -60,10 +60,11 @@ pub type Efd3 = Efd<3>;
 ///
 /// # Raw Coefficients
 ///
-/// The coefficients is contained with `na::Matrix`, use
+/// The coefficients is contained with [`na::Matrix`], use
 /// [`Efd::try_from_coeffs()`] to input the coefficients externally.
 ///
-/// Use [`Efd::into_inner()`] to get the matrix of the coefficients.
+/// See also [`Efd::from_parts_unchecked()`] and [`Efd::into_inner()`] without
+/// checking data.
 pub struct Efd<const D: usize>
 where
     U<D>: EfdDim<D>,
@@ -78,6 +79,25 @@ where
     U<D>: EfdDim<D>,
     na::Const<D>: na::DimNameMul<na::U2>,
 {
+    /// Create object from a matrix directly.
+    ///
+    /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
+    ///
+    /// Zero harmonic is allowed but meaningless. If the harmonic is zero, some
+    /// operations will panic.
+    ///
+    /// ```
+    /// use efd::{Coeffs2, Efd2, GeoVar};
+    /// let coeffs = Coeffs2::from_column_slice(&[]);
+    /// let path = Efd2::from_parts_unchecked(coeffs, GeoVar::identity()).generate(20);
+    /// assert_eq!(path.len(), 0);
+    /// ```
+    ///
+    /// See also [`Efd::into_inner()`].
+    pub const fn from_parts_unchecked(coeffs: Coeffs<D>, geo: GeoVar<Rot<D>, D>) -> Self {
+        Self { coeffs, geo }
+    }
+
     /// Create object from a matrix with boundary check and normalization.
     ///
     /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
@@ -94,23 +114,6 @@ where
     /// Return none if the harmonic is zero.
     pub fn try_from_coeffs_unnorm(coeffs: Coeffs<D>) -> Option<Self> {
         (coeffs.ncols() != 0).then_some(Self { coeffs, geo: GeoVar::identity() })
-    }
-
-    /// Create object from a matrix directly.
-    ///
-    /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
-    ///
-    /// Zero harmonic is allowed but meaningless. If the harmonic is zero, some
-    /// operations will panic.
-    ///
-    /// ```
-    /// use efd::{Coeffs2, Efd2, GeoVar};
-    /// let coeffs = Coeffs2::from_column_slice(&[]);
-    /// let path = Efd2::from_parts_unchecked(coeffs, GeoVar::identity()).generate(20);
-    /// assert_eq!(path.len(), 0);
-    /// ```
-    pub const fn from_parts_unchecked(coeffs: Coeffs<D>, geo: GeoVar<Rot<D>, D>) -> Self {
-        Self { coeffs, geo }
     }
 
     /// Fully automated coefficient calculation.
@@ -289,7 +292,9 @@ where
         Self { coeffs, geo: geo.apply(&geo_new) }
     }
 
-    /// Consume self and return a raw array of the coefficients.
+    /// Consume self and return the parts of this type.
+    ///
+    /// See also [`Efd::from_parts_unchecked()`].
     #[must_use]
     pub fn into_inner(self) -> (Coeffs<D>, GeoVar<Rot<D>, D>) {
         (self.coeffs, self.geo)
