@@ -4,6 +4,14 @@ use core::f64::consts::{PI, TAU};
 #[cfg(not(feature = "std"))]
 use num_traits::*;
 
+macro_rules! harmonic {
+    ($is_open:ident, $curve1:ident $(, $curve2:ident)*) => {{
+        let len = $curve1.len()$(.min($curve2.len()))*;
+        if $is_open { len * 2 } else { len }
+    }};
+}
+pub(crate) use harmonic;
+
 /// Get the theta value of each point coordinate of the curve.
 ///
 /// ```
@@ -146,9 +154,8 @@ where
     where
         C: Curve<Coord<D>>,
     {
-        let len = curve.len();
-        Self::from_curve_harmonic(curve, is_open, if is_open { len * 2 } else { len })
-            .fourier_power_anaysis(None)
+        let harmonic = harmonic!(is_open, curve);
+        Self::from_curve_harmonic(curve, is_open, harmonic).fourier_power_anaysis(None)
     }
 
     /// Same as [`Efd::from_curve()`], but if your sampling points are large,

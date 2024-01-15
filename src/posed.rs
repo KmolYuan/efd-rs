@@ -12,12 +12,22 @@ pub type PosedEfd2 = PosedEfd<2>;
 pub type PosedEfd3 = PosedEfd<3>;
 
 /// Unit vector type of the posed EFD.
-pub type UVector<const D: usize> =
-    na::Unit<na::Vector<f64, na::Const<D>, na::ArrayStorage<f64, D, 1>>>;
+pub type Vector<const D: usize> = na::Vector<f64, na::Const<D>, na::ArrayStorage<f64, D, 1>>;
 
-/// Create a unit vector from a coordinate.
-pub fn uvec<const D: usize>(c: Coord<D>) -> UVector<D> {
-    na::Unit::new_normalize(na::Vector::from(c))
+/// Make a vector to unit vector.
+pub fn uvec<V, const D: usize>(v: V) -> Coord<D>
+where
+    Vector<D>: From<V>,
+{
+    Vector::from(v).normalize().data.0[0]
+}
+
+/// Make a vector to unit vector and scale it with `len`.
+pub fn uvec_scaled<V, const D: usize>(v: V, len: f64) -> Vector<D>
+where
+    Vector<D>: From<V>,
+{
+    Vector::from(v).normalize() * len
 }
 
 /// A shape with a pose described by EFD.
@@ -36,6 +46,32 @@ where
 {
     curve: Efd<D>,
     pose: Efd<D>,
+}
+
+impl PosedEfd2 {
+    /// Calculate the coefficients from a curve and its angles from each point.
+    pub fn from_angles<C>(curve: C, angles: &[f64], is_open: bool) -> Self
+    where
+        C: Curve<Coord<2>>,
+    {
+        let harmonic = harmonic!(is_open, curve, angles);
+        Self::from_angles_harmonic(curve, angles, is_open, harmonic).fourier_power_anaysis(None)
+    }
+
+    /// Calculate the coefficients from a curve and its angles from each point.
+    ///
+    /// The `harmonic` is the number of the coefficients to be calculated.
+    pub fn from_angles_harmonic<C>(curve: C, angles: &[f64], is_open: bool, harmonic: usize) -> Self
+    where
+        C: Curve<Coord<2>>,
+    {
+        let vectors = angles
+            .as_curve()
+            .iter()
+            .map(|a| uvec([a.cos(), a.sin()]))
+            .collect::<Vec<_>>();
+        Self::from_uvec_harmonic_unchecked(curve, vectors, is_open, harmonic)
+    }
 }
 
 impl<const D: usize> PosedEfd<D>
@@ -57,9 +93,8 @@ where
         C1: Curve<Coord<D>>,
         C2: Curve<Coord<D>>,
     {
-        let len = curve1.len().min(curve2.len());
-        Self::from_series_harmonic(curve1, curve2, is_open, if is_open { len * 2 } else { len })
-            .fourier_power_anaysis(None)
+        let harmonic = harmonic!(is_open, curve1, curve2);
+        Self::from_series_harmonic(curve1, curve2, is_open, harmonic).fourier_power_anaysis(None)
     }
 
     /// Calculate the coefficients from two series of points.
@@ -79,40 +114,40 @@ where
         let vectors = curve
             .iter()
             .zip(curve2.as_curve())
-            .map(|(a, b)| na::Point::from(*b) - na::Point::from(*a))
-            .map(UVector::new_normalize)
+            .map(|(a, b)| uvec(na::Point::from(*b) - na::Point::from(*a)))
             .collect::<Vec<_>>();
-        Self::from_vectors_harmonic(curve, vectors, is_open, harmonic)
+        Self::from_uvec_harmonic_unchecked(curve, vectors, is_open, harmonic)
     }
 
-    /// Calculate the coefficients from a curve and its vector of each point.
-    pub fn from_vectors<C, V>(curve: C, vectors: V, is_open: bool) -> Self
+    /// Calculate the coefficients from a curve and its unit vectors from each
+    /// point.
+    pub fn from_uvec_unchecked<C, V>(curve: C, vectors: V, is_open: bool) -> Self
     where
         C: Curve<Coord<D>>,
-        V: Curve<UVector<D>>,
+        V: Curve<Coord<D>>,
     {
-        let len = curve.len().min(vectors.len());
-        Self::from_vectors_harmonic(curve, vectors, is_open, if is_open { len * 2 } else { len })
+        let harmonic = harmonic!(is_open, curve, vectors);
+        Self::from_uvec_harmonic_unchecked(curve, vectors, is_open, harmonic)
             .fourier_power_anaysis(None)
     }
 
-    /// Calculate the coefficients from a curve and its vector of each point.
+    /// Calculate the coefficients from a curve and its unit vectors from each
+    /// point.
     ///
     /// The `harmonic` is the number of the coefficients to be calculated.
-    pub fn from_vectors_harmonic<C, V>(curve: C, vectors: V, is_open: bool, harmonic: usize) -> Self
+    pub fn from_uvec_harmonic_unchecked<C, V>(
+        curve: C,
+        vectors: V,
+        is_open: bool,
+        harmonic: usize,
+    ) -> Self
     where
         C: Curve<Coord<D>>,
-        V: Curve<UVector<D>>,
+        V: Curve<Coord<D>>,
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let curve = curve.as_curve();
-        let vectors = vectors
-            .to_curve()
-            .into_iter()
-            .map(|v| v.into_inner().data.0[0])
-            .collect::<Vec<_>>();
-        let (_, arr) = U::<D>::get_coeff([curve, &vectors], is_open, harmonic);
+        let (_, arr) = U::<D>::get_coeff([curve.as_curve(), vectors.as_curve()], is_open, harmonic);
         let [curve, pose] = arr.map(|(mut coeffs, geo1)| {
             let geo2 = U::<D>::coeff_norm(&mut coeffs);
             Efd::from_parts_unchecked(coeffs, geo1 * geo2)
@@ -231,7 +266,7 @@ fn generate_pair<const D: usize>(
     let pose = curve
         .iter()
         .zip(pose)
-        .map(|(p, v)| na::Point::from(*p) + uvec(v).into_inner() * len)
+        .map(|(p, v)| na::Point::from(*p) + uvec_scaled(v, len))
         .map(|p| p.coords.data.0[0])
         .collect();
     (curve, pose)
