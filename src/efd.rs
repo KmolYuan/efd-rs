@@ -10,7 +10,7 @@ use num_traits::*;
 /// use efd::get_target_pos;
 ///
 /// let path = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
-/// let theta = get_target_pos(path, true);
+/// let (theta, _geo) = get_target_pos(path, true);
 /// assert_eq!(theta.len(), 4);
 /// ```
 pub fn get_target_pos<C, const D: usize>(curve: C, is_open: bool) -> (Vec<f64>, GeoVar<Rot<D>, D>)
