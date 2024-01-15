@@ -11,19 +11,16 @@ pub type PosedEfd2 = PosedEfd<2>;
 /// A 3D shape with a pose described by EFD.
 pub type PosedEfd3 = PosedEfd<3>;
 
-/// Unit vector type of the posed EFD.
-pub type Vector<const D: usize> = na::Vector<f64, na::Const<D>, na::ArrayStorage<f64, D, 1>>;
+type Vector<const D: usize> = na::Vector<f64, na::Const<D>, na::ArrayStorage<f64, D, 1>>;
 
-/// Make a vector to unit vector.
-pub fn uvec<V, const D: usize>(v: V) -> Coord<D>
+fn uvec<V, const D: usize>(v: V) -> Coord<D>
 where
     Vector<D>: From<V>,
 {
     Vector::from(v).normalize().data.0[0]
 }
 
-/// Make a vector to unit vector and scale it with `len`.
-pub fn uvec_scaled<V, const D: usize>(v: V, len: f64) -> Vector<D>
+fn uvec_scaled<V, const D: usize>(v: V, len: f64) -> Vector<D>
 where
     Vector<D>: From<V>,
 {
@@ -34,6 +31,8 @@ where
 ///
 /// These are the same as [`Efd`] except that it has a pose, and the data are
 /// always normalized and readonly.
+///
+/// Start with [`PosedEfd::from_series()`] and its related methods.
 ///
 /// # Pose Representation
 /// Pose is represented by an unit vector, which is rotated by the rotation
@@ -52,7 +51,7 @@ impl PosedEfd2 {
     /// Calculate the coefficients from a curve and its angles from each point.
     pub fn from_angles<C>(curve: C, angles: &[f64], is_open: bool) -> Self
     where
-        C: Curve<Coord<2>>,
+        C: Curve<2>,
     {
         let harmonic = harmonic!(is_open, curve, angles);
         Self::from_angles_harmonic(curve, angles, is_open, harmonic).fourier_power_anaysis(None)
@@ -63,10 +62,9 @@ impl PosedEfd2 {
     /// The `harmonic` is the number of the coefficients to be calculated.
     pub fn from_angles_harmonic<C>(curve: C, angles: &[f64], is_open: bool, harmonic: usize) -> Self
     where
-        C: Curve<Coord<2>>,
+        C: Curve<2>,
     {
         let vectors = angles
-            .as_curve()
             .iter()
             .map(|a| uvec([a.cos(), a.sin()]))
             .collect::<Vec<_>>();
@@ -90,8 +88,8 @@ where
     /// as `curve[i]`.
     pub fn from_series<C1, C2>(curve1: C1, curve2: C2, is_open: bool) -> Self
     where
-        C1: Curve<Coord<D>>,
-        C2: Curve<Coord<D>>,
+        C1: Curve<D>,
+        C2: Curve<D>,
     {
         let harmonic = harmonic!(is_open, curve1, curve2);
         Self::from_series_harmonic(curve1, curve2, is_open, harmonic).fourier_power_anaysis(None)
@@ -107,8 +105,8 @@ where
         harmonic: usize,
     ) -> Self
     where
-        C1: Curve<Coord<D>>,
-        C2: Curve<Coord<D>>,
+        C1: Curve<D>,
+        C2: Curve<D>,
     {
         let curve = curve1.as_curve();
         let vectors = curve
@@ -123,8 +121,8 @@ where
     /// point.
     pub fn from_uvec_unchecked<C, V>(curve: C, vectors: V, is_open: bool) -> Self
     where
-        C: Curve<Coord<D>>,
-        V: Curve<Coord<D>>,
+        C: Curve<D>,
+        V: Curve<D>,
     {
         let harmonic = harmonic!(is_open, curve, vectors);
         Self::from_uvec_harmonic_unchecked(curve, vectors, is_open, harmonic)
@@ -142,8 +140,8 @@ where
         harmonic: usize,
     ) -> Self
     where
-        C: Curve<Coord<D>>,
-        V: Curve<Coord<D>>,
+        C: Curve<D>,
+        V: Curve<D>,
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");

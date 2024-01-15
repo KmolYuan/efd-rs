@@ -21,9 +21,12 @@ pub(crate) use harmonic;
 /// let (theta, _geo) = get_target_pos(path, true);
 /// assert_eq!(theta.len(), 4);
 /// ```
+///
+/// See also [`Efd::from_curve_harmonic_and_get()`] if you want to get the
+/// coefficients.
 pub fn get_target_pos<C, const D: usize>(curve: C, is_open: bool) -> (Vec<f64>, GeoVar<Rot<D>, D>)
 where
-    C: Curve<Coord<D>>,
+    C: Curve<D>,
     U<D>: EfdDim<D>,
     na::Const<D>: na::DimNameMul<na::U2>,
 {
@@ -152,7 +155,7 @@ where
     #[must_use]
     pub fn from_curve<C>(curve: C, is_open: bool) -> Self
     where
-        C: Curve<Coord<D>>,
+        C: Curve<D>,
     {
         let harmonic = harmonic!(is_open, curve);
         Self::from_curve_harmonic(curve, is_open, harmonic).fourier_power_anaysis(None)
@@ -168,7 +171,7 @@ where
     #[must_use]
     pub fn from_curve_nyquist<C>(curve: C, is_open: bool) -> Self
     where
-        C: Curve<Coord<D>>,
+        C: Curve<D>,
     {
         let len = curve.len();
         Self::from_curve_harmonic(curve, is_open, if is_open { len } else { len / 2 })
@@ -189,7 +192,7 @@ where
     #[must_use]
     pub fn from_curve_harmonic<C>(curve: C, is_open: bool, harmonic: usize) -> Self
     where
-        C: Curve<Coord<D>>,
+        C: Curve<D>,
     {
         Self::from_curve_harmonic_and_get(curve, is_open, harmonic).0
     }
@@ -209,7 +212,7 @@ where
         harmonic: usize,
     ) -> (Self, Vec<f64>)
     where
-        C: Curve<Coord<D>>,
+        C: Curve<D>,
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
@@ -223,7 +226,7 @@ where
     #[must_use]
     pub fn from_curve_harmonic_unnorm<C>(curve: C, is_open: bool, harmonic: usize) -> Self
     where
-        C: Curve<Coord<D>>,
+        C: Curve<D>,
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");

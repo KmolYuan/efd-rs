@@ -7,24 +7,23 @@ pub(crate) type MatrixRxX<const D: usize> = na::OMatrix<f64, na::Const<D>, na::D
 
 pub(crate) fn to_mat<C, const D: usize>(curve: C) -> MatrixRxX<D>
 where
-    C: Curve<Coord<D>>,
+    C: Curve<D>,
 {
-    let curve = curve.to_curve();
-    MatrixRxX::from_iterator(curve.len(), curve.into_iter().flatten())
+    MatrixRxX::from_iterator(curve.len(), curve.as_curve().iter().flatten().copied())
 }
 
 /// Copy-on-write curve type.
 ///
-/// Instead of using [`Cow<A>`](std::borrow::Cow), this is a trait, which does
-/// not require any conversion.
-pub trait Curve<A: Clone>: Sized {
+/// Instead of using [`Cow<Coord<D>>`](std::borrow::Cow), this is a trait, which
+/// does not require any conversion.
+pub trait Curve<const D: usize>: Sized {
     /// Move or copy curve type into the owned type [`Vec`].
     #[must_use]
-    fn to_curve(self) -> Vec<A>;
+    fn to_curve(self) -> Vec<Coord<D>>;
 
     /// Elements view.
     #[must_use]
-    fn as_curve(&self) -> &[A];
+    fn as_curve(&self) -> &[Coord<D>];
 
     /// Length of the curve.
     fn len(&self) -> usize {
@@ -42,15 +41,15 @@ pub trait Curve<A: Clone>: Sized {
     ///
     /// Panics if the curve is empty.
     #[must_use]
-    fn closed_lin(self) -> Vec<A> {
+    fn closed_lin(self) -> Vec<Coord<D>> {
         let mut c = self.to_curve();
-        c.push(c[0].clone());
+        c.push(c[0]);
         c
     }
 
     /// Remove the last element.
     #[must_use]
-    fn pop_last(self) -> Vec<A> {
+    fn popped_last(self) -> Vec<Coord<D>> {
         let mut curve = self.to_curve();
         curve.pop();
         curve
@@ -58,10 +57,7 @@ pub trait Curve<A: Clone>: Sized {
 
     /// Check if a curve's first and end points are the same.
     #[must_use]
-    fn is_closed(&self) -> bool
-    where
-        A: PartialEq,
-    {
+    fn is_closed(&self) -> bool {
         let curve = self.as_curve();
         match (curve.first(), curve.last()) {
             (Some(a), Some(b)) => a == b,
@@ -70,46 +66,46 @@ pub trait Curve<A: Clone>: Sized {
     }
 }
 
-impl<A: Clone> Curve<A> for Vec<A> {
-    fn to_curve(self) -> Vec<A> {
+impl<const D: usize> Curve<D> for Vec<Coord<D>> {
+    fn to_curve(self) -> Vec<Coord<D>> {
         self
     }
 
-    fn as_curve(&self) -> &[A] {
+    fn as_curve(&self) -> &[Coord<D>] {
         self
     }
 }
 
 macro_rules! impl_slice {
     () => {
-        fn to_curve(self) -> Vec<A> {
+        fn to_curve(self) -> Vec<Coord<D>> {
             self.to_vec()
         }
 
-        fn as_curve(&self) -> &[A] {
+        fn as_curve(&self) -> &[Coord<D>] {
             self
         }
     };
 }
 
-impl<A: Clone, const N: usize> Curve<A> for [A; N] {
+impl<const D: usize, const N: usize> Curve<D> for [Coord<D>; N] {
     impl_slice!();
 }
 
-impl<A: Clone> Curve<A> for &[A] {
+impl<const D: usize> Curve<D> for &[Coord<D>] {
     impl_slice!();
 }
 
-impl<A: Clone> Curve<A> for alloc::borrow::Cow<'_, [A]> {
+impl<const D: usize> Curve<D> for alloc::borrow::Cow<'_, [Coord<D>]> {
     impl_slice!();
 }
 
-impl<A: Clone, T: Curve<A> + Clone> Curve<A> for &T {
-    fn to_curve(self) -> Vec<A> {
+impl<const D: usize, T: Curve<D> + Clone> Curve<D> for &T {
+    fn to_curve(self) -> Vec<Coord<D>> {
         self.clone().to_curve()
     }
 
-    fn as_curve(&self) -> &[A] {
+    fn as_curve(&self) -> &[Coord<D>] {
         (*self).as_curve()
     }
 }
