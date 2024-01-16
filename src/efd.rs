@@ -28,7 +28,6 @@ pub fn get_target_pos<C, const D: usize>(curve: C, is_open: bool) -> (Vec<f64>, 
 where
     C: Curve<D>,
     U<D>: EfdDim<D>,
-    na::Const<D>: na::DimNameMul<na::U2>,
 {
     let (pos, [(mut coeff, geo)]) = U::<D>::get_coeff([curve.as_curve()], is_open, 1);
     (pos, geo * U::<D>::coeff_norm(&mut coeff))
@@ -68,7 +67,6 @@ pub type Efd3 = Efd<3>;
 pub struct Efd<const D: usize>
 where
     U<D>: EfdDim<D>,
-    na::Const<D>: na::DimNameMul<na::U2>,
 {
     coeffs: Coeffs<D>,
     geo: GeoVar<Rot<D>, D>,
@@ -77,7 +75,6 @@ where
 impl<const D: usize> Efd<D>
 where
     U<D>: EfdDim<D>,
-    na::Const<D>: na::DimNameMul<na::U2>,
 {
     /// Create object from a matrix directly.
     ///
@@ -87,9 +84,8 @@ where
     /// operations will panic.
     ///
     /// ```
-    /// use efd::{Coeffs2, Efd2, GeoVar};
-    /// let coeffs = Coeffs2::from_column_slice(&[]);
-    /// let path = Efd2::from_parts_unchecked(coeffs, GeoVar::identity()).generate(20);
+    /// use efd::{Efd2, GeoVar};
+    /// let path = Efd2::from_parts_unchecked(vec![], GeoVar::identity()).generate(20);
     /// assert_eq!(path.len(), 0);
     /// ```
     ///
@@ -104,7 +100,7 @@ where
     ///
     /// Return none if the harmonic is zero.
     pub fn try_from_coeffs(mut coeffs: Coeffs<D>) -> Option<Self> {
-        (coeffs.ncols() != 0).then(|| Self { geo: U::<D>::coeff_norm(&mut coeffs), coeffs })
+        (!coeffs.is_empty()).then(|| Self { geo: U::<D>::coeff_norm(&mut coeffs), coeffs })
     }
 
     /// Create object from a matrix with boundary check.
@@ -113,7 +109,7 @@ where
     ///
     /// Return none if the harmonic is zero.
     pub fn try_from_coeffs_unnorm(coeffs: Coeffs<D>) -> Option<Self> {
-        (coeffs.ncols() != 0).then_some(Self { coeffs, geo: GeoVar::identity() })
+        (!coeffs.is_empty()).then_some(Self { coeffs, geo: GeoVar::identity() })
     }
 
     /// Fully automated coefficient calculation.
@@ -259,7 +255,7 @@ where
     where
         Option<f64>: From<T>,
     {
-        let lut = self.coeffs.map(pow2).row_sum();
+        let lut = self.coeffs.iter().map(|m| m.map(pow2).sum()).collect();
         self.set_harmonic(fourier_power_anaysis(lut, threshold));
         self
     }
@@ -275,7 +271,7 @@ where
             (1..=current).contains(&harmonic),
             "harmonic must in 1..={current}"
         );
-        self.coeffs.resize_horizontally_mut(harmonic, 0.);
+        self.coeffs.resize_with(harmonic, Kernel::zeros);
     }
 
     /// Force normalize the coefficients.
@@ -302,30 +298,24 @@ where
 
     /// Get a reference to the coefficients.
     #[must_use]
-    pub fn coeffs(&self) -> &Coeffs<D> {
+    pub fn coeffs(&self) -> &[Kernel<D>] {
         &self.coeffs
     }
 
     /// Get a view to the specific coefficients. (`0..self.harmonic()`)
     #[must_use]
     pub fn coeff(&self, harmonic: usize) -> CKernel<D> {
-        self.coeffs
-            .column(harmonic)
-            .reshape_generic(na::Const, na::U2)
+        self.coeffs[harmonic].as_view()
     }
 
     /// Get an iterator over all the coefficients per harmonic.
     pub fn coeffs_iter(&self) -> impl Iterator<Item = CKernel<D>> {
-        self.coeffs
-            .column_iter()
-            .map(|c| c.reshape_generic(na::Const, na::U2))
+        self.coeffs.iter().map(|c| c.as_view())
     }
 
     /// Get a mutable iterator over all the coefficients per harmonic.
     pub fn coeffs_iter_mut(&mut self) -> impl Iterator<Item = CKernelMut<D>> {
-        self.coeffs
-            .column_iter_mut()
-            .map(|c| c.reshape_generic(na::Const, na::U2))
+        self.coeffs.iter_mut().map(|c| c.as_view_mut())
     }
 
     /// Get the reference of geometric variables.
@@ -343,13 +333,13 @@ where
     /// Check if the descibed curve is open.
     #[must_use]
     pub fn is_open(&self) -> bool {
-        self.coeffs[(1, 0)] == 0.
+        self.coeffs[0][(1, 0)] == 0.
     }
 
     /// Get the harmonic number of the coefficients.
     #[must_use]
     pub fn harmonic(&self) -> usize {
-        self.coeffs.ncols()
+        self.coeffs.len()
     }
 
     /// Check if the coefficients are valid.
@@ -361,7 +351,7 @@ where
     /// [`Efd::from_parts_unchecked()`].
     #[must_use]
     pub fn is_valid(&self) -> bool {
-        self.harmonic() > 0
+        !self.coeffs.is_empty()
             && !self
                 .coeffs_iter()
                 .any(|m| m.iter().all(|x| x.abs() < f64::EPSILON) || m.iter().any(|x| x.is_nan()))
@@ -377,10 +367,10 @@ where
 
     /// Reverse the order of described curve then return a mutable reference.
     pub fn reverse_inplace(&mut self) {
-        self.coeffs
-            .row_iter_mut()
-            .skip(D)
-            .for_each(|mut c| c *= -1.);
+        self.coeffs.iter_mut().for_each(|m| {
+            let mut m = m.column_mut(1);
+            m *= -1.
+        });
     }
 
     /// Consume and return a reversed version of the coefficients. This method
@@ -469,7 +459,6 @@ where
 impl<const D: usize> Clone for Efd<D>
 where
     U<D>: EfdDim<D>,
-    na::Const<D>: na::DimNameMul<na::U2>,
 {
     fn clone(&self) -> Self {
         Self { coeffs: self.coeffs.clone(), geo: self.geo.clone() }
@@ -479,7 +468,6 @@ where
 impl<const D: usize> core::fmt::Debug for Efd<D>
 where
     U<D>: EfdDim<D>,
-    na::Const<D>: na::DimNameMul<na::U2>,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         if self.is_valid() {
@@ -500,7 +488,6 @@ where
 impl<const D: usize> core::fmt::Debug for PosedEfd<D>
 where
     U<D>: EfdDim<D>,
-    na::Const<D>: na::DimNameMul<na::U2>,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct(&format!("PosedEfd{D}"))
@@ -514,30 +501,22 @@ where
     }
 }
 
-struct CoeffFmt<'a, const D: usize>(&'a Coeffs<D>)
-where
-    na::Const<D>: na::DimNameMul<na::U2>;
+struct CoeffFmt<'a, const D: usize>(&'a Coeffs<D>);
 
-impl<const D: usize> core::fmt::Debug for CoeffFmt<'_, D>
-where
-    na::Const<D>: na::DimNameMul<na::U2>,
-{
+impl<const D: usize> core::fmt::Debug for CoeffFmt<'_, D> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        let entries = self
-            .0
-            .column_iter()
-            .map(|c| c.iter().copied().collect::<Vec<_>>());
+        let entries = self.0.iter().map(|c| c.iter().copied().collect::<Vec<_>>());
         f.debug_list().entries(entries).finish()
     }
 }
 
-pub(crate) fn fourier_power_anaysis<T>(lut: na::Matrix1xX<f64>, threshold: T) -> usize
+pub(crate) fn fourier_power_anaysis<T>(lut: Vec<f64>, threshold: T) -> usize
 where
     Option<f64>: From<T>,
 {
     let threshold = Option::from(threshold).unwrap_or(0.9999);
     assert!((0.0..1.0).contains(&threshold), "threshold must in 0..1");
-    let lut = cumsum(lut);
+    let lut = cumsum(na::Matrix1xX::from_vec(lut));
     let target = lut[lut.len() - 1] * threshold;
     match lut
         .as_slice()

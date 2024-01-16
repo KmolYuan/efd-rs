@@ -34,7 +34,6 @@ where
 pub struct PosedEfd<const D: usize>
 where
     U<D>: EfdDim<D>,
-    na::Const<D>: na::DimNameMul<na::U2>,
 {
     curve: Efd<D>,
     pose: Efd<D>,
@@ -68,7 +67,6 @@ impl PosedEfd2 {
 impl<const D: usize> PosedEfd<D>
 where
     U<D>: EfdDim<D>,
-    na::Const<D>: na::DimNameMul<na::U2>,
 {
     /// Create a new [`PosedEfd`] from two [`Efd`]s. (`curve` and `pose`)
     ///
@@ -190,7 +188,13 @@ where
     where
         Option<f64>: From<T>,
     {
-        let lut = (self.curve.coeffs().map(pow2) + self.pose.coeffs().map(pow2)).row_sum();
+        let lut = self
+            .curve
+            .coeffs()
+            .iter()
+            .zip(self.pose.coeffs())
+            .map(|(m1, m2)| m1.map(pow2).sum() + m2.map(pow2).sum())
+            .collect();
         self.set_harmonic(fourier_power_anaysis(lut, threshold));
         self
     }

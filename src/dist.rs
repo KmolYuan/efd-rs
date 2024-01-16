@@ -62,11 +62,10 @@ impl<S: AsRef<[f64]>> Distance for S {
 impl<const D: usize> Distance for Efd<D>
 where
     U<D>: EfdDim<D>,
-    na::Const<D>: na::DimNameMul<na::U2>,
 {
     fn err_buf(&self, rhs: &Self) -> Vec<f64> {
-        let a = self.coeffs().iter();
-        let b = rhs.coeffs().iter();
+        let a = self.coeffs().iter().flat_map(|m| m.iter());
+        let b = rhs.coeffs().iter().flat_map(|m| m.iter());
         let padding = core::iter::repeat(&0.);
         match self.harmonic() >= rhs.harmonic() {
             true => a.zip(b.chain(padding)).map(cmp).collect(),
@@ -78,7 +77,6 @@ where
 impl<const D: usize> Distance for PosedEfd<D>
 where
     U<D>: EfdDim<D>,
-    na::Const<D>: na::DimNameMul<na::U2>,
 {
     fn err_buf(&self, rhs: &Self) -> Vec<f64> {
         let mut buf = self.curve_efd().err_buf(rhs.curve_efd());

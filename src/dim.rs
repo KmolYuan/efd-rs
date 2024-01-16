@@ -1,5 +1,5 @@
 use crate::{util::*, *};
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use core::f64::consts::{PI, TAU};
 #[cfg(not(feature = "std"))]
 #[allow(unused_imports)]
@@ -15,13 +15,15 @@ pub type Coeffs2 = Coeffs<2>;
 /// 3D Coefficients type.
 pub type Coeffs3 = Coeffs<3>;
 /// Coefficients type.
-pub type Coeffs<const D: usize> = na::OMatrix<f64, na::DimNameProd<na::Const<D>, na::U2>, na::Dyn>;
+pub type Coeffs<const D: usize> = Vec<Kernel<D>>;
+/// An owned matrix of specific coefficients. (Dx2)
+pub type Kernel<const D: usize> = na::SMatrix<f64, D, 2>;
 /// A matrix view of specific coefficients. (Dx2)
 pub type CKernel<'a, const D: usize> = na::MatrixView<'a, f64, na::Const<D>, na::U2>;
 /// A mutable matrix view of specific coefficients. (Dx2)
 pub type CKernelMut<'a, const D: usize> = na::MatrixViewMut<'a, f64, na::Const<D>, na::U2>;
 /// Rotation type of the EFD.
-pub type Rot<const D: usize> = <U<D> as RotAlias<D>>::Rot;
+pub type Rot<const D: usize> = <U<D> as EfdDim<D>>::Rot;
 
 trait Sealed {}
 impl<const D: usize> Sealed for U<D> {}
@@ -30,12 +32,15 @@ impl<const D: usize> Sealed for U<D> {}
 ///
 /// **This trait is sealed and cannot be implemented outside of this crate.**
 #[allow(private_bounds)]
-pub trait EfdDim<const D: usize>: RotAlias<D> + Sealed
-where
-    na::Const<D>: na::DimNameMul<na::U2>,
-{
+pub trait EfdDim<const D: usize>: Sealed {
+    /// Rotation type of the dimension `D`.
+    ///
+    /// For the memory efficiency, the generic rotation matrix [`na::Rotation`]
+    /// is not used.
+    type Rot: RotHint<D>;
+
     #[doc(hidden)]
-    fn get_rot(m: &Coeffs<D>) -> Self::Rot;
+    fn get_rot(m: &[Kernel<D>]) -> Self::Rot;
 
     #[doc(hidden)]
     #[allow(clippy::type_complexity)]
@@ -63,21 +68,21 @@ where
             let dxyz = to_diff(curve);
             // Coefficients (2dim * N)
             // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
-            let mut coeff = Coeffs::<D>::zeros(harmonic);
-            for (n, mut c) in coeff.column_iter_mut().enumerate() {
+            let mut coeff = vec![Kernel::<D>::zeros(); harmonic];
+            for (n, c) in coeff.iter_mut().enumerate() {
                 let n = (n + 1) as f64;
                 let phi = &phi * n;
                 let scalar = scalar / pow2(n);
                 let cos_phi = diff(phi.map(f64::cos)).component_div(&dt);
                 dxyz.row_iter()
-                    .zip(&mut c.rows_range_mut(..D))
+                    .zip(&mut c.column_mut(0))
                     .for_each(|(d, c)| *c = scalar * d.component_mul(&cos_phi).sum());
                 if is_open {
                     continue;
                 }
                 let sin_phi = diff(phi.map(f64::sin)).component_div(&dt);
                 dxyz.row_iter()
-                    .zip(&mut c.rows_range_mut(D..))
+                    .zip(&mut c.column_mut(1))
                     .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
             }
             let mut center = curve[0];
@@ -92,51 +97,45 @@ where
     }
 
     #[doc(hidden)]
-    fn coeff_norm(coeffs: &mut Coeffs<D>) -> GeoVar<Self::Rot, D> {
+    fn coeff_norm(coeffs: &mut [Kernel<D>]) -> GeoVar<Self::Rot, D> {
         // Angle of starting point
         // m = m * theta
         let theta = {
-            let c = coeffs.column(0).reshape_generic(na::Const::<D>, na::U2);
+            let c = &coeffs[0];
             let dy = 2. * c.column_product().sum();
             let dx = c.map(pow2).row_sum();
             0.5 * dy.atan2(dx[0] - dx[1])
         };
-        for (i, c) in coeffs.column_iter_mut().enumerate() {
+        for (i, m) in coeffs.iter_mut().enumerate() {
             let theta = na::Rotation2::new((i + 1) as f64 * theta);
-            let mut m = c.reshape_generic(na::Const, na::U2);
-            m.copy_from(&(&m * theta));
+            m.copy_from(&(*m * theta));
         }
         // Normalize coefficients sign
-        if coeffs.ncols() > 1 && coeffs[(0, 0)] * coeffs[(0, 1)] < 0. {
-            coeffs
-                .column_iter_mut()
-                .step_by(2)
-                .for_each(|mut s| s *= -1.);
+        if coeffs.len() > 1 && coeffs[0][0] * coeffs[1][0] < 0. {
+            coeffs.iter_mut().step_by(2).for_each(|s| *s *= -1.);
         }
         // Rotation angle
         // m = psi' * m
         let psi = Self::get_rot(coeffs);
         let psi_mat = psi.clone().matrix();
-        for c in coeffs.column_iter_mut() {
-            let mut m = c.reshape_generic(na::Const, na::U2);
-            m.tr_mul(&psi_mat).transpose_to(&mut m);
+        for m in coeffs.iter_mut() {
+            m.tr_mul(&psi_mat).transpose_to(m);
         }
         // Scale factor
         // |u1| == |a1| (after rotation)
-        let scale = coeffs[(0, 0)].abs();
-        *coeffs /= scale;
+        let scale = coeffs[0][0].abs();
+        coeffs.iter_mut().for_each(|m| *m /= scale);
         GeoVar::new([0.; D], psi, scale)
     }
 
     #[doc(hidden)]
-    fn reconstruct(coeffs: &Coeffs<D>, t: na::Matrix1xX<f64>) -> Vec<Coord<D>> {
+    fn reconstruct(coeffs: &[Kernel<D>], t: na::Matrix1xX<f64>) -> Vec<Coord<D>> {
         coeffs
-            .column_iter()
+            .iter()
             .enumerate()
             .map(|(i, c)| {
                 let t = &t * (i + 1) as f64;
-                let t = na::Matrix2xX::from_rows(&[t.map(f64::cos), t.map(f64::sin)]);
-                c.reshape_generic(na::Const::<D>, na::U2) * t
+                c * na::Matrix2xX::from_rows(&[t.map(f64::cos), t.map(f64::sin)])
             })
             .reduce(|a, b| a + b)
             .unwrap_or_else(|| MatrixRxX::<D>::from_vec(Vec::new()))
@@ -147,30 +146,33 @@ where
 }
 
 impl EfdDim<1> for U<1> {
-    fn get_rot(m: &Coeffs<1>) -> Self::Rot {
-        na::Rotation::from_matrix_unchecked(na::matrix![m[(0, 0)].signum()])
+    type Rot = na::Rotation<f64, 1>;
+    fn get_rot(m: &[Kernel<1>]) -> Self::Rot {
+        na::Rotation::from_matrix_unchecked(na::matrix![m[0][0].signum()])
     }
 }
 
 impl EfdDim<2> for U<2> {
-    fn get_rot(m: &Coeffs<2>) -> Self::Rot {
-        na::UnitComplex::new(m[(1, 0)].atan2(m[(0, 0)]))
+    type Rot = na::UnitComplex<f64>;
+    fn get_rot(m: &[Kernel<2>]) -> Self::Rot {
+        na::UnitComplex::new(m[0][1].atan2(m[0][0]))
     }
 }
 
 impl EfdDim<3> for U<3> {
-    fn get_rot(m: &Coeffs<3>) -> Self::Rot {
-        let m1 = m.column(0).reshape_generic(na::U3, na::U2);
+    type Rot = na::UnitQuaternion<f64>;
+    fn get_rot(m: &[Kernel<3>]) -> Self::Rot {
+        let m1 = &m[0];
         let u = m1.column(0).normalize();
         if let Some(v) = m1.column(1).try_normalize(f64::EPSILON) {
             // Closed curve, use `u` and `v` plane as basis
             let w = u.cross(&v);
             na::UnitQuaternion::from_basis_unchecked(&[u, v, w])
-        } else if m.ncols() > 1 {
+        } else if m.len() > 1 {
             // Open curve, `v` is zero vector, use `u1` and `u2` plane as basis
-            let m2 = m.column(1).reshape_generic(na::U3, na::U2);
+            let u2 = m[1].column(0);
             // `w` is orthogonal to `u` and `u2`
-            let w = u.cross(&m2.column(0)).normalize();
+            let w = u.cross(&u2).normalize();
             let u2 = w.cross(&u);
             na::UnitQuaternion::from_basis_unchecked(&[u, u2, w])
         } else {

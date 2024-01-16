@@ -1,5 +1,7 @@
 #![doc(hidden)]
 use crate::*;
+#[cfg(test)]
+use alloc::{vec, vec::Vec};
 
 /// Epsilon for curve difference.
 pub const EPS: f64 = 2.2e-14;
@@ -12,9 +14,12 @@ pub fn curve_diff<const D: usize>(a: &[Coord<D>], b: &[Coord<D>]) -> f64 {
 
 #[test]
 fn error() {
-    let coeff = Coeffs2::from_column_slice(&[10., 20., 20., 10., 3., 4., 4., 3.]);
+    let coeff = vec![
+        na::matrix![10., 20.; 20., 10.],
+        na::matrix![ 3., 4.; 4., 3.],
+    ];
     let a = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
-    let coeff = Coeffs2::from_column_slice(&[10., 20., 20., 10.]);
+    let coeff = vec![na::matrix![10., 20.; 20., 10.]];
     let b = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
     assert_eq!(a.square_err(&b), 50.);
     assert_eq!(b.square_err(&a), 50.);
@@ -50,7 +55,7 @@ fn efd2d() {
         .skip(PATH.len() / 2)
         .take(PATH.len())
         .copied()
-        .collect::<alloc::vec::Vec<_>>();
+        .collect::<Vec<_>>();
     let efd_half = Efd2::from_curve(path, false);
     assert_abs_diff_eq!(efd.l1_norm(&efd_half), 0., epsilon = 1e-12);
     assert_eq!(efd.harmonic(), 8);
@@ -79,7 +84,7 @@ fn efd3d() {
         .skip(PATH3D.len() / 2)
         .take(PATH3D.len())
         .copied()
-        .collect::<alloc::vec::Vec<_>>();
+        .collect::<Vec<_>>();
     let efd_half = Efd3::from_curve_nyquist(path, false);
     assert_abs_diff_eq!(efd.l1_norm(&efd_half), 0., epsilon = 1e-12);
     assert_eq!(efd.harmonic(), 5);
@@ -101,48 +106,44 @@ fn efd3d() {
 #[test]
 #[cfg(feature = "std")]
 fn plot2d_closed() -> Result<(), Box<dyn std::error::Error>> {
-    #[rustfmt::skip]
-    let coeff = crate::Coeffs2::from_column_slice(&[
-        12., 35., 35., 13.,
-        5., 21., 21., 5.,
-        1., 12., 12., 1.,
-    ]);
+    let coeff = vec![
+        na::matrix![12., 35.; 35., 13.],
+        na::matrix![5., 21.; 21., 5.],
+        na::matrix![1., 12.; 12., 1.],
+    ];
     plot2d(coeff, "img/2d.svg")
 }
 
 #[test]
 #[cfg(feature = "std")]
 fn plot2d_open() -> Result<(), Box<dyn std::error::Error>> {
-    #[rustfmt::skip]
-    let coeff = crate::Coeffs2::from_column_slice(&[
-        35., 8., 0., 0.,
-        10., 24., 0., 0.,
-        5., -8., 0., 0.,
-    ]);
+    let coeff = vec![
+        na::matrix![35., 0.; 8., 0.],
+        na::matrix![10., 0.; 24., 0.],
+        na::matrix![5., 0.; -8., 0.],
+    ];
     plot2d(coeff, "img/2d_open.svg")
 }
 
 #[test]
 #[cfg(feature = "std")]
 fn plot3d_closed() -> Result<(), Box<dyn std::error::Error>> {
-    #[rustfmt::skip]
-    let coeff = crate::Coeffs3::from_column_slice(&[
-        12., 35., 20., 22., 5., 21.,
-        21., 5., 1., 12., 12., 1.,
-        3., 7., 12., 3., 5., 21.,
-    ]);
+    let coeff = vec![
+        na::matrix![12., 22.; 35., 5.; 20., 21.],
+        na::matrix![21., 12.; 5., 12.; 1., 1.],
+        na::matrix![3., 3.; 7., 5.; 12., 21.],
+    ];
     plot3d(coeff, "img/3d.svg")
 }
 
 #[test]
 #[cfg(feature = "std")]
 fn plot3d_open() -> Result<(), Box<dyn std::error::Error>> {
-    #[rustfmt::skip]
-    let coeff = crate::Coeffs3::from_column_slice(&[
-        16., 35., 27., 0., 0., 0.,
-        21., 8., 16., 0., 0., 0.,
-        3., 7., 12., 0., 0., 0.,
-    ]);
+    let coeff = vec![
+        na::matrix![16., 0.; 35., 0.; 27., 0.],
+        na::matrix![21., 0.; 8., 0.; 16., 0.],
+        na::matrix![3., 0.; 7., 0.; 12., 0.],
+    ];
     plot3d(coeff, "img/3d_open.svg")
 }
 
@@ -158,7 +159,7 @@ fn get_area<const D: usize>(pts: &[[f64; D]]) -> [[f64; 2]; D] {
 }
 
 #[cfg(all(test, feature = "std"))]
-fn plot2d(coeff: crate::Coeffs2, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn plot2d(coeff: Coeffs2, path: &str) -> Result<(), Box<dyn std::error::Error>> {
     use plotters::prelude::*;
 
     fn bounding_box(pts: &[[f64; 2]]) -> [f64; 4] {
@@ -220,7 +221,7 @@ fn plot2d(coeff: crate::Coeffs2, path: &str) -> Result<(), Box<dyn std::error::E
 }
 
 #[cfg(all(test, feature = "std"))]
-fn plot3d(coeff: crate::Coeffs3, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn plot3d(coeff: Coeffs3, path: &str) -> Result<(), Box<dyn std::error::Error>> {
     use plotters::prelude::*;
 
     fn bounding_box(pts: &[[f64; 3]]) -> [f64; 6] {
