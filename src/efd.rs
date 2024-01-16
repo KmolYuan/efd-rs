@@ -304,18 +304,18 @@ where
 
     /// Get a view to the specific coefficients. (`0..self.harmonic()`)
     #[must_use]
-    pub fn coeff(&self, harmonic: usize) -> CKernel<D> {
-        self.coeffs[harmonic].as_view()
+    pub fn coeff(&self, harmonic: usize) -> &Kernel<D> {
+        &self.coeffs[harmonic]
     }
 
     /// Get an iterator over all the coefficients per harmonic.
-    pub fn coeffs_iter(&self) -> impl Iterator<Item = CKernel<D>> {
-        self.coeffs.iter().map(|c| c.as_view())
+    pub fn coeffs_iter(&self) -> impl Iterator<Item = &Kernel<D>> {
+        self.coeffs.iter()
     }
 
     /// Get a mutable iterator over all the coefficients per harmonic.
-    pub fn coeffs_iter_mut(&mut self) -> impl Iterator<Item = CKernelMut<D>> {
-        self.coeffs.iter_mut().map(|c| c.as_view_mut())
+    pub fn coeffs_iter_mut(&mut self) -> impl Iterator<Item = &mut Kernel<D>> {
+        self.coeffs.iter_mut()
     }
 
     /// Get the reference of geometric variables.

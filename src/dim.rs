@@ -18,10 +18,6 @@ pub type Coeffs3 = Coeffs<3>;
 pub type Coeffs<const D: usize> = Vec<Kernel<D>>;
 /// An owned matrix of specific coefficients. (Dx2)
 pub type Kernel<const D: usize> = na::SMatrix<f64, D, 2>;
-/// A matrix view of specific coefficients. (Dx2)
-pub type CKernel<'a, const D: usize> = na::MatrixView<'a, f64, na::Const<D>, na::U2>;
-/// A mutable matrix view of specific coefficients. (Dx2)
-pub type CKernelMut<'a, const D: usize> = na::MatrixViewMut<'a, f64, na::Const<D>, na::U2>;
 /// Rotation type of the EFD.
 pub type Rot<const D: usize> = <U<D> as EfdDim<D>>::Rot;
 
@@ -147,6 +143,7 @@ pub trait EfdDim<const D: usize>: Sealed {
 
 impl EfdDim<1> for U<1> {
     type Rot = na::Rotation<f64, 1>;
+
     fn get_rot(m: &[Kernel<1>]) -> Self::Rot {
         na::Rotation::from_matrix_unchecked(na::matrix![m[0][0].signum()])
     }
@@ -154,6 +151,7 @@ impl EfdDim<1> for U<1> {
 
 impl EfdDim<2> for U<2> {
     type Rot = na::UnitComplex<f64>;
+
     fn get_rot(m: &[Kernel<2>]) -> Self::Rot {
         na::UnitComplex::new(m[0][1].atan2(m[0][0]))
     }
@@ -161,6 +159,7 @@ impl EfdDim<2> for U<2> {
 
 impl EfdDim<3> for U<3> {
     type Rot = na::UnitQuaternion<f64>;
+
     fn get_rot(m: &[Kernel<3>]) -> Self::Rot {
         let m1 = &m[0];
         let u = m1.column(0).normalize();
@@ -173,8 +172,9 @@ impl EfdDim<3> for U<3> {
             let u2 = m[1].column(0);
             // `w` is orthogonal to `u` and `u2`
             let w = u.cross(&u2).normalize();
-            let u2 = w.cross(&u);
-            na::UnitQuaternion::from_basis_unchecked(&[u, u2, w])
+            // A new `v` is orthogonal to `w` and `u`
+            let v = w.cross(&u);
+            na::UnitQuaternion::from_basis_unchecked(&[u, v, w])
         } else {
             // Open curve, one harmonic, just rotate `u` to x-axis
             let (u, v) = (na::Vector3::x(), u);
