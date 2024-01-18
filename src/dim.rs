@@ -134,7 +134,7 @@ pub trait EfdDim<const D: usize>: Sealed {
                 c * na::Matrix2xX::from_rows(&[t.map(f64::cos), t.map(f64::sin)])
             })
             .reduce(|a, b| a + b)
-            .unwrap_or_else(|| MatrixRxX::<D>::from_vec(Vec::new()))
+            .unwrap_or_else(|| MatrixRxX::from_vec(Vec::new()))
             .column_iter()
             .map(|row| core::array::from_fn(|i| row[i]))
             .collect()

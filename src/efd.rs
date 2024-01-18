@@ -29,8 +29,8 @@ where
     C: Curve<D>,
     U<D>: EfdDim<D>,
 {
-    let (pos, [(mut coeff, geo)]) = U::<D>::get_coeff([curve.as_curve()], is_open, 1);
-    (pos, geo * U::<D>::coeff_norm(&mut coeff))
+    let (pos, [(mut coeff, geo)]) = U::get_coeff([curve.as_curve()], is_open, 1);
+    (pos, geo * U::coeff_norm(&mut coeff))
 }
 
 /// A 1D shape described by EFD.
@@ -100,7 +100,7 @@ where
     ///
     /// Return none if the harmonic is zero.
     pub fn try_from_coeffs(mut coeffs: Coeffs<D>) -> Option<Self> {
-        (!coeffs.is_empty()).then(|| Self { geo: U::<D>::coeff_norm(&mut coeffs), coeffs })
+        (!coeffs.is_empty()).then(|| Self { geo: U::coeff_norm(&mut coeffs), coeffs })
     }
 
     /// Create object from a matrix with boundary check.
@@ -216,8 +216,8 @@ where
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let curve = curve.as_curve();
-        let (pos, [(mut coeffs, geo1)]) = U::<D>::get_coeff([curve], is_open, harmonic);
-        let geo2 = U::<D>::coeff_norm(&mut coeffs);
+        let (pos, [(mut coeffs, geo1)]) = U::get_coeff([curve], is_open, harmonic);
+        let geo2 = U::coeff_norm(&mut coeffs);
         (Self { coeffs, geo: geo1 * geo2 }, pos)
     }
 
@@ -230,7 +230,7 @@ where
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let curve = curve.as_curve();
-        let (_, [(coeffs, geo)]) = U::<D>::get_coeff([curve], is_open, harmonic);
+        let (_, [(coeffs, geo)]) = U::get_coeff([curve], is_open, harmonic);
         Self { coeffs, geo }
     }
 
@@ -284,7 +284,7 @@ where
     /// Panics if the harmonic is zero.
     pub fn normalized(self) -> Self {
         let Self { mut coeffs, geo } = self;
-        let geo_new = U::<D>::coeff_norm(&mut coeffs);
+        let geo_new = U::coeff_norm(&mut coeffs);
         Self { coeffs, geo: geo.apply(&geo_new) }
     }
 
@@ -436,13 +436,13 @@ where
     fn generate_norm_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
         debug_assert!(n > 2, "n ({n}) must larger than 2");
         let t = na::Matrix1xX::from_fn(n, |_, i| i as f64 / (n - 1) as f64 * theta);
-        U::<D>::reconstruct(&self.coeffs, t)
+        U::reconstruct(&self.coeffs, t)
     }
 
     /// Generate (reconstruct) a described curve in a series of time `t`.
     #[must_use]
     pub fn generate_by(&self, t: &[f64]) -> Vec<Coord<D>> {
-        let mut curve = U::<D>::reconstruct(&self.coeffs, na::Matrix1xX::from_column_slice(t));
+        let mut curve = U::reconstruct(&self.coeffs, na::Matrix1xX::from_column_slice(t));
         self.geo.transform_inplace(&mut curve);
         curve
     }
@@ -452,7 +452,7 @@ where
     /// Normalized curve is **without** transformation.
     #[must_use]
     pub fn generate_norm_by(&self, t: &[f64]) -> Vec<Coord<D>> {
-        U::<D>::reconstruct(&self.coeffs, na::Matrix1xX::from_column_slice(t))
+        U::reconstruct(&self.coeffs, na::Matrix1xX::from_column_slice(t))
     }
 }
 
