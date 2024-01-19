@@ -30,7 +30,7 @@ where
     U<D>: EfdDim<D>,
 {
     let (pos, [(mut coeff, geo)]) = U::get_coeff([curve.as_curve()], is_open, 1);
-    (pos, geo * U::coeff_norm(&mut coeff))
+    (pos, geo * U::coeff_norm(&mut coeff, None))
 }
 
 /// A 1D shape described by EFD.
@@ -100,7 +100,7 @@ where
     ///
     /// Return none if the harmonic is zero.
     pub fn try_from_coeffs(mut coeffs: Coeffs<D>) -> Option<Self> {
-        (!coeffs.is_empty()).then(|| Self { geo: U::coeff_norm(&mut coeffs), coeffs })
+        (!coeffs.is_empty()).then(|| Self { geo: U::coeff_norm(&mut coeffs, None), coeffs })
     }
 
     /// Create object from a matrix with boundary check.
@@ -217,7 +217,7 @@ where
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let curve = curve.as_curve();
         let (pos, [(mut coeffs, geo1)]) = U::get_coeff([curve], is_open, harmonic);
-        let geo2 = U::coeff_norm(&mut coeffs);
+        let geo2 = U::coeff_norm(&mut coeffs, None);
         (Self { coeffs, geo: geo1 * geo2 }, pos)
     }
 
@@ -284,7 +284,7 @@ where
     /// Panics if the harmonic is zero.
     pub fn normalized(self) -> Self {
         let Self { mut coeffs, geo } = self;
-        let geo_new = U::coeff_norm(&mut coeffs);
+        let geo_new = U::coeff_norm(&mut coeffs, None);
         Self { coeffs, geo: geo.apply(&geo_new) }
     }
 
