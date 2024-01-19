@@ -85,7 +85,7 @@ fn efd3d() {
         .take(PATH3D.len())
         .copied()
         .collect::<Vec<_>>();
-    let efd_half = Efd3::from_curve_nyquist(path, false);
+    let efd_half = Efd3::from_curve(path, false);
     assert_abs_diff_eq!(efd.l1_norm(&efd_half), 0., epsilon = 1e-12);
     assert_eq!(efd.harmonic(), 5);
     // Test transformation
@@ -101,6 +101,30 @@ fn efd3d() {
     // Test reconstruction
     let target = efd.generate(NORM3D.len());
     assert_abs_diff_eq!(curve_diff(&target, TARGET3D), 0.);
+}
+
+#[test]
+fn posed_efd() {
+    use approx::assert_abs_diff_eq;
+    let efd = PosedEfd2::from_angles(POSE_PATH, POSE_ANGLE, false);
+    // Test starting point
+    let path = POSE_PATH
+        .iter()
+        .cycle()
+        .skip(POSE_PATH.len() / 2)
+        .take(POSE_PATH.len())
+        .copied()
+        .collect::<Vec<_>>();
+    let angles = POSE_ANGLE
+        .iter()
+        .cycle()
+        .skip(POSE_ANGLE.len() / 2)
+        .take(POSE_ANGLE.len())
+        .copied()
+        .collect::<Vec<_>>();
+    let efd_half = PosedEfd2::from_angles(path, &angles, false);
+    assert_abs_diff_eq!(efd.l1_norm(&efd_half), 0., epsilon = 1e-12);
+    assert_eq!(efd.harmonic(), 9);
 }
 
 #[test]
@@ -570,3 +594,15 @@ pub const TARGET3D: &[[f64; 3]] = &[
     [0.3347146215240782, 0.3108698548364523, 0.8904178079577785],
     [0.3260958725587005, 0.2626914373285256, 0.9089784150350605],
 ];
+pub const POSE_PATH: &[[f64; 2]] = &[
+    [18.8, 12.1],
+    [13.3, 18.1],
+    [6.3, 19.8],
+    [-0.4, 17.1],
+    [-2.7, 10.3],
+    [-1.1, 6.0],
+    [0.2, 1.7],
+    [3.4, -2.2],
+    [7.8, -4.9],
+];
+pub const POSE_ANGLE: &[f64] = &[-0.9, 0., 0.7, 1.5, 2.8, -2.3, -2., -1.9, -2.1];
