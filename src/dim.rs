@@ -93,7 +93,11 @@ pub trait EfdDim<const D: usize>: Sealed {
     }
 
     #[doc(hidden)]
-    fn coeff_norm(coeffs: &mut [Kernel<D>], dep: Option<&Self::Rot>) -> GeoVar<Self::Rot, D> {
+    fn coeff_norm(
+        coeffs: &mut [Kernel<D>],
+        pos: Option<&mut [f64]>,
+        dep: Option<&Self::Rot>,
+    ) -> GeoVar<Self::Rot, D> {
         // Angle of starting point
         // m = m * theta
         let theta = {
@@ -105,6 +109,9 @@ pub trait EfdDim<const D: usize>: Sealed {
         for (i, m) in coeffs.iter_mut().enumerate() {
             let theta = na::Rotation2::new((i + 1) as f64 * theta);
             m.copy_from(&(*m * theta));
+        }
+        if let Some(pos) = pos {
+            pos.iter_mut().for_each(|v| *v -= theta);
         }
         // Normalize coefficients sign
         if coeffs.len() > 1 && coeffs[0][0] * coeffs[1][0] < 0. {
