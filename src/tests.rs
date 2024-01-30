@@ -30,6 +30,7 @@ fn error() {
 fn efd2d_open() {
     use approx::assert_abs_diff_eq;
     let efd = Efd2::from_curve(PATH_OPEN, true);
+    assert!(efd.is_open());
     assert_eq!(efd.harmonic(), 14);
     // Test transformation
     let geo = efd.as_geo();
@@ -49,6 +50,7 @@ fn efd2d_open() {
 fn efd2d() {
     use approx::assert_abs_diff_eq;
     let efd = Efd2::from_curve(PATH, false);
+    assert!(!efd.is_open());
     // Test starting point
     let path = PATH
         .iter()
@@ -78,6 +80,7 @@ fn efd2d() {
 fn efd3d() {
     use approx::assert_abs_diff_eq;
     let efd = Efd3::from_curve(PATH3D, false);
+    assert!(!efd.is_open());
     // Test starting point
     let path = PATH3D
         .iter()
@@ -108,6 +111,7 @@ fn efd3d() {
 fn posed_efd() {
     use approx::assert_abs_diff_eq;
     let efd = PosedEfd2::from_angles(POSE_PATH, POSE_ANGLE, false);
+    assert!(!efd.is_open());
     // Test starting point
     let path = POSE_PATH
         .iter()

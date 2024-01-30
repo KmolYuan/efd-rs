@@ -100,19 +100,23 @@ pub trait EfdDim<const D: usize>: Sealed {
         dep: Option<&Self::Rot>,
     ) -> GeoVar<Self::Rot, D> {
         // Angle of starting point
+        // theta = atan2(2 * sum(m[:, 0] * m[:, 1]), sum(m[:, 0]^2) - sum(m[:, 1]^2))
+        // theta = 0 if is open curve
         // m = m * theta
-        let theta = {
-            let c = &coeffs[0];
-            let dy = 2. * c.column_product().sum();
-            let dx = c.map(pow2).row_sum();
-            0.5 * dy.atan2(dx[0] - dx[1])
-        };
-        for (i, m) in coeffs.iter_mut().enumerate() {
-            let theta = na::Rotation2::new((i + 1) as f64 * theta);
-            m.copy_from(&(*m * theta));
-        }
-        if let Some(pos) = pos {
-            pos.iter_mut().for_each(|v| *v -= theta);
+        if coeffs[0][(0, 1)] != 0. {
+            let theta = {
+                let c = &coeffs[0];
+                let dy = 2. * c.column_product().sum();
+                let dx = c.map(pow2).row_sum();
+                0.5 * dy.atan2(dx[0] - dx[1])
+            };
+            for (i, m) in coeffs.iter_mut().enumerate() {
+                let theta = na::Rotation2::new((i + 1) as f64 * theta);
+                m.copy_from(&(*m * theta));
+            }
+            if let Some(pos) = pos {
+                pos.iter_mut().for_each(|v| *v -= theta);
+            }
         }
         // Normalize coefficients sign
         if coeffs.len() > 1 && coeffs[0][0] * coeffs[1][0] < 0. {
