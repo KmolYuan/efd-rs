@@ -34,7 +34,7 @@ pub trait Distance {
     ///
     /// This method is also called Manhattan distance.
     fn l1_norm(&self, rhs: &Self) -> f64 {
-        self.err_buf(rhs).map(f64::abs).sum()
+        self.err_buf(rhs).map(|x| x.abs()).sum()
     }
 
     /// Calculate the L2 norm of the error.
@@ -56,7 +56,7 @@ pub trait Distance {
     ///
     /// This method is also called Chebyshev distance.
     fn linf_norm(&self, rhs: &Self) -> f64 {
-        self.err_buf(rhs).map(f64::abs).fold(0., f64::max)
+        self.err_buf(rhs).map(|x| x.abs()).fold(0., f64::max)
     }
 }
 
