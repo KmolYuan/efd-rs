@@ -14,7 +14,7 @@ fn cmp((a, b): (&f64, &f64)) -> f64 {
 /// Each data number has the same weight by default, but you can change it by
 /// implementing [`Distance::err_buf()`].
 pub trait Distance {
-    /// Calculate the error between each pair of datas.
+    /// Calculate the error between each pair of data.
     fn err_buf<'a>(&'a self, rhs: &'a Self) -> impl Iterator<Item = f64> + 'a;
 
     /// Calculate the square error.
