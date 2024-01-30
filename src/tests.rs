@@ -251,8 +251,7 @@ fn plot3d(coeff: Coeffs3, path: &str) -> Result<(), Box<dyn std::error::Error>> 
         let width = b
             .iter()
             .map(|[min, max]| (max - min).abs())
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap();
+            .fold(0., f64::max);
         for ([min, max], c) in zip(&mut b, center) {
             *min = c - width * 0.5;
             *max = c + width * 0.5;
