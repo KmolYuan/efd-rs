@@ -65,22 +65,30 @@ impl<R, const D: usize> GeoVar<R, D>
 where
     R: RotHint<D>,
 {
-    /// Create a new transform type.
-    #[must_use]
+    /// Create with identity matrix.
+    pub fn identity() -> Self {
+        Self::default()
+    }
+
+    /// Create a new instance.
     pub fn new(trans: Coord<D>, rot: R, scale: f64) -> Self {
         Self { inner: Sim::from_parts(trans.into(), rot, scale) }
     }
 
-    /// Create with identity matrix.
-    #[must_use]
-    pub fn identity() -> Self {
-        Self::default()
+    /// Create a new instance from translation.
+    pub fn from_trans(trans: Coord<D>) -> Self {
+        Self::new(trans, R::identity(), 1.)
+    }
+
+    /// Create a new instance from rotation.
+    pub fn from_rot(rot: R) -> Self {
+        Self::new([0.; D], rot, 1.)
     }
 
     /// Transform a point.
     ///
     /// Please see [`GeoVar::transform()`] for more information.
-    #[must_use]
+    #[must_use = "The transformed point is returned as a new value"]
     pub fn transform_pt(&self, p: Coord<D>) -> Coord<D> {
         self.inner.transform_point(&na::Point::from(p)).into()
     }
@@ -100,7 +108,7 @@ where
     /// # assert!(curve_diff(&path1, TARGET) < EPS);
     /// # assert!(curve_diff(&path1_inv, &path) < EPS);
     /// ```
-    #[must_use]
+    #[must_use = "The transformed point is returned as a new value"]
     pub fn transform<C>(&self, curve: C) -> Vec<Coord<D>>
     where
         C: AsRef<[Coord<D>]>,
@@ -117,10 +125,9 @@ where
     where
         C: AsMut<[Coord<D>]>,
     {
-        curve
-            .as_mut()
-            .iter_mut()
-            .for_each(|c| *c = self.transform_pt(*c));
+        for c in curve.as_mut() {
+            *c = self.transform_pt(*c);
+        }
     }
 
     /// Transform an iterator contour.
@@ -131,7 +138,7 @@ where
         curve.into_iter().map(|c| self.transform_pt(c))
     }
 
-    /// Merge inverse `self` and `rhs` matrices.
+    /// Merge inverse `self` and `rhs` matrices. (`rhs * self^T`)
     ///
     /// It can be used on a not normalized contour `a` transforming to `b`.
     ///
@@ -146,14 +153,12 @@ where
     /// let geo = a.as_geo().to(b.as_geo());
     /// assert!(curve_diff(&geo.transform(path1), path2) < EPS);
     /// ```
-    #[must_use]
+    #[must_use = "this returns the result of the operation, without modifying the original"]
     pub fn to(&self, rhs: &Self) -> Self {
-        self.inverse().apply(rhs)
+        rhs * self.inverse()
     }
 
-    /// Merge two matrices.
-    ///
-    /// Same as `rhs * self`.
+    /// Merge two matrices. (`rhs * self`)
     ///
     /// ```
     /// use efd::{tests::*, Efd2};
@@ -166,12 +171,12 @@ where
     /// let geo = b.as_geo() * a.as_geo().inverse();
     /// assert!(curve_diff(&geo.transform(path1), path2) < EPS);
     /// ```
-    #[must_use]
+    #[must_use = "this returns the result of the operation, without modifying the original"]
     pub fn apply(&self, rhs: &Self) -> Self {
-        Self { inner: &rhs.inner * &self.inner }
+        rhs * self
     }
 
-    /// Inverse matrices.
+    /// Inverse matrices. (`self^T`)
     ///
     /// ```
     /// use efd::{tests::*, Efd2};
@@ -184,25 +189,22 @@ where
     /// let path = efd.as_geo().inverse().transform(path);
     /// # assert!(curve_diff(&path, &path_norm) < EPS);
     /// ```
-    #[must_use]
+    #[must_use = "this returns the result of the operation, without modifying the original"]
     pub fn inverse(&self) -> Self {
         Self { inner: self.inner.inverse() }
     }
 
-    /// Translate property.
-    #[must_use]
+    /// Get the translate property.
     pub fn trans(&self) -> Coord<D> {
         self.inner.isometry.translation.vector.data.0[0]
     }
 
-    /// Rotation property.
-    #[must_use]
+    /// Get the rotation property.
     pub fn rot(&self) -> &R {
         &self.inner.isometry.rotation
     }
 
-    /// Scaling property.
-    #[must_use]
+    /// Get the scaling property.
     pub fn scale(&self) -> f64 {
         self.inner.scaling()
     }
@@ -210,12 +212,8 @@ where
 
 macro_rules! impl_mul {
     ($ty1:ty, $ty2:ty) => {
-        impl<R, const D: usize> core::ops::Mul<$ty2> for $ty1
-        where
-            R: RotHint<D>,
-        {
+        impl<R: RotHint<D>, const D: usize> core::ops::Mul<$ty2> for $ty1 {
             type Output = GeoVar<R, D>;
-            #[must_use]
             fn mul(self, rhs: $ty2) -> Self::Output {
                 GeoVar { inner: &self.inner * &rhs.inner }
             }

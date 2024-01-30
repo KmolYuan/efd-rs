@@ -155,7 +155,6 @@ where
     /// Panics if the curve length is not greater than 2 in debug mode. This
     /// function check the lengths only. Please use [`valid_curve()`] to
     /// verify the curve if there has NaN input.
-    #[must_use]
     pub fn from_curve<C>(curve: C, is_open: bool) -> Self
     where
         C: Curve<D>,
@@ -171,7 +170,6 @@ where
     ///
     /// Please ensure the sampling points are generated from a known function
     /// and are more than enough. Otherwise, it will cause undersampling.
-    #[must_use]
     pub fn from_curve_nyquist<C>(curve: C, is_open: bool) -> Self
     where
         C: Curve<D>,
@@ -192,7 +190,6 @@ where
     /// greater than 2 in the **debug mode**. This function check the lengths
     /// only. Please use [`valid_curve()`] to verify the curve if there has
     /// NaN input.
-    #[must_use]
     pub fn from_curve_harmonic<C>(curve: C, is_open: bool, harmonic: usize) -> Self
     where
         C: Curve<D>,
@@ -208,7 +205,6 @@ where
     /// # Panics
     ///
     /// Please see [`Efd::from_curve_harmonic()`].
-    #[must_use]
     pub fn from_curve_harmonic_and_get<C>(
         curve: C,
         is_open: bool,
@@ -226,7 +222,6 @@ where
     }
 
     /// Same as [`Efd::from_curve_harmonic()`] but without normalization.
-    #[must_use]
     pub fn from_curve_harmonic_unnorm<C>(curve: C, is_open: bool, harmonic: usize) -> Self
     where
         C: Curve<D>,
@@ -239,12 +234,12 @@ where
     }
 
     /// A builder method for changing geometric variables.
-    #[must_use]
     pub fn with_geo(self, geo: GeoVar<Rot<D>, D>) -> Self {
         Self { geo, ..self }
     }
 
-    /// Use Fourier Power Anaysis (FPA) to reduce the harmonic number.
+    /// A builder method using Fourier Power Anaysis (FPA) to reduce the
+    /// harmonic number.
     ///
     /// The coefficient memory will be saved but cannot be used twice due to
     /// undersampling.
@@ -254,7 +249,6 @@ where
     /// # Panics
     ///
     /// Panics if the threshold is not in 0..1, or the harmonic is zero.
-    #[must_use]
     pub fn fourier_power_anaysis<T>(mut self, threshold: T) -> Self
     where
         Option<f64>: From<T>,
@@ -295,19 +289,16 @@ where
     /// Consume self and return the parts of this type.
     ///
     /// See also [`Efd::from_parts_unchecked()`].
-    #[must_use]
     pub fn into_inner(self) -> (Coeffs<D>, GeoVar<Rot<D>, D>) {
         (self.coeffs, self.geo)
     }
 
     /// Get a reference to the coefficients.
-    #[must_use]
     pub fn coeffs(&self) -> &[Kernel<D>] {
         &self.coeffs
     }
 
     /// Get a view to the specific coefficients. (`0..self.harmonic()`)
-    #[must_use]
     pub fn coeff(&self, harmonic: usize) -> &Kernel<D> {
         &self.coeffs[harmonic]
     }
@@ -323,25 +314,21 @@ where
     }
 
     /// Get the reference of geometric variables.
-    #[must_use]
     pub fn as_geo(&self) -> &GeoVar<Rot<D>, D> {
         &self.geo
     }
 
     /// Get the mutable reference of geometric variables.
-    #[must_use]
     pub fn as_geo_mut(&mut self) -> &mut GeoVar<Rot<D>, D> {
         &mut self.geo
     }
 
     /// Check if the descibed curve is open.
-    #[must_use]
     pub fn is_open(&self) -> bool {
         self.coeffs[0][(1, 0)] == 0.
     }
 
     /// Get the harmonic number of the coefficients.
-    #[must_use]
     pub fn harmonic(&self) -> usize {
         self.coeffs.len()
     }
@@ -353,7 +340,6 @@ where
     ///
     /// It is only helpful if this object is constructed by
     /// [`Efd::from_parts_unchecked()`].
-    #[must_use]
     pub fn is_valid(&self) -> bool {
         !self.coeffs.is_empty()
             && !self
@@ -364,24 +350,22 @@ where
     /// Calculate the L1 distance between two coefficient set.
     ///
     /// For more distance methods, please see [`Distance`].
-    #[must_use]
     pub fn distance(&self, rhs: &Self) -> f64 {
         self.l1_norm(rhs)
     }
 
     /// Reverse the order of described curve then return a mutable reference.
     pub fn reverse_inplace(&mut self) {
-        self.coeffs.iter_mut().for_each(|m| {
+        for m in &mut self.coeffs {
             let mut m = m.column_mut(1);
             m *= -1.
-        });
+        }
     }
 
     /// Consume and return a reversed version of the coefficients. This method
     /// can avoid mutable require.
     ///
     /// Please clone the object if you want to do self-comparison.
-    #[must_use]
     pub fn reversed(mut self) -> Self {
         self.reverse_inplace();
         self
@@ -392,7 +376,6 @@ where
     /// # Panics
     ///
     /// Panics if the number of the points `n` is less than 2.
-    #[must_use]
     pub fn generate(&self, n: usize) -> Vec<Coord<D>> {
         self.generate_in(n, TAU)
     }
@@ -402,7 +385,6 @@ where
     /// # Panics
     ///
     /// Panics if the number of the points `n` is less than 2.
-    #[must_use]
     pub fn generate_half(&self, n: usize) -> Vec<Coord<D>> {
         self.generate_in(n, PI)
     }
@@ -420,7 +402,6 @@ where
     /// # Panics
     ///
     /// Panics if the number of the points `n` is less than 2.
-    #[must_use]
     pub fn generate_norm(&self, n: usize) -> Vec<Coord<D>> {
         self.generate_norm_in(n, TAU)
     }
@@ -432,7 +413,6 @@ where
     /// # Panics
     ///
     /// Panics if the number of the points `n` is less than 2.
-    #[must_use]
     pub fn generate_norm_half(&self, n: usize) -> Vec<Coord<D>> {
         self.generate_norm_in(n, PI)
     }
@@ -444,7 +424,6 @@ where
     }
 
     /// Generate (reconstruct) a described curve in a series of time `t`.
-    #[must_use]
     pub fn generate_by(&self, t: &[f64]) -> Vec<Coord<D>> {
         let mut curve = U::reconstruct(&self.coeffs, na::Matrix1xX::from_column_slice(t));
         self.geo.transform_inplace(&mut curve);
@@ -454,7 +433,6 @@ where
     /// Generate (reconstruct) a normalized curve in a series of time `t`.
     ///
     /// Normalized curve is **without** transformation.
-    #[must_use]
     pub fn generate_norm_by(&self, t: &[f64]) -> Vec<Coord<D>> {
         U::reconstruct(&self.coeffs, na::Matrix1xX::from_column_slice(t))
     }

@@ -101,13 +101,10 @@ where
         C1: Curve<D>,
         C2: Curve<D>,
     {
-        let curve = curve1.as_curve();
-        let vectors = curve
-            .iter()
-            .zip(curve2.as_curve())
+        let vectors = core::iter::zip(curve1.as_curve(), curve2.as_curve())
             .map(|(a, b)| uvec(na::Point::from(*b) - na::Point::from(*a)))
             .collect::<Vec<_>>();
-        Self::from_uvec_harmonic_unchecked(curve, vectors, is_open, harmonic)
+        Self::from_uvec_harmonic_unchecked(curve1, vectors, is_open, harmonic)
     }
 
     /// Calculate the coefficients from a curve and its unit vectors from each
@@ -184,16 +181,11 @@ where
     /// # Panics
     ///
     /// Panics if the threshold is not in 0..1, or the harmonic is zero.
-    #[must_use]
     pub fn fourier_power_anaysis<T>(mut self, threshold: T) -> Self
     where
         Option<f64>: From<T>,
     {
-        let lut = self
-            .curve
-            .coeffs()
-            .iter()
-            .zip(self.pose.coeffs())
+        let lut = core::iter::zip(self.curve.coeffs(), self.pose.coeffs())
             .map(|(m1, m2)| m1.map(pow2).sum() + m2.map(pow2).sum())
             .collect();
         self.set_harmonic(fourier_power_anaysis(lut, threshold));
@@ -219,19 +211,16 @@ where
     /// coefficients, and the second is the pose coefficients.
     ///
     /// See also [`PosedEfd::from_parts_unchecked()`].
-    #[must_use]
     pub fn into_inner(self) -> (Efd<D>, Efd<D>) {
         (self.curve, self.pose)
     }
 
     /// Check if the described curve is open.
-    #[must_use]
     pub fn is_open(&self) -> bool {
         self.curve.is_open()
     }
 
     /// Get the harmonic number of the coefficients.
-    #[must_use]
     pub fn harmonic(&self) -> usize {
         self.curve.harmonic()
     }
@@ -240,7 +229,6 @@ where
     ///
     /// It is only helpful if this object is constructed by
     /// [`PosedEfd::from_parts_unchecked()`].
-    #[must_use]
     pub fn is_valid(&self) -> bool {
         self.curve.is_valid() && self.pose.is_valid()
     }
@@ -248,19 +236,17 @@ where
     /// Calculate the L1 distance between two coefficient set.
     ///
     /// For more distance methods, please see [`Distance`].
-    #[must_use]
+    #[must_use = "this returns the result of the operation, without modifying the original"]
     pub fn distance(&self, rhs: &Self) -> f64 {
         self.l1_norm(rhs)
     }
 
-    /// Get a reference to the curve coefficients.
-    #[must_use]
+    /// Get the reference of the curve coefficients.
     pub fn curve_efd(&self) -> &Efd<D> {
         &self.curve
     }
 
-    /// Get a reference to the posed coefficients.
-    #[must_use]
+    /// Get the reference of the posed coefficients.
     pub fn pose_efd(&self) -> &Efd<D> {
         &self.pose
     }
@@ -290,9 +276,7 @@ fn generate_pair<const D: usize>(
     pose: Vec<Coord<D>>,
     len: f64,
 ) -> (Vec<Coord<D>>, Vec<Coord<D>>) {
-    let pose = curve
-        .iter()
-        .zip(pose)
+    let pose = core::iter::zip(&curve, pose)
         .map(|(p, v)| na::Point::from(*p) + na::Vector::from(v) * len)
         .map(|p| p.coords.data.0[0])
         .collect();

@@ -1,6 +1,9 @@
 use crate::{util::*, *};
 use alloc::{vec, vec::Vec};
-use core::f64::consts::{PI, TAU};
+use core::{
+    f64::consts::{PI, TAU},
+    iter::zip,
+};
 #[cfg(not(feature = "std"))]
 #[allow(unused_imports)]
 use num_traits::*;
@@ -70,22 +73,20 @@ pub trait EfdDim<const D: usize>: Sealed {
                 let phi = &phi * n;
                 let scalar = scalar / pow2(n);
                 let cos_phi = diff(phi.map(f64::cos)).component_div(&dt);
-                dxyz.row_iter()
-                    .zip(&mut c.column_mut(0))
+                zip(dxyz.row_iter(), &mut c.column_mut(0))
                     .for_each(|(d, c)| *c = scalar * d.component_mul(&cos_phi).sum());
                 if is_open {
                     continue;
                 }
                 let sin_phi = diff(phi.map(f64::sin)).component_div(&dt);
-                dxyz.row_iter()
-                    .zip(&mut c.column_mut(1))
+                zip(dxyz.row_iter(), &mut c.column_mut(1))
                     .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
             }
             let mut center = curve[0];
-            dxyz.row_iter().zip(&mut center).for_each(|(dxyz, oxyz)| {
+            for (dxyz, oxyz) in zip(dxyz.row_iter(), &mut center) {
                 let xi = cumsum(dxyz) - dxyz.component_mul(&tdt);
                 *oxyz += (dxyz.component_mul(&scalar2) + xi.component_mul(&dt)).sum() / zt;
-            });
+            }
             let rot_eye = na::AbstractRotation::identity();
             (coeff, GeoVar::new(center, rot_eye, 1.))
         });

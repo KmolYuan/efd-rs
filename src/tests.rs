@@ -2,6 +2,7 @@
 use crate::*;
 #[cfg(test)]
 use alloc::{vec, vec::Vec};
+use core::iter::zip;
 
 /// Epsilon for curve difference.
 pub const EPS: f64 = 2.2e-14;
@@ -9,7 +10,7 @@ pub const RES: usize = 1000;
 
 /// Error between two curves, the length of the curves must be the same.
 pub fn curve_diff<const D: usize>(a: &[Coord<D>], b: &[Coord<D>]) -> f64 {
-    a.iter().zip(b).map(|(a, b)| a.l2_norm(b)).sum::<f64>() / a.len() as f64
+    zip(a, b).map(|(a, b)| a.l2_norm(b)).sum::<f64>() / a.len() as f64
 }
 
 #[test]
@@ -175,9 +176,7 @@ fn plot3d_open() -> Result<(), Box<dyn std::error::Error>> {
 fn get_area<const D: usize>(pts: &[[f64; D]]) -> [[f64; 2]; D] {
     pts.iter()
         .fold([[f64::INFINITY, f64::NEG_INFINITY]; D], |mut b, c| {
-            b.iter_mut()
-                .zip(c.iter())
-                .for_each(|(b, c)| *b = [b[0].min(*c), b[1].max(*c)]);
+            zip(&mut b, c).for_each(|(b, c)| *b = [b[0].min(*c), b[1].max(*c)]);
             b
         })
 }
@@ -228,9 +227,7 @@ fn plot2d(coeff: Coeffs2, path: &str) -> Result<(), Box<dyn std::error::Error>> 
             })
             .map(|c| geo.transform_pt(c.data.0[0]).into());
         let p1 = c0;
-        c0.iter_mut()
-            .zip(m.column(0).iter())
-            .for_each(|(c, u)| *c += u);
+        zip(&mut c0, &m.column(0)).for_each(|(c, u)| *c += u);
         let p1 = geo0.transform_pt(p1).into();
         let p2 = geo0.transform_pt(c0).into();
         chart.draw_series([Circle::new(p2, 5, RED.filled())])?;
@@ -256,10 +253,10 @@ fn plot3d(coeff: Coeffs3, path: &str) -> Result<(), Box<dyn std::error::Error>> 
             .map(|[min, max]| (max - min).abs())
             .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap();
-        b.iter_mut().zip(center).for_each(|([min, max], c)| {
+        for ([min, max], c) in zip(&mut b, center) {
             *min = c - width * 0.5;
             *max = c + width * 0.5;
-        });
+        }
         let [[x_min, x_max], [y_min, y_max], [z_min, z_max]] = b;
         [x_min, x_max, y_min, y_max, z_min, z_max]
     }
@@ -299,9 +296,7 @@ fn plot3d(coeff: Coeffs3, path: &str) -> Result<(), Box<dyn std::error::Error>> 
             })
             .map(|c| geo.transform_pt(c.data.0[0]).into());
         let p1 = c0;
-        c0.iter_mut()
-            .zip(m.column(0).iter())
-            .for_each(|(c, u)| *c += u);
+        zip(&mut c0, &m.column(0)).for_each(|(c, u)| *c += u);
         let p1 = geo0.transform_pt(p1).into();
         let p2 = geo0.transform_pt(c0).into();
         chart.draw_series([Circle::new(p2, 5, RED.filled())])?;

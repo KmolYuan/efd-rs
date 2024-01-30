@@ -18,11 +18,9 @@ where
 /// does not require any conversion.
 pub trait Curve<const D: usize>: Sized {
     /// Move or copy curve type into the owned type [`Vec`].
-    #[must_use]
     fn to_curve(self) -> Vec<Coord<D>>;
 
     /// Elements view.
-    #[must_use]
     fn as_curve(&self) -> &[Coord<D>];
 
     /// Length of the curve.
@@ -40,7 +38,6 @@ pub trait Curve<const D: usize>: Sized {
     /// # Panics
     ///
     /// Panics if the curve is empty.
-    #[must_use]
     fn closed_lin(self) -> Vec<Coord<D>> {
         let mut c = self.to_curve();
         c.push(c[0]);
@@ -48,7 +45,6 @@ pub trait Curve<const D: usize>: Sized {
     }
 
     /// Remove the last element.
-    #[must_use]
     fn popped_last(self) -> Vec<Coord<D>> {
         let mut curve = self.to_curve();
         curve.pop();
@@ -56,13 +52,9 @@ pub trait Curve<const D: usize>: Sized {
     }
 
     /// Check if a curve's first and end points are the same.
-    #[must_use]
     fn is_closed(&self) -> bool {
         let curve = self.as_curve();
-        match (curve.first(), curve.last()) {
-            (Some(a), Some(b)) => a == b,
-            _ => false,
-        }
+        matches!((curve.first(), curve.last()), (Some(a), Some(b)) if a == b)
     }
 }
 
