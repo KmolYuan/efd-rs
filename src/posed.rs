@@ -163,10 +163,11 @@ where
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (_, [(mut curve, geo1), (mut pose, pose_geo)]) =
-            U::get_coeff([curve.as_curve(), vectors.as_curve()], is_open, harmonic);
+        let (pos, mut curve, geo1) = U::get_coeff(curve.as_curve(), is_open, harmonic, None);
         let geo2 = U::coeff_norm(&mut curve, None, None);
         let curve = Efd::from_parts_unchecked(curve, geo1 * &geo2);
+        let (_, mut pose, pose_geo) =
+            U::get_coeff(vectors.as_curve(), is_open, harmonic, Some(&pos));
         let geo2 = U::coeff_norm(&mut pose, None, Some(geo2.rot()));
         let pose = Efd::from_parts_unchecked(pose, pose_geo * geo2);
         Self { curve, pose }

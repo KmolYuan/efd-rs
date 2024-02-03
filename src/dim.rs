@@ -43,11 +43,12 @@ pub trait EfdDim<const D: usize>: Sealed {
 
     #[doc(hidden)]
     #[allow(clippy::type_complexity)]
-    fn get_coeff<const N: usize>(
-        series: [&[Coord<D>]; N],
+    fn get_coeff(
+        curve: &[Coord<D>],
         is_open: bool,
         harmonic: usize,
-    ) -> (Vec<f64>, [(Coeffs<D>, GeoVar<Self::Rot, D>); N]) {
+        phi: Option<&[f64]>,
+    ) -> (Vec<f64>, Coeffs<D>, GeoVar<Self::Rot, D>) {
         let to_diff = |curve: &[_]| {
             diff(if is_open || curve.first() == curve.last() {
                 to_mat(curve)
@@ -55,42 +56,42 @@ pub trait EfdDim<const D: usize>: Sealed {
                 to_mat(curve.closed_lin())
             })
         };
-        let dxyz = to_diff(series[0]);
+        let dxyz = to_diff(curve);
         let dt = dxyz.map(pow2).row_sum().map(f64::sqrt);
         let t = cumsum(dt.clone()).insert_column(0, 0.);
         let zt = t[t.len() - 1];
         let scalar = zt / (PI * PI) * if is_open { 2. } else { 0.5 };
-        let phi = &t * TAU / zt * if is_open { 0.5 } else { 1. };
+        let phi = if let Some(phi) = phi {
+            MatrixRxX::from_vec(phi.to_vec())
+        } else {
+            &t * TAU / zt * if is_open { 0.5 } else { 1. }
+        };
         let tdt = t.columns_range(1..).component_div(&dt);
         let scalar2 = 0.5 * diff(t.map(pow2)).component_div(&dt);
-        let arr = series.map(|curve| {
-            let dxyz = to_diff(curve);
-            // Coefficients (2dim * N)
-            // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
-            let mut coeff = vec![Kernel::<D>::zeros(); harmonic];
-            for (n, c) in coeff.iter_mut().enumerate() {
-                let n = (n + 1) as f64;
-                let phi = &phi * n;
-                let scalar = scalar / pow2(n);
-                let cos_phi = diff(phi.map(f64::cos)).component_div(&dt);
-                zip(dxyz.row_iter(), &mut c.column_mut(0))
-                    .for_each(|(d, c)| *c = scalar * d.component_mul(&cos_phi).sum());
-                if is_open {
-                    continue;
-                }
-                let sin_phi = diff(phi.map(f64::sin)).component_div(&dt);
-                zip(dxyz.row_iter(), &mut c.column_mut(1))
-                    .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
+        let dxyz = to_diff(curve);
+        // Coefficients (2dim * N)
+        // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
+        let mut coeff = vec![Kernel::<D>::zeros(); harmonic];
+        for (n, c) in coeff.iter_mut().enumerate() {
+            let n = (n + 1) as f64;
+            let phi = &phi * n;
+            let scalar = scalar / pow2(n);
+            let cos_phi = diff(phi.map(f64::cos)).component_div(&dt);
+            zip(dxyz.row_iter(), &mut c.column_mut(0))
+                .for_each(|(d, c)| *c = scalar * d.component_mul(&cos_phi).sum());
+            if is_open {
+                continue;
             }
-            let mut center = curve[0];
-            for (dxyz, oxyz) in zip(dxyz.row_iter(), &mut center) {
-                let xi = cumsum(dxyz) - dxyz.component_mul(&tdt);
-                *oxyz += (dxyz.component_mul(&scalar2) + xi.component_mul(&dt)).sum() / zt;
-            }
-            let rot_eye = na::AbstractRotation::identity();
-            (coeff, GeoVar::new(center, rot_eye, 1.))
-        });
-        (phi.data.into(), arr)
+            let sin_phi = diff(phi.map(f64::sin)).component_div(&dt);
+            zip(dxyz.row_iter(), &mut c.column_mut(1))
+                .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
+        }
+        let mut center = curve[0];
+        for (dxyz, oxyz) in zip(dxyz.row_iter(), &mut center) {
+            let xi = cumsum(dxyz) - dxyz.component_mul(&tdt);
+            *oxyz += (dxyz.component_mul(&scalar2) + xi.component_mul(&dt)).sum() / zt;
+        }
+        (phi.data.into(), coeff, GeoVar::from_trans(center))
     }
 
     #[doc(hidden)]
@@ -131,13 +132,8 @@ pub trait EfdDim<const D: usize>: Sealed {
         }
         // Scale factor
         // |u1| == |a1| (after rotation)
-        let scale = if dep.is_some() {
-            1.
-        } else {
-            let scale = coeffs[0][0].abs();
-            coeffs.iter_mut().for_each(|m| *m /= scale);
-            scale
-        };
+        let scale = coeffs[0][0].abs();
+        coeffs.iter_mut().for_each(|m| *m /= scale);
         GeoVar::new([0.; D], psi, scale)
     }
 
