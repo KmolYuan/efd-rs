@@ -4,14 +4,6 @@ use core::f64::consts::{PI, TAU};
 #[cfg(not(feature = "std"))]
 use num_traits::*;
 
-macro_rules! harmonic {
-    ($is_open:ident, $curve1:ident $(, $curve2:ident)*) => {{
-        let len = $curve1.len()$(.min($curve2.len()))*;
-        if $is_open { len * 2 } else { len }
-    }};
-}
-pub(crate) use harmonic;
-
 /// Get the theta value of each point coordinate of the curve.
 ///
 /// ```
@@ -170,13 +162,14 @@ where
     ///
     /// Please ensure the sampling points are generated from a known function
     /// and are more than enough. Otherwise, it will cause undersampling.
+    ///
+    /// See also [`harmonic_nyquist`].
     pub fn from_curve_nyquist<C>(curve: C, is_open: bool) -> Self
     where
         C: Curve<D>,
     {
-        let len = curve.len();
-        Self::from_curve_harmonic(curve, is_open, if is_open { len } else { len / 2 })
-            .fourier_power_anaysis(None)
+        let harmonic = harmonic_nyquist!(is_open, curve);
+        Self::from_curve_harmonic(curve, is_open, harmonic).fourier_power_anaysis(None)
     }
 
     /// Manual coefficient calculation.

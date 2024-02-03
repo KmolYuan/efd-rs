@@ -1,5 +1,6 @@
 use crate::{util::*, *};
 use alloc::vec::Vec;
+use core::iter::zip;
 #[cfg(not(feature = "std"))]
 #[allow(unused_imports)]
 use num_traits::*;
@@ -11,13 +12,9 @@ pub type PosedEfd2 = PosedEfd<2>;
 /// A 3D shape with a pose described by EFD.
 pub type PosedEfd3 = PosedEfd<3>;
 
-type Vector<const D: usize> = na::Vector<f64, na::Const<D>, na::ArrayStorage<f64, D, 1>>;
-
-fn uvec<V, const D: usize>(v: V) -> Coord<D>
-where
-    Vector<D>: From<V>,
-{
-    Vector::from(v).normalize().data.0[0]
+fn uvec<const D: usize>(v: [f64; D]) -> Coord<D> {
+    let norm = v.l2_norm(&[0.; D]);
+    v.map(|x| x / norm)
 }
 
 /// A shape with a pose described by EFD.
@@ -58,7 +55,7 @@ impl PosedEfd2 {
     {
         let vectors = angles
             .iter()
-            .map(|a| uvec([a.cos(), a.sin()]))
+            .map(|a| [a.cos(), a.sin()])
             .collect::<Vec<_>>();
         Self::from_uvec_harmonic_unchecked(curve, vectors, is_open, harmonic)
     }
@@ -101,8 +98,8 @@ where
         C1: Curve<D>,
         C2: Curve<D>,
     {
-        let vectors = core::iter::zip(curve1.as_curve(), curve2.as_curve())
-            .map(|(a, b)| uvec(na::Point::from(*b) - na::Point::from(*a)))
+        let vectors = zip(curve1.as_curve(), curve2.as_curve())
+            .map(|(a, b)| uvec(core::array::from_fn(|i| b[i] - a[i])))
             .collect::<Vec<_>>();
         Self::from_uvec_harmonic_unchecked(curve1, vectors, is_open, harmonic)
     }
@@ -163,13 +160,12 @@ where
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (pos, mut curve, geo1) = U::get_coeff(curve.as_curve(), is_open, harmonic, None);
-        let geo2 = U::coeff_norm(&mut curve, None, None);
-        let curve = Efd::from_parts_unchecked(curve, geo1 * &geo2);
-        let (_, mut pose, pose_geo) =
-            U::get_coeff(vectors.as_curve(), is_open, harmonic, Some(&pos));
-        let geo2 = U::coeff_norm(&mut pose, None, Some(geo2.rot()));
-        let pose = Efd::from_parts_unchecked(pose, pose_geo * geo2);
+        let (pos, mut curve, geo) = U::get_coeff(curve.as_curve(), is_open, harmonic, None);
+        let n_geo = U::coeff_norm(&mut curve, None, None);
+        let curve = Efd::from_parts_unchecked(curve, geo * &n_geo);
+        let (_, mut pose, p_geo) = U::get_coeff(vectors.as_curve(), is_open, harmonic, Some(&pos));
+        let n_geo = U::coeff_norm(&mut pose, None, Some(n_geo.rot()));
+        let pose = Efd::from_parts_unchecked(pose, p_geo * n_geo);
         Self { curve, pose }
     }
 
@@ -186,7 +182,7 @@ where
     where
         Option<f64>: From<T>,
     {
-        let lut = core::iter::zip(self.curve.coeffs(), self.pose.coeffs())
+        let lut = zip(self.curve.coeffs(), self.pose.coeffs())
             .map(|(m1, m2)| m1.map(pow2).sum() + m2.map(pow2).sum())
             .collect();
         self.set_harmonic(fourier_power_anaysis(lut, threshold));
@@ -277,7 +273,7 @@ fn generate_pair<const D: usize>(
     pose: Vec<Coord<D>>,
     len: f64,
 ) -> (Vec<Coord<D>>, Vec<Coord<D>>) {
-    let pose = core::iter::zip(&curve, pose)
+    let pose = zip(&curve, pose)
         .map(|(p, v)| na::Point::from(*p) + na::Vector::from(v) * len)
         .map(|p| p.coords.data.0[0])
         .collect();

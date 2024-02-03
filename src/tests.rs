@@ -239,7 +239,7 @@ fn plot2d(coeff: Coeffs2, path: &str) -> Result<(), Box<dyn std::error::Error>> 
         chart.draw_series(LineSeries::new(ellipse, RED.stroke_width(7)))?;
     }
     chart.draw_series(LineSeries::new(
-        curve.into_iter().map(|[x, y]| (x, y)),
+        curve.into_iter().map(|c| c.into()),
         BLACK.stroke_width(10),
     ))?;
     Ok(())
