@@ -96,15 +96,15 @@ pub trait EfdDim<const D: usize>: Sealed {
         pos: Option<&mut [f64]>,
         rot: Option<&Self::Rot>,
     ) -> GeoVar<Self::Rot, D> {
-        // Angle of starting point
+        // Angle of starting point (theta)
         // theta = atan2(2 * sum(m[:, 0] * m[:, 1]), sum(m[:, 0]^2) - sum(m[:, 1]^2))
         // theta = 0 if is open curve
         // m = m * theta
-        if coeffs[0][(0, 1)] != 0. {
+        if coeffs[0].column(1).sum() != 0. {
             let theta = {
-                let c = &coeffs[0];
-                let dy = 2. * c.column_product().sum();
-                let dx = c.map(pow2).row_sum();
+                let m1 = &coeffs[0];
+                let dy = 2. * m1.column_product().sum();
+                let dx = m1.map(pow2).row_sum();
                 0.5 * dy.atan2(dx[0] - dx[1])
             };
             for (i, m) in coeffs.iter_mut().enumerate() {
@@ -115,11 +115,15 @@ pub trait EfdDim<const D: usize>: Sealed {
                 pos.iter_mut().for_each(|v| *v -= theta);
             }
         }
-        // Normalize coefficients sign
-        if coeffs.len() > 1 && coeffs[0][0] * coeffs[1][0] < 0. {
+        // Normalize coefficients sign (zeta)
+        if coeffs.len() > 1 && {
+            let [u1, v1] = [coeffs[0].column(0), coeffs[0].column(1)];
+            let [u2, v2] = [coeffs[1].column(0), coeffs[1].column(1)];
+            (u1 - u2).norm() + (v1 - v2).norm() > (u1 + u2).norm() + (v1 + v2).norm()
+        } {
             coeffs.iter_mut().step_by(2).for_each(|s| *s *= -1.);
         }
-        // Rotation angle
+        // Rotation angle (psi)
         // m = psi' * m
         let mut psi = rot.cloned().unwrap_or_else(|| Self::get_rot(coeffs));
         let psi_mat = psi.clone().matrix();
@@ -131,10 +135,6 @@ pub trait EfdDim<const D: usize>: Sealed {
         let scale = if rot.is_some() {
             1.
         } else {
-            // Rotation correction
-            if coeffs.len() > 1 && coeffs[0][0] * coeffs[1][0] < 0. {
-                coeffs.iter_mut().step_by(2).for_each(|s| *s *= -1.);
-            }
             let scale = coeffs[0][0];
             coeffs.iter_mut().for_each(|m| *m /= scale);
             if scale < 0. {

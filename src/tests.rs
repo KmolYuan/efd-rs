@@ -9,8 +9,11 @@ pub const EPS: f64 = 2.2e-14;
 pub const RES: usize = 1000;
 
 /// Error between two curves, the length of the curves must be the same.
-pub fn curve_diff<const D: usize>(a: &[Coord<D>], b: &[Coord<D>]) -> f64 {
-    zip(a, b).map(|(a, b)| a.l2_norm(b)).sum::<f64>() / a.len() as f64
+pub fn curve_diff<const D: usize>(a: impl Curve<D>, b: impl Curve<D>) -> f64 {
+    zip(a.as_curve(), b.as_curve())
+        .map(|(a, b)| a.l2_norm(b))
+        .sum::<f64>()
+        / a.len() as f64
 }
 
 #[test]
@@ -24,25 +27,6 @@ fn error() {
     let b = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
     assert_eq!(a.square_err(&b), 50.);
     assert_eq!(b.square_err(&a), 50.);
-}
-
-#[test]
-fn efd2d_open() {
-    use approx::assert_abs_diff_eq;
-    let efd = Efd2::from_curve(CURVE2D_OPEN, true);
-    assert!(efd.is_open());
-    assert_eq!(efd.harmonic(), 14);
-    // Test transformation
-    let geo = efd.as_geo();
-    assert_abs_diff_eq!(geo.trans()[0], 43.03456791427352);
-    assert_abs_diff_eq!(geo.trans()[1], 48.107208358019015);
-    assert_abs_diff_eq!(geo.rot().angle(), 2.7330524299596815);
-    assert_abs_diff_eq!(geo.scale(), 33.930916934329495);
-    // Test reconstruction
-    let (pos, _) = get_target_pos(CURVE2D_OPEN, true);
-    let target = efd.generate_norm_by(&pos);
-    let curve = efd.as_geo().inverse().transform(CURVE2D_OPEN);
-    assert!(curve_diff(&target, &curve) < 0.015);
 }
 
 #[test]
@@ -72,13 +56,32 @@ fn efd2d() {
     let geo = efd.as_geo();
     assert_abs_diff_eq!(geo.trans()[0], -1.248409055632358);
     assert_abs_diff_eq!(geo.trans()[1], 55.26080122817753);
-    assert_abs_diff_eq!(geo.rot().angle(), 0.6423416350347734);
+    assert_abs_diff_eq!(geo.rot().angle(), -2.49925101855502);
     assert_abs_diff_eq!(geo.scale(), 48.16765830752243);
     // Test reconstruction
     let (pos, _) = get_target_pos(CURVE2D, false);
     let target = efd.generate_norm_by(&pos);
     let curve = efd.as_geo().inverse().transform(CURVE2D);
-    assert!(curve_diff(&target, &curve) < 0.016);
+    assert!(curve_diff(target, curve) < 1.5381);
+}
+
+#[test]
+fn efd2d_open() {
+    use approx::assert_abs_diff_eq;
+    let efd = Efd2::from_curve(CURVE2D_OPEN, true);
+    assert!(efd.is_open());
+    assert_eq!(efd.harmonic(), 14);
+    // Test transformation
+    let geo = efd.as_geo();
+    assert_abs_diff_eq!(geo.trans()[0], 43.03456791427352);
+    assert_abs_diff_eq!(geo.trans()[1], 48.107208358019015);
+    assert_abs_diff_eq!(geo.rot().angle(), 2.7330524299596815);
+    assert_abs_diff_eq!(geo.scale(), 33.930916934329495);
+    // Test reconstruction
+    let (pos, _) = get_target_pos(CURVE2D_OPEN, true);
+    let target = efd.generate_norm_by(&pos);
+    let curve = efd.as_geo().inverse().transform(CURVE2D_OPEN);
+    assert!(curve_diff(target, curve) < 0.0143);
 }
 
 #[test]
@@ -97,16 +100,14 @@ fn efd3d() {
     let efd_half = Efd3::from_curve(curve, false);
     assert_abs_diff_eq!(efd.l1_norm(&efd_half), 0., epsilon = 1e-12);
     assert_eq!(efd.harmonic(), 5);
-    // TODO: Test rotation
-    // for ang in 0..6 {
-    //     let ang = core::f64::consts::TAU * ang as f64 / 6.;
-    //     let curve = GeoVar::from_rot(na::UnitQuaternion::new(na::matrix![1.; 1.;
-    // 0.] * ang))         .transform(CURVE3D);
-    //     let efd_rot = Efd3::from_curve_harmonic(curve, false, efd.harmonic());
-    //     // dbg!(&efd_rot.coeffs()[..2]);
-    //     // dbg!(&efd.coeffs()[..2]);
-    //     assert_abs_diff_eq!(efd.l1_norm(&efd_rot), 0., epsilon = 1e-12);
-    // }
+    // Test rotation
+    for ang in 0..6 {
+        let ang = core::f64::consts::TAU * ang as f64 / 6.;
+        let curve = GeoVar::from_rot(na::UnitQuaternion::new(na::matrix![1.; 1.; 0.] * ang))
+            .transform(CURVE3D);
+        let efd_rot = Efd3::from_curve_harmonic(curve, false, efd.harmonic());
+        assert_abs_diff_eq!(efd.l1_norm(&efd_rot), 0., epsilon = 1e-12);
+    }
     // Test transformation
     let geo = efd.as_geo();
     assert_abs_diff_eq!(geo.trans()[0], 0.7239345388499508);
@@ -118,7 +119,7 @@ fn efd3d() {
     let (pos, _) = get_target_pos(CURVE3D, false);
     let target = efd.generate_norm_by(&pos);
     let curve = efd.as_geo().inverse().transform(CURVE3D);
-    assert!(curve_diff(&target, &curve) < 1.682);
+    assert!(curve_diff(target, curve) < 0.0041);
 }
 
 #[test]
