@@ -9,8 +9,8 @@ use num_traits::*;
 /// ```
 /// use efd::get_target_pos;
 ///
-/// let path = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
-/// let (theta, _geo) = get_target_pos(path, true);
+/// let curve = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
+/// let (theta, _geo) = get_target_pos(curve, true);
 /// assert_eq!(theta.len(), 4);
 /// ```
 ///
@@ -78,8 +78,8 @@ where
     ///
     /// ```
     /// use efd::{Efd2, GeoVar};
-    /// let path = Efd2::from_parts_unchecked(vec![], GeoVar::identity()).generate(20);
-    /// assert_eq!(path.len(), 0);
+    /// let curve = Efd2::from_parts_unchecked(vec![], GeoVar::identity()).generate(20);
+    /// assert_eq!(curve.len(), 0);
     /// ```
     ///
     /// See also [`Efd::into_inner()`].
@@ -124,20 +124,20 @@ where
     /// of itself. For example,
     ///
     /// ```no_run
-    /// # let path_open = [];
-    /// let efd = efd::Efd2::from_curve(path_open, true);
+    /// # let curve_open = [];
+    /// let efd = efd::Efd2::from_curve(curve_open, true);
     /// ```
     ///
     /// is equivalent to
     ///
     /// ```no_run
-    /// # let path_open = [];
-    /// let path_closed = path_open
+    /// # let curve_open = [];
+    /// let curve_closed = curve_open
     ///     .iter()
-    ///     .chain(path_open.iter().rev().skip(1))
+    ///     .chain(curve_open.iter().rev().skip(1))
     ///     .cloned()
     ///     .collect::<Vec<_>>();
-    /// let efd = efd::Efd2::from_curve(path_closed, false);
+    /// let efd = efd::Efd2::from_curve(curve_closed, false);
     /// ```
     ///
     /// but not actually increase the data size.

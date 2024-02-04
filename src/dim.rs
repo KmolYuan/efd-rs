@@ -47,7 +47,7 @@ pub trait EfdDim<const D: usize>: Sealed {
         curve: &[Coord<D>],
         is_open: bool,
         harmonic: usize,
-        phi: Option<&[f64]>,
+        guide: Option<&[Coord<D>]>,
     ) -> (Vec<f64>, Coeffs<D>, GeoVar<Self::Rot, D>) {
         let to_diff = |curve: &[_]| {
             diff(if is_open || curve.first() == curve.last() {
@@ -56,16 +56,12 @@ pub trait EfdDim<const D: usize>: Sealed {
                 to_mat(curve.closed_lin())
             })
         };
-        let dxyz = to_diff(curve);
+        let dxyz = to_diff(guide.unwrap_or(curve));
         let dt = dxyz.map(pow2).row_sum().map(f64::sqrt);
         let t = cumsum(dt.clone()).insert_column(0, 0.);
         let zt = t[t.len() - 1];
         let scalar = zt / (PI * PI) * if is_open { 2. } else { 0.5 };
-        let phi = if let Some(phi) = phi {
-            MatrixRxX::from_vec(phi.to_vec())
-        } else {
-            &t * TAU / zt * if is_open { 0.5 } else { 1. }
-        };
+        let phi = &t * TAU / zt * if is_open { 0.5 } else { 1. };
         let tdt = t.columns_range(1..).component_div(&dt);
         let scalar2 = 0.5 * diff(t.map(pow2)).component_div(&dt);
         let dxyz = to_diff(curve);
@@ -98,7 +94,7 @@ pub trait EfdDim<const D: usize>: Sealed {
     fn coeff_norm(
         coeffs: &mut [Kernel<D>],
         pos: Option<&mut [f64]>,
-        dep: Option<&Self::Rot>,
+        rot: Option<&Self::Rot>,
     ) -> GeoVar<Self::Rot, D> {
         // Angle of starting point
         // theta = atan2(2 * sum(m[:, 0] * m[:, 1]), sum(m[:, 0]^2) - sum(m[:, 1]^2))
@@ -125,15 +121,27 @@ pub trait EfdDim<const D: usize>: Sealed {
         }
         // Rotation angle
         // m = psi' * m
-        let psi = dep.cloned().unwrap_or_else(|| Self::get_rot(coeffs));
+        let mut psi = rot.cloned().unwrap_or_else(|| Self::get_rot(coeffs));
         let psi_mat = psi.clone().matrix();
         for m in coeffs.iter_mut() {
             m.tr_mul(&psi_mat).transpose_to(m);
         }
-        // Scale factor
+        // Scaling factor
         // |u1| == |a1| (after rotation)
-        let scale = coeffs[0][0].abs();
-        coeffs.iter_mut().for_each(|m| *m /= scale);
+        let scale = if rot.is_some() {
+            1.
+        } else {
+            // Rotation correction
+            if coeffs.len() > 1 && coeffs[0][0] * coeffs[1][0] < 0. {
+                coeffs.iter_mut().step_by(2).for_each(|s| *s *= -1.);
+            }
+            let scale = coeffs[0][0];
+            coeffs.iter_mut().for_each(|m| *m /= scale);
+            if scale < 0. {
+                psi.mirror_inplace();
+            }
+            scale.abs()
+        };
         GeoVar::new([0.; D], psi, scale)
     }
 

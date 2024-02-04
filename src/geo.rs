@@ -14,11 +14,19 @@ type Sim<R, const D: usize> = na::Similarity<f64, R, D>;
 pub trait RotHint<const D: usize>: na::AbstractRotation<f64, D> + core::fmt::Debug {
     /// Get the rotation matrix.
     fn matrix(self) -> na::SMatrix<f64, D, D>;
+    /// Mirror the rotation matrix in-place.
+    ///
+    /// This function is used to multiply negative one to all components.
+    fn mirror_inplace(&mut self);
 }
 
 impl<const D: usize> RotHint<D> for na::Rotation<f64, D> {
     fn matrix(self) -> na::SMatrix<f64, D, D> {
         self.into_inner()
+    }
+
+    fn mirror_inplace(&mut self) {
+        *self.matrix_mut_unchecked() *= -1.;
     }
 }
 
@@ -26,11 +34,19 @@ impl RotHint<2> for na::UnitComplex<f64> {
     fn matrix(self) -> na::SMatrix<f64, 2, 2> {
         self.to_rotation_matrix().into_inner()
     }
+
+    fn mirror_inplace(&mut self) {
+        *self.as_mut_unchecked() *= -1.;
+    }
 }
 
 impl RotHint<3> for na::UnitQuaternion<f64> {
     fn matrix(self) -> na::SMatrix<f64, 3, 3> {
         self.to_rotation_matrix().into_inner()
+    }
+
+    fn mirror_inplace(&mut self) {
+        *self.as_mut_unchecked() *= -1.;
     }
 }
 
@@ -44,7 +60,7 @@ pub struct GeoVar<R: RotHint<D>, const D: usize> {
 
 impl<R: RotHint<D>, const D: usize> Default for GeoVar<R, D> {
     fn default() -> Self {
-        Self { inner: Sim::identity() }
+        Self::identity()
     }
 }
 
@@ -67,7 +83,7 @@ where
 {
     /// Create with identity matrix.
     pub fn identity() -> Self {
-        Self::default()
+        Self { inner: Sim::identity() }
     }
 
     /// Create a new instance.
@@ -85,6 +101,16 @@ where
         Self::new([0.; D], rot, 1.)
     }
 
+    /// Create a new instance from translation.
+    pub fn only_trans(self) -> Self {
+        Self::from_trans(self.trans())
+    }
+
+    /// Create a new instance from rotation.
+    pub fn only_rot(self) -> Self {
+        Self::from_rot(self.inner.isometry.rotation)
+    }
+
     /// Transform a point.
     ///
     /// Please see [`GeoVar::transform()`] for more information.
@@ -99,14 +125,10 @@ where
     ///
     /// ```
     /// use efd::{tests::*, *};
-    /// # let target = TARGET;
-    /// # let efd = Efd2::from_curve(PATH, false);
-    /// # let path = efd.generate_norm(target.len());
-    /// let path1 = efd.as_geo().transform(&path);
-    /// # let geo = efd.as_geo();
-    /// let path1_inv = geo.inverse().transform(&path1);
-    /// # assert!(curve_diff(&path1, TARGET) < EPS);
-    /// # assert!(curve_diff(&path1_inv, &path) < EPS);
+    /// # let curve = CURVE2D;
+    /// let efd = Efd2::from_curve(curve, false);
+    /// // Normalize the curve
+    /// let curve_norm = efd.as_geo().inverse().transform(&curve);
     /// ```
     #[must_use = "The transformed point is returned as a new value"]
     pub fn transform<C>(&self, curve: C) -> Vec<Coord<D>>
@@ -145,13 +167,13 @@ where
     /// ```
     /// use efd::{tests::*, Efd2};
     /// # use efd::Curve as _;
-    /// # let path1 = PATH;
-    /// # let path2 = PATH;
+    /// # let curve1 = CURVE2D;
+    /// # let curve2 = CURVE2D;
     ///
-    /// let a = Efd2::from_curve(path1, false);
-    /// let b = Efd2::from_curve(path2, false);
+    /// let a = Efd2::from_curve(curve1, false);
+    /// let b = Efd2::from_curve(curve2, false);
     /// let geo = a.as_geo().to(b.as_geo());
-    /// assert!(curve_diff(&geo.transform(path1), path2) < EPS);
+    /// assert!(curve_diff(&geo.transform(curve1), curve2) < EPS);
     /// ```
     #[must_use = "this returns the result of the operation, without modifying the original"]
     pub fn to(&self, rhs: &Self) -> Self {
@@ -163,13 +185,13 @@ where
     /// ```
     /// use efd::{tests::*, Efd2};
     /// # use efd::Curve as _;
-    /// # let path1 = PATH;
-    /// # let path2 = PATH;
+    /// # let curve1 = CURVE2D;
+    /// # let curve2 = CURVE2D;
     ///
-    /// let a = Efd2::from_curve(path1, false);
-    /// let b = Efd2::from_curve(path2, false);
+    /// let a = Efd2::from_curve(curve1, false);
+    /// let b = Efd2::from_curve(curve2, false);
     /// let geo = b.as_geo() * a.as_geo().inverse();
-    /// assert!(curve_diff(&geo.transform(path1), path2) < EPS);
+    /// assert!(curve_diff(&geo.transform(curve1), curve2) < EPS);
     /// ```
     #[must_use = "this returns the result of the operation, without modifying the original"]
     pub fn apply(&self, rhs: &Self) -> Self {
@@ -181,13 +203,13 @@ where
     /// ```
     /// use efd::{tests::*, Efd2};
     /// # use efd::Curve as _;
-    /// # let path = PATH;
+    /// # let curve = CURVE2D;
     ///
-    /// let efd = Efd2::from_curve(path, false);
-    /// let path = efd.generate(path.len());
-    /// let path_norm = efd.generate_norm(path.len());
-    /// let path = efd.as_geo().inverse().transform(path);
-    /// # assert!(curve_diff(&path, &path_norm) < EPS);
+    /// let efd = Efd2::from_curve(curve, false);
+    /// let curve = efd.generate(curve.len());
+    /// let curve_norm = efd.generate_norm(curve.len());
+    /// let curve = efd.as_geo().inverse().transform(curve);
+    /// # assert!(curve_diff(&curve, &curve_norm) < EPS);
     /// ```
     #[must_use = "this returns the result of the operation, without modifying the original"]
     pub fn inverse(&self) -> Self {
