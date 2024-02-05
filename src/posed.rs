@@ -275,8 +275,7 @@ fn generate_pair<const D: usize>(
     len: f64,
 ) -> (Vec<Coord<D>>, Vec<Coord<D>>) {
     let pose = zip(&curve, pose)
-        .map(|(p, v)| na::Point::from(*p) + na::Vector::from(v) * len)
-        .map(|p| p.coords.data.0[0])
+        .map(|(p, v)| core::array::from_fn(|i| p[i] + len * v[i]))
         .collect();
     (curve, pose)
 }
