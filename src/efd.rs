@@ -4,14 +4,15 @@ use core::f64::consts::{PI, TAU};
 #[cfg(not(feature = "std"))]
 use num_traits::*;
 
-/// Get the theta value of each point coordinate of the curve.
+/// Get the theta value of each point coordinate of the curve. This function is
+/// faster than [`Efd`] since it only calculates one harmonic.
 ///
 /// ```
 /// use efd::get_target_pos;
 ///
 /// let curve = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
-/// let (theta, _geo) = get_target_pos(curve, true);
-/// assert_eq!(theta.len(), 4);
+/// let (t, _geo) = get_target_pos(curve, true);
+/// assert_eq!(t.len(), 4);
 /// ```
 ///
 /// See also [`Efd::from_curve_harmonic_and_get()`] if you want to get the

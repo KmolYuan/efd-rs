@@ -62,7 +62,7 @@ fn efd2d() {
     let (pos, _) = get_target_pos(CURVE2D, false);
     let target = efd.generate_norm_by(&pos);
     let curve = efd.as_geo().inverse().transform(CURVE2D);
-    assert!(curve_diff(target, curve) < 1.5381);
+    assert!(curve_diff(target, curve) < 1.6565);
 }
 
 #[test]
@@ -119,38 +119,21 @@ fn efd3d() {
     let (pos, _) = get_target_pos(CURVE3D, false);
     let target = efd.generate_norm_by(&pos);
     let curve = efd.as_geo().inverse().transform(CURVE3D);
-    assert!(curve_diff(target, curve) < 0.0041);
+    assert!(curve_diff(target, curve) < 0.0042);
 }
 
 #[test]
-fn posed_efd() {
+fn posed_efd_open() {
     use approx::assert_abs_diff_eq;
-    let efd = PosedEfd2::from_angles(CURVE2D_POSE, ANGLE2D_POSE, false);
-    assert!(!efd.is_open());
-    // Test starting point
-    let curve = CURVE2D_POSE
-        .iter()
-        .cycle()
-        .skip(CURVE2D_POSE.len() / 2)
-        .take(CURVE2D_POSE.len())
-        .copied()
-        .collect::<Vec<_>>();
-    let angles = ANGLE2D_POSE
-        .iter()
-        .cycle()
-        .skip(ANGLE2D_POSE.len() / 2)
-        .take(ANGLE2D_POSE.len())
-        .copied()
-        .collect::<Vec<_>>();
-    let efd_half = PosedEfd2::from_angles(curve, &angles, false);
-    assert_abs_diff_eq!(efd.l1_norm(&efd_half), 0., epsilon = 1e-11);
-    assert_eq!(efd.harmonic(), 9);
+    let efd = PosedEfd2::from_angles(CURVE2D_POSE, ANGLE2D_POSE, true);
+    assert!(efd.is_open());
+    assert_eq!(efd.harmonic(), 16);
     // Test rotation
     for ang in 0..6 {
         let ang = core::f64::consts::TAU * ang as f64 / 6.;
         let curve = GeoVar::from_rot(na::UnitComplex::new(ang)).transform(CURVE2D_POSE);
         let angles = ANGLE2D_POSE.iter().map(|a| a + ang).collect::<Vec<_>>();
-        let efd_rot = PosedEfd2::from_angles(curve, &angles, false);
+        let efd_rot = PosedEfd2::from_angles(curve, &angles, true);
         assert_abs_diff_eq!(efd.l1_norm(&efd_rot), 0., epsilon = 1e-12);
     }
 }

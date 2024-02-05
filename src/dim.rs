@@ -87,7 +87,11 @@ pub trait EfdDim<const D: usize>: Sealed {
             let xi = cumsum(dxyz) - dxyz.component_mul(&tdt);
             *oxyz += (dxyz.component_mul(&scalar2) + xi.component_mul(&dt)).sum() / zt;
         }
-        (phi.data.into(), coeff, GeoVar::from_trans(center))
+        let mut t: Vec<_> = phi.data.into();
+        if !is_open && curve.first() != curve.last() {
+            t.pop();
+        }
+        (t, coeff, GeoVar::from_trans(center))
     }
 
     #[doc(hidden)]
