@@ -161,7 +161,7 @@ pub trait EfdDim<const D: usize>: Sealed {
             .reduce(|a, b| a + b)
             .unwrap_or_else(|| MatrixRxX::from_vec(Vec::new()))
             .column_iter()
-            .map(|row| core::array::from_fn(|i| row[i]))
+            .map(|row| row.into())
             .collect()
     }
 }
@@ -169,8 +169,8 @@ pub trait EfdDim<const D: usize>: Sealed {
 impl EfdDim<1> for U<1> {
     type Rot = na::Rotation<f64, 1>;
 
-    fn get_rot(m: &[Kernel<1>]) -> Self::Rot {
-        na::Rotation::from_matrix_unchecked(na::matrix![m[0][0].signum()])
+    fn get_rot(_m: &[Kernel<1>]) -> Self::Rot {
+        na::Rotation::from_matrix_unchecked(na::matrix![1.])
     }
 }
 
@@ -202,8 +202,8 @@ impl EfdDim<3> for U<3> {
             na::UnitQuaternion::from_basis_unchecked(&[u, v, w])
         } else {
             // Open curve, one harmonic, just rotate `u` to x-axis
-            let (u, v) = (na::Vector3::x(), u);
-            na::UnitQuaternion::from_scaled_axis(u.cross(&v).normalize() * u.dot(&v).acos())
+            let [u, x] = [na::Unit::new_unchecked(u), na::Vector3::x_axis()];
+            na::UnitQuaternion::rotation_between_axis(&u, &x).unwrap_or_default()
         }
     }
 }

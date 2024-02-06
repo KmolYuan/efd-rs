@@ -14,9 +14,10 @@ type Sim<R, const D: usize> = na::Similarity<f64, R, D>;
 pub trait RotHint<const D: usize>: na::AbstractRotation<f64, D> + core::fmt::Debug {
     /// Get the rotation matrix.
     fn matrix(self) -> na::SMatrix<f64, D, D>;
-    /// Mirror the rotation matrix in-place.
+    /// Mirror this rotation in-placed. (`self = -I * self`)
     ///
-    /// This function is used to multiply negative one to all components.
+    /// This function is used to multiply negative one to all components after
+    /// the current rotation.
     fn mirror_inplace(&mut self);
 }
 
@@ -26,7 +27,9 @@ impl<const D: usize> RotHint<D> for na::Rotation<f64, D> {
     }
 
     fn mirror_inplace(&mut self) {
-        *self.matrix_mut_unchecked() *= -1.;
+        let mut eye = Self::identity();
+        *eye.matrix_mut_unchecked() *= -1.;
+        *self *= eye;
     }
 }
 
@@ -81,7 +84,7 @@ impl<R, const D: usize> GeoVar<R, D>
 where
     R: RotHint<D>,
 {
-    /// Create with identity matrix.
+    /// Create a new identity instance.
     pub fn identity() -> Self {
         Self { inner: Sim::identity() }
     }
@@ -109,6 +112,85 @@ where
     /// Create a new instance from rotation.
     pub fn only_rot(self) -> Self {
         Self::from_rot(self.inner.isometry.rotation)
+    }
+
+    /// Merge inverse `self` and `rhs`. (`rhs * self^T`)
+    ///
+    /// It can be used on a not normalized contour `a` transforming to `b`.
+    ///
+    /// ```
+    /// use efd::{tests::*, Efd2};
+    /// # use efd::Curve as _;
+    /// # let curve1 = CURVE2D;
+    /// # let curve2 = CURVE2D;
+    ///
+    /// let a = Efd2::from_curve(curve1, false);
+    /// let b = Efd2::from_curve(curve2, false);
+    /// let geo = a.as_geo().to(b.as_geo());
+    /// assert!(curve_diff(&geo.transform(curve1), curve2) < EPS);
+    /// ```
+    #[must_use = "this returns the result of the operation, without modifying the original"]
+    pub fn to(&self, rhs: &Self) -> Self {
+        rhs * self.inverse()
+    }
+
+    /// Merge `self` and `rhs`. (`rhs * self`)
+    ///
+    /// ```
+    /// use efd::{tests::*, Efd2};
+    /// # use efd::Curve as _;
+    /// # let curve1 = CURVE2D;
+    /// # let curve2 = CURVE2D;
+    ///
+    /// let a = Efd2::from_curve(curve1, false);
+    /// let b = Efd2::from_curve(curve2, false);
+    /// let geo = b.as_geo() * a.as_geo().inverse();
+    /// assert!(curve_diff(&geo.transform(curve1), curve2) < EPS);
+    /// ```
+    #[must_use = "this returns the result of the operation, without modifying the original"]
+    pub fn apply(&self, rhs: &Self) -> Self {
+        rhs * self
+    }
+
+    /// Inverse `self`. (`self^T`/`self^-1`)
+    ///
+    /// ```
+    /// use efd::{tests::*, Efd2};
+    /// # use efd::Curve as _;
+    /// # let curve = CURVE2D;
+    ///
+    /// let efd = Efd2::from_curve(curve, false);
+    /// let curve = efd.generate(curve.len());
+    /// let curve_norm = efd.generate_norm(curve.len());
+    /// let curve = efd.as_geo().inverse().transform(curve);
+    /// # assert!(curve_diff(&curve, &curve_norm) < EPS);
+    /// ```
+    #[must_use = "this returns the result of the operation, without modifying the original"]
+    pub fn inverse(&self) -> Self {
+        Self { inner: self.inner.inverse() }
+    }
+
+    /// Mirror `self`.
+    #[must_use = "this returns the result of the operation, without modifying the original"]
+    pub fn mirror(&self) -> Self {
+        let mut geo = self.clone();
+        geo.inner.isometry.rotation.mirror_inplace();
+        geo
+    }
+
+    /// Get the translate property.
+    pub fn trans(&self) -> Coord<D> {
+        self.inner.isometry.translation.vector.data.0[0]
+    }
+
+    /// Get the rotation property.
+    pub fn rot(&self) -> &R {
+        &self.inner.isometry.rotation
+    }
+
+    /// Get the scaling property.
+    pub fn scale(&self) -> f64 {
+        self.inner.scaling()
     }
 
     /// Transform a point.
@@ -158,77 +240,6 @@ where
         C: IntoIterator<Item = Coord<D>> + 'a,
     {
         curve.into_iter().map(|c| self.transform_pt(c))
-    }
-
-    /// Merge inverse `self` and `rhs` matrices. (`rhs * self^T`)
-    ///
-    /// It can be used on a not normalized contour `a` transforming to `b`.
-    ///
-    /// ```
-    /// use efd::{tests::*, Efd2};
-    /// # use efd::Curve as _;
-    /// # let curve1 = CURVE2D;
-    /// # let curve2 = CURVE2D;
-    ///
-    /// let a = Efd2::from_curve(curve1, false);
-    /// let b = Efd2::from_curve(curve2, false);
-    /// let geo = a.as_geo().to(b.as_geo());
-    /// assert!(curve_diff(&geo.transform(curve1), curve2) < EPS);
-    /// ```
-    #[must_use = "this returns the result of the operation, without modifying the original"]
-    pub fn to(&self, rhs: &Self) -> Self {
-        rhs * self.inverse()
-    }
-
-    /// Merge two matrices. (`rhs * self`)
-    ///
-    /// ```
-    /// use efd::{tests::*, Efd2};
-    /// # use efd::Curve as _;
-    /// # let curve1 = CURVE2D;
-    /// # let curve2 = CURVE2D;
-    ///
-    /// let a = Efd2::from_curve(curve1, false);
-    /// let b = Efd2::from_curve(curve2, false);
-    /// let geo = b.as_geo() * a.as_geo().inverse();
-    /// assert!(curve_diff(&geo.transform(curve1), curve2) < EPS);
-    /// ```
-    #[must_use = "this returns the result of the operation, without modifying the original"]
-    pub fn apply(&self, rhs: &Self) -> Self {
-        rhs * self
-    }
-
-    /// Inverse matrices. (`self^T`)
-    ///
-    /// ```
-    /// use efd::{tests::*, Efd2};
-    /// # use efd::Curve as _;
-    /// # let curve = CURVE2D;
-    ///
-    /// let efd = Efd2::from_curve(curve, false);
-    /// let curve = efd.generate(curve.len());
-    /// let curve_norm = efd.generate_norm(curve.len());
-    /// let curve = efd.as_geo().inverse().transform(curve);
-    /// # assert!(curve_diff(&curve, &curve_norm) < EPS);
-    /// ```
-    #[must_use = "this returns the result of the operation, without modifying the original"]
-    pub fn inverse(&self) -> Self {
-        Self { inner: self.inner.inverse() }
-    }
-
-    /// Get the translate property.
-    pub fn trans(&self) -> Coord<D> {
-        self.inner.isometry.translation.vector.data.0[0]
-    }
-
-    /// Get the rotation property.
-    pub fn rot(&self) -> &R {
-        &self.inner.isometry.rotation
-    }
-
-    /// Get the scaling property.
-    pub fn scale(&self) -> f64 {
-        self.inner.scaling()
     }
 }
 
