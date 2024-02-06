@@ -97,7 +97,7 @@ pub trait EfdDim<const D: usize>: Sealed {
     #[doc(hidden)]
     fn coeff_norm(
         coeffs: &mut [Kernel<D>],
-        pos: Option<&mut [f64]>,
+        t: Option<&mut [f64]>,
         rot: Option<&Self::Rot>,
     ) -> GeoVar<Self::Rot, D> {
         // Angle of starting point (theta)
@@ -115,8 +115,9 @@ pub trait EfdDim<const D: usize>: Sealed {
                 let theta = na::Rotation2::new((i + 1) as f64 * theta);
                 m.copy_from(&(*m * theta));
             }
-            if let Some(pos) = pos {
-                pos.iter_mut().for_each(|v| *v -= theta);
+            if let Some(t) = t {
+                // FIXME
+                t.iter_mut().for_each(|v| *v -= theta);
             }
         }
         // Normalize coefficients sign (zeta)
@@ -129,7 +130,7 @@ pub trait EfdDim<const D: usize>: Sealed {
         }
         // Rotation angle (psi)
         // m = psi' * m
-        let mut psi = rot.cloned().unwrap_or_else(|| Self::get_rot(coeffs));
+        let psi = rot.cloned().unwrap_or_else(|| Self::get_rot(coeffs));
         let psi_mat = psi.clone().matrix();
         for m in coeffs.iter_mut() {
             m.tr_mul(&psi_mat).transpose_to(m);
@@ -141,10 +142,7 @@ pub trait EfdDim<const D: usize>: Sealed {
         } else {
             let scale = coeffs[0][0];
             coeffs.iter_mut().for_each(|m| *m /= scale);
-            if scale < 0. {
-                psi.mirror_inplace();
-            }
-            scale.abs()
+            scale
         };
         GeoVar::new([0.; D], psi, scale)
     }

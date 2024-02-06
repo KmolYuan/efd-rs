@@ -14,22 +14,11 @@ type Sim<R, const D: usize> = na::Similarity<f64, R, D>;
 pub trait RotHint<const D: usize>: na::AbstractRotation<f64, D> + core::fmt::Debug {
     /// Get the rotation matrix.
     fn matrix(self) -> na::SMatrix<f64, D, D>;
-    /// Mirror this rotation in-placed. (`self = -I * self`)
-    ///
-    /// This function is used to multiply negative one to all components after
-    /// the current rotation.
-    fn mirror_inplace(&mut self);
 }
 
 impl<const D: usize> RotHint<D> for na::Rotation<f64, D> {
     fn matrix(self) -> na::SMatrix<f64, D, D> {
         self.into_inner()
-    }
-
-    fn mirror_inplace(&mut self) {
-        let mut eye = Self::identity();
-        *eye.matrix_mut_unchecked() *= -1.;
-        *self *= eye;
     }
 }
 
@@ -37,19 +26,11 @@ impl RotHint<2> for na::UnitComplex<f64> {
     fn matrix(self) -> na::SMatrix<f64, 2, 2> {
         self.to_rotation_matrix().into_inner()
     }
-
-    fn mirror_inplace(&mut self) {
-        *self.as_mut_unchecked() *= -1.;
-    }
 }
 
 impl RotHint<3> for na::UnitQuaternion<f64> {
     fn matrix(self) -> na::SMatrix<f64, 3, 3> {
         self.to_rotation_matrix().into_inner()
-    }
-
-    fn mirror_inplace(&mut self) {
-        *self.as_mut_unchecked() *= -1.;
     }
 }
 
@@ -168,14 +149,6 @@ where
     #[must_use = "this returns the result of the operation, without modifying the original"]
     pub fn inverse(&self) -> Self {
         Self { inner: self.inner.inverse() }
-    }
-
-    /// Mirror `self`.
-    #[must_use = "this returns the result of the operation, without modifying the original"]
-    pub fn mirror(&self) -> Self {
-        let mut geo = self.clone();
-        geo.inner.isometry.rotation.mirror_inplace();
-        geo
     }
 
     /// Get the translate property.

@@ -4,8 +4,9 @@ use core::f64::consts::{PI, TAU};
 #[cfg(not(feature = "std"))]
 use num_traits::*;
 
-/// Get the theta value of each point coordinate of the curve. This function is
-/// faster than [`Efd`] since it only calculates one harmonic.
+/// Get the theta value `t` of each point coordinate of the curve.
+///
+/// This function is faster than [`Efd`] since it only calculates one harmonic.
 ///
 /// ```
 /// use efd::get_target_pos;
@@ -22,9 +23,9 @@ where
     C: Curve<D>,
     U<D>: EfdDim<D>,
 {
-    let (mut pos, mut coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, 1, None);
-    let geo = geo * U::coeff_norm(&mut coeffs, Some(&mut pos), None);
-    (pos, geo)
+    let (mut t, mut coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, 1, None);
+    let geo = geo * U::coeff_norm(&mut coeffs, Some(&mut t), None);
+    (t, geo)
 }
 
 /// A 1D shape described by EFD.
@@ -210,9 +211,9 @@ where
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let curve = curve.as_curve();
-        let (pos, mut coeffs, geo) = U::get_coeff(curve, is_open, harmonic, None);
+        let (t, mut coeffs, geo) = U::get_coeff(curve, is_open, harmonic, None);
         let geo = geo * U::coeff_norm(&mut coeffs, None, None);
-        (Self { coeffs, geo }, pos)
+        (Self { coeffs, geo }, t)
     }
 
     /// Same as [`Efd::from_curve_harmonic()`] but without normalization.
