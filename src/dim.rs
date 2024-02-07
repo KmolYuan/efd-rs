@@ -56,14 +56,20 @@ pub trait EfdDim<const D: usize>: Sealed {
                 to_mat(curve.closed_lin())
             })
         };
-        let dxyz = to_diff(guide.unwrap_or(curve));
-        let dt = dxyz.map(pow2).row_sum().map(f64::sqrt);
+        // Length of curve between points
+        let dt = to_diff(guide.unwrap_or(curve))
+            .map(pow2)
+            .row_sum()
+            .map(f64::sqrt);
+        // Length of curve from start to each point
         let t = cumsum(dt.clone()).insert_column(0, 0.);
+        // Total length of curve
         let zt = t[t.len() - 1];
-        let scalar = zt / (PI * PI) * if is_open { 2. } else { 0.5 };
+        // Length to angle
         let phi = &t * TAU / zt * if is_open { 0.5 } else { 1. };
-        let tdt = t.columns_range(1..).component_div(&dt);
-        let scalar2 = 0.5 * diff(t.map(pow2)).component_div(&dt);
+        // Scalar for coefficients
+        let scalar = zt / (PI * PI) * if is_open { 2. } else { 0.5 };
+        // Differential of the components
         let dxyz = to_diff(curve);
         // Coefficients (2dim * N)
         // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
@@ -82,12 +88,18 @@ pub trait EfdDim<const D: usize>: Sealed {
             zip(dxyz.row_iter(), &mut c.column_mut(1))
                 .for_each(|(d, c)| *c = scalar * d.component_mul(&sin_phi).sum());
         }
+        // Percentage of total stroke versus current stroke
+        let tdt = t.columns_range(1..).component_div(&dt);
+        // Scalar for the shape center
+        let scalar = 0.5 * diff(t.map(pow2)).component_div(&dt);
+        // Shape center
         let mut center = curve[0];
         for (dxyz, oxyz) in zip(dxyz.row_iter(), &mut center) {
             let xi = cumsum(dxyz) - dxyz.component_mul(&tdt);
-            *oxyz += (dxyz.component_mul(&scalar2) + xi.component_mul(&dt)).sum() / zt;
+            *oxyz += (dxyz.component_mul(&scalar) + xi.component_mul(&dt)).sum() / zt;
         }
-        let mut t: Vec<_> = phi.data.into();
+        // Keep the t number the same as the input curve
+        let mut t = Vec::from(phi.data);
         if !is_open && curve.first() != curve.last() {
             t.pop();
         }
