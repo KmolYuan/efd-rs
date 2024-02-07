@@ -73,9 +73,7 @@ impl<const D: usize> Efd<D>
 where
     U<D>: EfdDim<D>,
 {
-    /// Create object from a matrix directly.
-    ///
-    /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
+    /// Create object from coefficients and geometric variables.
     ///
     /// Zero harmonic is allowed but meaningless. If the harmonic is zero, some
     /// operations will panic.
@@ -497,10 +495,8 @@ where
         f.debug_struct(&format!("PosedEfd{D}"))
             .field("is_open", &self.is_open())
             .field("harmonic", &self.harmonic())
-            .field("curve_geo", &self.curve_efd().geo)
-            .field("curve_coeff", &CoeffFmt(&self.curve_efd().coeffs))
-            .field("pose_geo", &self.pose_efd().geo)
-            .field("pose_coeff", &CoeffFmt(&self.pose_efd().coeffs))
+            .field("geo", &self.geo)
+            .field("coeff", &CoeffFmt(&self.coeffs))
             .finish()
     }
 }

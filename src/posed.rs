@@ -1,9 +1,11 @@
-use crate::{util::*, *};
+use crate::*;
 use alloc::vec::Vec;
-use core::iter::zip;
+use core::{array, iter::zip};
 #[cfg(not(feature = "std"))]
 #[allow(unused_imports)]
 use num_traits::*;
+
+const IS_OPEN: bool = false;
 
 /// A 1D shape with a pose described by EFD.
 pub type PosedEfd1 = PosedEfd<1>;
@@ -32,8 +34,8 @@ pub struct PosedEfd<const D: usize>
 where
     U<D>: EfdDim<D>,
 {
-    curve: Efd<D>,
-    pose: Efd<D>,
+    efd: Efd<D>,
+    is_open: bool,
 }
 
 impl PosedEfd2 {
@@ -42,7 +44,7 @@ impl PosedEfd2 {
     where
         C: Curve<2>,
     {
-        let harmonic = harmonic!(is_open, curve, angles);
+        let harmonic = harmonic!(IS_OPEN, curve, angles);
         Self::from_angles_harmonic(curve, angles, is_open, harmonic).fourier_power_anaysis(None)
     }
 
@@ -65,11 +67,14 @@ impl<const D: usize> PosedEfd<D>
 where
     U<D>: EfdDim<D>,
 {
-    /// Create a new [`PosedEfd`] from two [`Efd`]s. (`curve` and `pose`)
+    /// Create object from an [`Efd`] object.
+    ///
+    /// Posed EFD is a special shape to describe the pose, `efd` is only used to
+    /// describe this motion signature.
     ///
     /// See also [`PosedEfd::into_inner()`].
-    pub const fn from_parts_unchecked(curve: Efd<D>, pose: Efd<D>) -> Self {
-        Self { curve, pose }
+    pub const fn from_efd(efd: Efd<D>, is_open: bool) -> Self {
+        Self { efd, is_open }
     }
 
     /// Calculate the coefficients from two series of points.
@@ -81,7 +86,7 @@ where
         C1: Curve<D>,
         C2: Curve<D>,
     {
-        let harmonic = harmonic!(is_open, curve1, curve2);
+        let harmonic = harmonic!(IS_OPEN, curve1, curve2);
         Self::from_series_harmonic(curve1, curve2, is_open, harmonic).fourier_power_anaysis(None)
     }
 
@@ -99,7 +104,7 @@ where
         C2: Curve<D>,
     {
         let vectors = zip(curve1.as_curve(), curve2.as_curve())
-            .map(|(a, b)| uvec(core::array::from_fn(|i| b[i] - a[i])))
+            .map(|(a, b)| uvec(array::from_fn(|i| b[i] - a[i])))
             .collect::<Vec<_>>();
         Self::from_uvec_harmonic_unchecked(curve1, vectors, is_open, harmonic)
     }
@@ -114,7 +119,7 @@ where
         C: Curve<D>,
         V: Curve<D>,
     {
-        let harmonic = harmonic!(is_open, curve, vectors);
+        let harmonic = harmonic!(IS_OPEN, curve, vectors);
         Self::from_uvec_harmonic(curve, vectors, is_open, harmonic)
     }
 
@@ -139,7 +144,7 @@ where
         C: Curve<D>,
         V: Curve<D>,
     {
-        let harmonic = harmonic!(is_open, curve, vectors);
+        let harmonic = harmonic!(IS_OPEN, curve, vectors);
         Self::from_uvec_harmonic_unchecked(curve, vectors, is_open, harmonic)
             .fourier_power_anaysis(None)
     }
@@ -160,14 +165,25 @@ where
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let c_raw = curve.as_curve();
-        let (_, mut curve, geo) = U::get_coeff(c_raw, is_open, harmonic, None);
-        let n_geo = U::coeff_norm(&mut curve, None, None);
-        let curve = Efd::from_parts_unchecked(curve, geo * &n_geo);
-        let (_, mut pose, p_geo) = U::get_coeff(vectors.as_curve(), is_open, harmonic, Some(c_raw));
-        let n_geo = U::coeff_norm(&mut pose, None, Some(n_geo.rot()));
-        let pose = Efd::from_parts_unchecked(pose, p_geo * n_geo);
-        Self { curve, pose }
+        let (_, geo1) = get_target_pos(curve.as_curve(), is_open);
+        let geo_inv = geo1.inverse();
+        let mut curve = geo_inv.transform(curve);
+        // A constant length to define unit vectors
+        const LENGTH: f64 = 1.;
+        let vectors = zip(&curve, geo_inv.only_rot().transform(vectors))
+            .map(|(p, v)| array::from_fn(|i| p[i] + LENGTH * v[i]))
+            .rev()
+            .collect::<Vec<_>>();
+        let rev_guide = curve
+            .iter()
+            .rev()
+            .map(|p| array::from_fn(|i| p[i] + vectors[0][i]));
+        let mut guide = curve.clone();
+        guide.extend(rev_guide);
+        curve.extend(vectors);
+        let (_, coeffs, geo2) = U::get_coeff(&curve, IS_OPEN, harmonic, Some(&guide));
+        let efd = Efd::from_parts_unchecked(coeffs, geo1 * geo2);
+        Self { efd, is_open }
     }
 
     /// Use Fourier Power Anaysis (FPA) to reduce the harmonic number.
@@ -183,99 +199,34 @@ where
     where
         Option<f64>: From<T>,
     {
-        let lut = zip(self.curve.coeffs(), self.pose.coeffs())
-            .map(|(m1, m2)| m1.map(pow2).sum() + m2.map(pow2).sum())
-            .collect();
-        self.set_harmonic(fourier_power_anaysis(lut, threshold));
+        self.efd = self.efd.fourier_power_anaysis(threshold);
         self
     }
 
-    /// Set the harmonic number of the coefficients.
+    /// Check if the descibed curve is open.
     ///
-    /// # Panics
-    ///
-    /// Panics if the harmonic is zero or greater than the current harmonic.
-    pub fn set_harmonic(&mut self, harmonic: usize) {
-        let current = self.harmonic();
-        assert!(
-            (1..=current).contains(&harmonic),
-            "harmonic ({harmonic}) must in 1..={current}"
-        );
-        self.curve.set_harmonic(harmonic);
-        self.pose.set_harmonic(harmonic);
+    /// Unlike [`Efd::is_open()`], this method is not the `is_open` of the
+    /// coefficients.
+    pub const fn is_open(&self) -> bool {
+        self.is_open
     }
 
     /// Consume self and return the parts of this type. The first is the curve
     /// coefficients, and the second is the pose coefficients.
     ///
-    /// See also [`PosedEfd::from_parts_unchecked()`].
-    pub fn into_inner(self) -> (Efd<D>, Efd<D>) {
-        (self.curve, self.pose)
-    }
-
-    /// Check if the described curve is open.
-    pub fn is_open(&self) -> bool {
-        self.curve.is_open()
-    }
-
-    /// Get the harmonic number of the coefficients.
-    pub fn harmonic(&self) -> usize {
-        self.curve.harmonic()
-    }
-
-    /// Check if the coefficients are valid.
-    ///
-    /// It is only helpful if this object is constructed by
-    /// [`PosedEfd::from_parts_unchecked()`].
-    pub fn is_valid(&self) -> bool {
-        self.curve.is_valid() && self.pose.is_valid()
-    }
-
-    /// Calculate the L1 distance between two coefficient set.
-    ///
-    /// For more distance methods, please see [`Distance`].
-    #[must_use = "this returns the result of the operation, without modifying the original"]
-    pub fn distance(&self, rhs: &Self) -> f64 {
-        self.l1_norm(rhs)
-    }
-
-    /// Get the reference of the curve coefficients.
-    pub fn curve_efd(&self) -> &Efd<D> {
-        &self.curve
-    }
-
-    /// Get the reference of the posed coefficients.
-    pub fn pose_efd(&self) -> &Efd<D> {
-        &self.pose
-    }
-
-    /// Obtain the curve and pose for visualization.
-    ///
-    /// The `len` is the length of the pose vector.
-    pub fn generate(&self, n: usize, len: f64) -> (Vec<Coord<D>>, Vec<Coord<D>>) {
-        generate_pair(self.curve.generate(n), self.pose.generate(n), len)
-    }
-
-    /// Obtain the curve and pose for visualization in half range.
-    ///
-    /// The `len` is the length of the pose vector.
-    pub fn generate_half(&self, n: usize, len: f64) -> (Vec<Coord<D>>, Vec<Coord<D>>) {
-        generate_pair(self.curve.generate_half(n), self.pose.generate_half(n), len)
-    }
-
-    /// Obtain the curve and pose for visualization from a series of time `t`.
-    pub fn generate_by(&self, t: &[f64], len: f64) -> (Vec<Coord<D>>, Vec<Coord<D>>) {
-        generate_pair(self.curve.generate_by(t), self.pose.generate_by(t), len)
+    /// See also [`PosedEfd::from_efd()`].
+    pub fn into_inner(self) -> Efd<D> {
+        self.efd
     }
 }
 
-fn generate_pair<const D: usize>(
-    curve: Vec<Coord<D>>,
-    pose: Vec<Coord<D>>,
-    len: f64,
-) -> (Vec<Coord<D>>, Vec<Coord<D>>) {
-    let pose = zip(&curve, pose)
-        .map(|(p, v)| core::array::from_fn(|i| p[i] + len * v[i]))
-        .collect();
-    (curve, pose)
+impl<const D: usize> core::ops::Deref for PosedEfd<D>
+where
+    U<D>: EfdDim<D>,
+{
+    type Target = Efd<D>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.efd
+    }
 }

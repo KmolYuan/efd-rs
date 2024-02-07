@@ -115,24 +115,6 @@ where
         rhs * self.inverse()
     }
 
-    /// Merge `self` and `rhs`. (`rhs * self`)
-    ///
-    /// ```
-    /// use efd::{tests::*, Efd2};
-    /// # use efd::Curve as _;
-    /// # let curve1 = CURVE2D;
-    /// # let curve2 = CURVE2D;
-    ///
-    /// let a = Efd2::from_curve(curve1, false);
-    /// let b = Efd2::from_curve(curve2, false);
-    /// let geo = b.as_geo() * a.as_geo().inverse();
-    /// assert!(curve_diff(&geo.transform(curve1), curve2) < EPS);
-    /// ```
-    #[must_use = "this returns the result of the operation, without modifying the original"]
-    pub fn apply(&self, rhs: &Self) -> Self {
-        rhs * self
-    }
-
     /// Inverse `self`. (`self^T`/`self^-1`)
     ///
     /// ```
@@ -218,6 +200,19 @@ where
 
 macro_rules! impl_mul {
     ($ty1:ty, $ty2:ty) => {
+        /// Merge `self` and `rhs`.
+        ///
+        /// ```
+        /// use efd::{tests::*, Efd2};
+        /// # use efd::Curve as _;
+        /// # let curve1 = CURVE2D;
+        /// # let curve2 = CURVE2D;
+        ///
+        /// let a = Efd2::from_curve(curve1, false);
+        /// let b = Efd2::from_curve(curve2, false);
+        /// let geo = b.as_geo() * a.as_geo().inverse();
+        /// assert!(curve_diff(&geo.transform(curve1), curve2) < EPS);
+        /// ```
         impl<R: RotHint<D>, const D: usize> core::ops::Mul<$ty2> for $ty1 {
             type Output = GeoVar<R, D>;
             fn mul(self, rhs: $ty2) -> Self::Output {

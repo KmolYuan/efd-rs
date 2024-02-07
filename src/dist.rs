@@ -80,14 +80,3 @@ where
         }
     }
 }
-
-impl<const D: usize> Distance for PosedEfd<D>
-where
-    U<D>: EfdDim<D>,
-{
-    fn err_buf<'a>(&'a self, rhs: &'a Self) -> impl Iterator<Item = f64> + 'a {
-        self.curve_efd()
-            .err_buf(rhs.curve_efd())
-            .chain(self.pose_efd().err_buf(rhs.pose_efd()))
-    }
-}

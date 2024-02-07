@@ -24,12 +24,12 @@ pub use crate::{curve::*, dim::*, dist::*, efd::*, geo::*, posed::*};
 /// use efd::harmonic;
 ///
 /// let is_open = true;
-/// assert_eq!(harmonic!(is_open, [0.; 2], [0.; 3]), 6);
+/// assert_eq!(harmonic!(is_open, [0.; 2], [0.; 3]), 10);
 /// ```
 #[macro_export]
 macro_rules! harmonic {
     ($is_open:expr, $curve1:expr $(, $curve2:expr)*) => {{
-        let len = $curve1.len()$(.max($curve2.len()))*;
+        let len = $curve1.len()$( + $curve2.len())*;
         if $is_open { len * 2 } else { len }
     }};
 }
@@ -41,7 +41,7 @@ macro_rules! harmonic {
 #[macro_export]
 macro_rules! harmonic_nyquist {
     ($is_open:expr, $curve1:expr $(, $curve2:expr)*) => {{
-        let len = $curve1.len()$(.max($curve2.len()))*;
+        let len = $curve1.len()$( + $curve2.len())*;
         if $is_open { len } else { len / 2 }
     }};
 }

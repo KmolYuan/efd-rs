@@ -2,6 +2,8 @@
 use crate::*;
 #[cfg(test)]
 use alloc::{vec, vec::Vec};
+#[cfg(test)]
+use approx::assert_abs_diff_eq;
 use core::iter::zip;
 
 /// Epsilon for curve difference.
@@ -31,7 +33,6 @@ fn error() {
 
 #[test]
 fn efd2d() {
-    use approx::assert_abs_diff_eq;
     let efd = Efd2::from_curve(CURVE2D, false);
     assert!(!efd.is_open());
     // Test starting point
@@ -67,7 +68,6 @@ fn efd2d() {
 
 #[test]
 fn efd2d_open() {
-    use approx::assert_abs_diff_eq;
     let efd = Efd2::from_curve(CURVE2D_OPEN, true);
     assert!(efd.is_open());
     assert_eq!(efd.harmonic(), 14);
@@ -93,7 +93,6 @@ fn efd2d_open() {
 
 #[test]
 fn efd3d() {
-    use approx::assert_abs_diff_eq;
     let efd = Efd3::from_curve(CURVE3D, false);
     assert!(!efd.is_open());
     // Test starting point
@@ -131,10 +130,9 @@ fn efd3d() {
 
 #[test]
 fn posed_efd_open() {
-    use approx::assert_abs_diff_eq;
     let efd = PosedEfd2::from_angles(CURVE2D_POSE, ANGLE2D_POSE, true);
     assert!(efd.is_open());
-    assert_eq!(efd.harmonic(), 16);
+    assert_eq!(efd.harmonic(), 17);
     // Test rotation
     for ang in 0..6 {
         let ang = core::f64::consts::TAU * ang as f64 / 6.;
