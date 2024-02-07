@@ -188,12 +188,12 @@ where
     #[must_use = "The transformed point is returned as a new value"]
     pub fn transform<C>(&self, curve: C) -> Vec<Coord<D>>
     where
-        C: AsRef<[Coord<D>]>,
+        C: Curve<D>,
     {
         curve
-            .as_ref()
-            .iter()
-            .map(|c| self.transform_pt(*c))
+            .to_curve()
+            .into_iter()
+            .map(|c| self.transform_pt(c))
             .collect()
     }
 
@@ -207,7 +207,7 @@ where
         }
     }
 
-    /// Transform an iterator contour.
+    /// Transform an iterator contour and return a new iterator.
     pub fn transform_iter<'a, C>(&'a self, curve: C) -> impl Iterator<Item = Coord<D>> + 'a
     where
         C: IntoIterator<Item = Coord<D>> + 'a,
