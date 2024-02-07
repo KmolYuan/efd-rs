@@ -62,7 +62,7 @@ fn efd2d() {
     let (t, _) = get_target_pos(CURVE2D, false);
     let target = efd.generate_norm_by_t(&t);
     let curve = efd.as_geo().inverse().transform(CURVE2D);
-    assert!(curve_diff(target, curve) < 1.6565);
+    assert!(curve_diff(target, curve) < 0.01695);
 }
 
 #[test]
@@ -119,7 +119,7 @@ fn efd3d() {
     let (t, _) = get_target_pos(CURVE3D, false);
     let target = efd.generate_norm_by(&t);
     let curve = efd.as_geo().inverse().transform(CURVE3D);
-    assert!(curve_diff(target, curve) < 0.0042);
+    assert!(curve_diff(target, curve) < 0.00412);
 }
 
 #[test]

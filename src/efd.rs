@@ -4,9 +4,11 @@ use core::f64::consts::{PI, TAU};
 #[cfg(not(feature = "std"))]
 use num_traits::*;
 
-/// Get the theta value `t` of each point coordinate of the curve.
+/// Get the theta value `t` of each point coordinate and the normalized
+/// geometric variables of the curve.
 ///
-/// This function is faster than [`Efd`] since it only calculates one harmonic.
+/// This function is faster than building [`Efd`] since it only calculates **one
+/// harmonic**.
 ///
 /// ```
 /// use efd::get_target_pos;
@@ -324,6 +326,7 @@ where
     }
 
     /// Get the harmonic number of the coefficients.
+    #[inline]
     pub fn harmonic(&self) -> usize {
         self.coeffs.len()
     }
@@ -414,13 +417,13 @@ where
 
     fn generate_norm_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
         debug_assert!(n > 2, "n ({n}) must larger than 2");
-        let t = na::Matrix1xX::from_fn(n, |_, i| i as f64 / (n - 1) as f64 * theta);
-        U::reconstruct(&self.coeffs, t)
+        let iter = (0..n).map(|i| i as f64 / (n - 1) as f64 * theta);
+        U::reconstruct(&self.coeffs, iter)
     }
 
     /// Generate (reconstruct) a described curve in a time series `t`.
     pub fn generate_by(&self, t: &[f64]) -> Vec<Coord<D>> {
-        let mut curve = U::reconstruct(&self.coeffs, na::Matrix1xX::from_column_slice(t));
+        let mut curve = U::reconstruct(&self.coeffs, t.iter().copied());
         self.geo.transform_inplace(&mut curve);
         curve
     }
@@ -429,11 +432,14 @@ where
     ///
     /// Normalized curve is **without** transformation.
     pub fn generate_norm_by(&self, t: &[f64]) -> Vec<Coord<D>> {
-        U::reconstruct(&self.coeffs, na::Matrix1xX::from_column_slice(t))
+        U::reconstruct(&self.coeffs, t.iter().copied())
     }
 
     /// Generate (reconstruct) a described curve in a normalized time series
     /// `t`.
+    ///
+    /// If the input angle is obtained from [`get_target_pos()`], the
+    /// reconstruction must use this method.
     pub fn generate_by_t(&self, t: &[f64]) -> Vec<Coord<D>> {
         let mut curve = self.generate_norm_by_t(t);
         self.geo.transform_inplace(&mut curve);
@@ -442,24 +448,14 @@ where
 
     /// Generate (reconstruct) a normalized curve in a normalized time series
     /// `t`.
+    ///
+    /// If the input angle is obtained from [`get_target_pos()`], the
+    /// reconstruction must use this method.
     pub fn generate_norm_by_t(&self, t: &[f64]) -> Vec<Coord<D>> {
-        if self.is_open() {
+        if self.is_open() || self.harmonic() <= 1 {
             self.generate_norm_by(t)
         } else {
-            let mut sys = Kernel::zeros();
-            sys[(0, 0)] = 1.;
-            sys[(1, 1)] = 1.;
-            let n_inv = self
-                .coeffs
-                .iter()
-                .skip(1)
-                .filter(|m| U::is_reversed(&sys, m))
-                .count();
-            let t = t
-                .iter()
-                .map(|t| t + (n_inv % 2) as f64 * PI)
-                .collect::<Vec<_>>();
-            self.generate_norm_by(&t)
+            U::reconstruct(&self.coeffs, t.iter().map(|t| t + PI))
         }
     }
 }

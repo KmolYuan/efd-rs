@@ -120,7 +120,11 @@ pub trait EfdDim<const D: usize>: Sealed {
             }
         }
         // Normalize coefficients sign (zeta)
-        if coeffs.len() > 1 && Self::is_reversed(&coeffs[0], &coeffs[1]) {
+        if coeffs.len() > 1 && {
+            let [u1, v1] = [coeffs[0].column(0), coeffs[0].column(1)];
+            let [u2, v2] = [coeffs[1].column(0), coeffs[1].column(1)];
+            (u1 - u2).norm() + (v1 - v2).norm() > (u1 + u2).norm() + (v1 + v2).norm()
+        } {
             coeffs.iter_mut().step_by(2).for_each(|s| *s *= -1.);
         }
         // Rotation angle (psi)
@@ -143,12 +147,16 @@ pub trait EfdDim<const D: usize>: Sealed {
     }
 
     #[doc(hidden)]
-    fn reconstruct(coeffs: &[Kernel<D>], t: na::Matrix1xX<f64>) -> Vec<Coord<D>> {
+    fn reconstruct(
+        coeffs: &[Kernel<D>],
+        t_iter: impl ExactSizeIterator<Item = f64>,
+    ) -> Vec<Coord<D>> {
+        let t = na::Matrix1xX::from_iterator(t_iter.len(), t_iter);
         coeffs
             .iter()
             .enumerate()
-            .map(|(i, c)| {
-                let t = &t * (i + 1) as f64;
+            .map(|(n, c)| {
+                let t = (n + 1) as f64 * &t;
                 c * na::Matrix2xX::from_rows(&[t.map(f64::cos), t.map(f64::sin)])
             })
             .reduce(|a, b| a + b)
@@ -157,20 +165,13 @@ pub trait EfdDim<const D: usize>: Sealed {
             .map(|row| row.into())
             .collect()
     }
-
-    #[doc(hidden)]
-    fn is_reversed(m1: &Kernel<D>, m2: &Kernel<D>) -> bool {
-        let [u1, v1] = [m1.column(0), m1.column(1)];
-        let [u2, v2] = [m2.column(0), m2.column(1)];
-        (u1 - u2).norm() + (v1 - v2).norm() > (u1 + u2).norm() + (v1 + v2).norm()
-    }
 }
 
 impl EfdDim<1> for U<1> {
     type Rot = na::Rotation<f64, 1>;
 
-    fn get_rot(_m: &[Kernel<1>]) -> Self::Rot {
-        na::Rotation::from_matrix_unchecked(na::matrix![1.])
+    fn get_rot(m: &[Kernel<1>]) -> Self::Rot {
+        na::Rotation::from_matrix_unchecked(na::matrix![m[0][0].signum()])
     }
 }
 
