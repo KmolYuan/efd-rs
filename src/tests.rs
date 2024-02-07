@@ -60,7 +60,7 @@ fn efd2d() {
     assert_abs_diff_eq!(geo.scale(), 48.16765830752243);
     // Test reconstruction
     let (t, _) = get_target_pos(CURVE2D, false);
-    let target = efd.generate_norm_by(&t);
+    let target = efd.generate_norm_by_t(&t);
     let curve = efd.as_geo().inverse().transform(CURVE2D);
     assert!(curve_diff(target, curve) < 1.6565);
 }
@@ -79,7 +79,7 @@ fn efd2d_open() {
     assert_abs_diff_eq!(geo.scale(), 33.930916934329495);
     // Test reconstruction
     let (t, _) = get_target_pos(CURVE2D_OPEN, true);
-    let target = efd.generate_norm_by(&t);
+    let target = efd.generate_norm_by_t(&t);
     let curve = efd.as_geo().inverse().transform(CURVE2D_OPEN);
     assert!(curve_diff(target, curve) < 0.0143);
 }

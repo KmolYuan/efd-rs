@@ -116,16 +116,11 @@ pub trait EfdDim<const D: usize>: Sealed {
                 m.copy_from(&(*m * theta));
             }
             if let Some(t) = t {
-                // FIXME
                 t.iter_mut().for_each(|v| *v -= theta);
             }
         }
         // Normalize coefficients sign (zeta)
-        if coeffs.len() > 1 && {
-            let [u1, v1] = [coeffs[0].column(0), coeffs[0].column(1)];
-            let [u2, v2] = [coeffs[1].column(0), coeffs[1].column(1)];
-            (u1 - u2).norm() + (v1 - v2).norm() > (u1 + u2).norm() + (v1 + v2).norm()
-        } {
+        if coeffs.len() > 1 && Self::is_reversed(&coeffs[0], &coeffs[1]) {
             coeffs.iter_mut().step_by(2).for_each(|s| *s *= -1.);
         }
         // Rotation angle (psi)
@@ -161,6 +156,13 @@ pub trait EfdDim<const D: usize>: Sealed {
             .column_iter()
             .map(|row| row.into())
             .collect()
+    }
+
+    #[doc(hidden)]
+    fn is_reversed(m1: &Kernel<D>, m2: &Kernel<D>) -> bool {
+        let [u1, v1] = [m1.column(0), m1.column(1)];
+        let [u2, v2] = [m2.column(0), m2.column(1)];
+        (u1 - u2).norm() + (v1 - v2).norm() > (u1 + u2).norm() + (v1 + v2).norm()
     }
 }
 

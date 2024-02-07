@@ -418,18 +418,49 @@ where
         U::reconstruct(&self.coeffs, t)
     }
 
-    /// Generate (reconstruct) a described curve in a series of time `t`.
+    /// Generate (reconstruct) a described curve in a time series `t`.
     pub fn generate_by(&self, t: &[f64]) -> Vec<Coord<D>> {
         let mut curve = U::reconstruct(&self.coeffs, na::Matrix1xX::from_column_slice(t));
         self.geo.transform_inplace(&mut curve);
         curve
     }
 
-    /// Generate (reconstruct) a normalized curve in a series of time `t`.
+    /// Generate (reconstruct) a normalized curve in a time series `t`.
     ///
     /// Normalized curve is **without** transformation.
     pub fn generate_norm_by(&self, t: &[f64]) -> Vec<Coord<D>> {
         U::reconstruct(&self.coeffs, na::Matrix1xX::from_column_slice(t))
+    }
+
+    /// Generate (reconstruct) a described curve in a normalized time series
+    /// `t`.
+    pub fn generate_by_t(&self, t: &[f64]) -> Vec<Coord<D>> {
+        let mut curve = self.generate_norm_by_t(t);
+        self.geo.transform_inplace(&mut curve);
+        curve
+    }
+
+    /// Generate (reconstruct) a normalized curve in a normalized time series
+    /// `t`.
+    pub fn generate_norm_by_t(&self, t: &[f64]) -> Vec<Coord<D>> {
+        if self.is_open() {
+            self.generate_norm_by(t)
+        } else {
+            let mut sys = Kernel::zeros();
+            sys[(0, 0)] = 1.;
+            sys[(1, 1)] = 1.;
+            let n_inv = self
+                .coeffs
+                .iter()
+                .skip(1)
+                .filter(|m| U::is_reversed(&sys, m))
+                .count();
+            let t = t
+                .iter()
+                .map(|t| t + (n_inv % 2) as f64 * PI)
+                .collect::<Vec<_>>();
+            self.generate_norm_by(&t)
+        }
     }
 }
 
