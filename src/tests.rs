@@ -71,6 +71,13 @@ fn efd2d_open() {
     let efd = Efd2::from_curve(CURVE2D_OPEN, true);
     assert!(efd.is_open());
     assert_eq!(efd.harmonic(), 14);
+    // Test rotation
+    for ang in 0..6 {
+        let ang = core::f64::consts::TAU * ang as f64 / 6.;
+        let curve = GeoVar::from_rot(na::UnitComplex::new(ang)).transform(CURVE2D_OPEN);
+        let efd_rot = Efd2::from_curve_harmonic(curve, true, efd.harmonic());
+        assert_abs_diff_eq!(efd_rot.l1_norm(&efd), 0., epsilon = 1e-12);
+    }
     // Test transformation
     let geo = efd.as_geo();
     assert_abs_diff_eq!(geo.trans()[0], 43.03456791427352);
