@@ -170,16 +170,18 @@ where
         let mut curve = geo_inv.transform(curve);
         // A constant length to define unit vectors
         const LENGTH: f64 = 1.;
+        let dxyz = zip(&curve, &curve[1..])
+            .map(|(a, b)| a.l2_norm(b))
+            .collect::<Vec<_>>();
+        let mut guide = dxyz.clone();
+        guide.reserve(dxyz.len() + 2);
+        guide.push(LENGTH);
+        guide.extend(dxyz.into_iter().rev());
+        guide.push(LENGTH); // for closed curve
         let vectors = zip(&curve, geo_inv.only_rot().transform(vectors))
             .map(|(p, v)| array::from_fn(|i| p[i] + LENGTH * v[i]))
             .rev()
             .collect::<Vec<_>>();
-        let rev_guide = curve
-            .iter()
-            .rev()
-            .map(|p| array::from_fn(|i| p[i] + vectors[0][i]));
-        let mut guide = curve.clone();
-        guide.extend(rev_guide);
         curve.extend(vectors);
         let (_, coeffs, geo2) = U::get_coeff(&curve, IS_OPEN, harmonic, Some(&guide));
         let efd = Efd::from_parts_unchecked(coeffs, geo1 * geo2);

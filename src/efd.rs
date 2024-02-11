@@ -210,8 +210,7 @@ where
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let curve = curve.as_curve();
-        let (t, mut coeffs, geo) = U::get_coeff(curve, is_open, harmonic, None);
+        let (t, mut coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, harmonic, None);
         let geo = geo * U::coeff_norm(&mut coeffs, None, None);
         (Self { coeffs, geo }, t)
     }
@@ -223,8 +222,7 @@ where
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let curve = curve.as_curve();
-        let (_, coeffs, geo) = U::get_coeff(curve, is_open, harmonic, None);
+        let (_, coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, harmonic, None);
         Self { coeffs, geo }
     }
 

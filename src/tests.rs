@@ -132,7 +132,7 @@ fn efd3d() {
 fn posed_efd_open() {
     let efd = PosedEfd2::from_angles(CURVE2D_POSE, ANGLE2D_POSE, true);
     assert!(efd.is_open());
-    assert_eq!(efd.harmonic(), 17);
+    assert_eq!(efd.harmonic(), 16);
     // Test rotation
     for ang in 0..6 {
         let ang = core::f64::consts::TAU * ang as f64 / 6.;

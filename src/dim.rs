@@ -47,20 +47,24 @@ pub trait EfdDim<const D: usize>: Sealed {
         curve: &[Coord<D>],
         is_open: bool,
         harmonic: usize,
-        guide: Option<&[Coord<D>]>,
+        guide: Option<&[f64]>,
     ) -> (Vec<f64>, Coeffs<D>, GeoVar<Self::Rot, D>) {
-        let to_diff = |curve: &[_]| {
-            diff(if is_open || curve.first() == curve.last() {
-                to_mat(curve)
-            } else {
-                to_mat(curve.closed_lin())
-            })
-        };
+        let is_closed = !is_open && curve.first() != curve.last();
+        // Differential of the components
+        let dxyz = diff(if is_closed {
+            to_mat(curve.closed_lin())
+        } else {
+            to_mat(curve)
+        });
         // Length of curve between points
-        let dt = to_diff(guide.unwrap_or(curve))
-            .map(pow2)
-            .row_sum()
-            .map(f64::sqrt);
+        // from: (1) provided guide, or
+        //       (2) differential of the components
+        let dt = if let Some(guide) = guide {
+            debug_assert_eq!(guide.len(), dxyz.ncols());
+            na::Matrix1xX::from_row_slice(guide)
+        } else {
+            dxyz.map(pow2).row_sum().map(f64::sqrt)
+        };
         // Length of curve from start to each point
         let t = cumsum(dt.clone()).insert_column(0, 0.);
         // Total length of curve
@@ -69,8 +73,6 @@ pub trait EfdDim<const D: usize>: Sealed {
         let phi = &t * TAU / zt * if is_open { 0.5 } else { 1. };
         // Scalar for coefficients
         let scalar = zt / (PI * PI) * if is_open { 2. } else { 0.5 };
-        // Differential of the components
-        let dxyz = to_diff(curve);
         // Coefficients (2dim * N)
         // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
         let mut coeff = vec![Kernel::<D>::zeros(); harmonic];
@@ -100,7 +102,7 @@ pub trait EfdDim<const D: usize>: Sealed {
         }
         // Keep the t number the same as the input curve
         let mut t = Vec::from(phi.data);
-        if !is_open && curve.first() != curve.last() {
+        if is_closed {
             t.pop();
         }
         (t, coeff, GeoVar::from_trans(center))
