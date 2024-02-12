@@ -1,11 +1,14 @@
+//! Posed EFD (Elliptic Fourier Descriptor) is a special shape to describe the
+//! pose of a curve. It is a combination of two curves, the first is the
+//! original curve, and the second is the pose unit vectors.
+//!
+//! Please see the [`PosedEfd`] type for more information.
 use crate::*;
 use alloc::vec::Vec;
 use core::{array, iter::zip};
 #[cfg(not(feature = "std"))]
 #[allow(unused_imports)]
 use num_traits::*;
-
-const IS_OPEN: bool = false;
 
 /// A 1D shape with a pose described by EFD.
 pub type PosedEfd1 = PosedEfd<1>;
@@ -17,6 +20,27 @@ pub type PosedEfd3 = PosedEfd<3>;
 fn uvec<const D: usize>(v: [f64; D]) -> Coord<D> {
     let norm = v.l2_norm(&[0.; D]);
     v.map(|x| x / norm)
+}
+
+/// Control the posed EFD is using open curve as the signature or not.
+pub const IS_OPEN: bool = false;
+
+/// Calculate the number of harmonics for posed EFD.
+///
+/// The number of harmonics is calculated by the minimum length of the curves.
+/// And if the curve is open accroding to [`IS_OPEN`], the number is doubled.
+///
+/// ```
+/// assert_eq!(efd::posed::harmonic(2, 3), 7);
+/// ```
+#[inline]
+pub const fn harmonic(len1: usize, len2: usize) -> usize {
+    let len = len1 + len2 + 2;
+    if IS_OPEN {
+        len * 2
+    } else {
+        len
+    }
 }
 
 /// A shape with a pose described by EFD.
@@ -44,7 +68,7 @@ impl PosedEfd2 {
     where
         C: Curve<2>,
     {
-        let harmonic = harmonic!(IS_OPEN, curve, angles);
+        let harmonic = harmonic(curve.len(), angles.len());
         Self::from_angles_harmonic(curve, angles, is_open, harmonic).fourier_power_anaysis(None)
     }
 
@@ -86,7 +110,7 @@ where
         C1: Curve<D>,
         C2: Curve<D>,
     {
-        let harmonic = harmonic!(IS_OPEN, curve1, curve2);
+        let harmonic = harmonic(curve1.len(), curve2.len());
         Self::from_series_harmonic(curve1, curve2, is_open, harmonic).fourier_power_anaysis(None)
     }
 
@@ -119,7 +143,7 @@ where
         C: Curve<D>,
         V: Curve<D>,
     {
-        let harmonic = harmonic!(IS_OPEN, curve, vectors);
+        let harmonic = harmonic(curve.len(), vectors.len());
         Self::from_uvec_harmonic(curve, vectors, is_open, harmonic)
     }
 
@@ -144,7 +168,7 @@ where
         C: Curve<D>,
         V: Curve<D>,
     {
-        let harmonic = harmonic!(IS_OPEN, curve, vectors);
+        let harmonic = harmonic(curve.len(), vectors.len());
         Self::from_uvec_harmonic_unchecked(curve, vectors, is_open, harmonic)
             .fourier_power_anaysis(None)
     }

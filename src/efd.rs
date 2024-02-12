@@ -4,6 +4,38 @@ use core::f64::consts::{PI, TAU};
 #[cfg(not(feature = "std"))]
 use num_traits::*;
 
+/// Calculate the number of harmonics.
+///
+/// The number of harmonics is calculated by the minimum length of the curves.
+/// And if the curve is open, the number is doubled.
+///
+/// ```
+/// let is_open = true;
+/// assert_eq!(efd::harmonic(is_open, 3), 6);
+/// ```
+#[inline]
+pub const fn harmonic(is_open: bool, len: usize) -> usize {
+    if is_open {
+        len * 2
+    } else {
+        len
+    }
+}
+
+/// Calculate the number of harmonics with the Nyquist frequency.
+///
+/// This macro is similar to [`harmonic()`], but the number of harmonics is half
+/// if the given curve meets the Nyquist–Shannon sampling theorem.
+///
+/// ```
+/// let is_open = false;
+/// assert_eq!(efd::harmonic_nyquist(is_open, 6), 3);
+/// ```
+#[inline]
+pub const fn harmonic_nyquist(is_open: bool, len: usize) -> usize {
+    harmonic(is_open, len) / 2
+}
+
 /// Get the theta value `t` of each point coordinate and the normalized
 /// geometric variables of the curve.
 ///
@@ -153,7 +185,7 @@ where
     where
         C: Curve<D>,
     {
-        let harmonic = harmonic!(is_open, curve);
+        let harmonic = harmonic(is_open, curve.len());
         Self::from_curve_harmonic(curve, is_open, harmonic).fourier_power_anaysis(None)
     }
 
@@ -170,7 +202,7 @@ where
     where
         C: Curve<D>,
     {
-        let harmonic = harmonic_nyquist!(is_open, curve);
+        let harmonic = harmonic_nyquist(is_open, curve.len());
         Self::from_curve_harmonic(curve, is_open, harmonic).fourier_power_anaysis(None)
     }
 

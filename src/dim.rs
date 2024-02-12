@@ -27,9 +27,14 @@ pub type Rot<const D: usize> = <U<D> as EfdDim<D>>::Rot;
 trait Sealed {}
 impl<const D: usize> Sealed for U<D> {}
 
-/// Trait for the dimension [`U<D>`] of EFD.
+/// Trait for the dimension [`U<D>`](U) of EFD.
+///
+/// Use `where U<D>: EfdDim<D>` bound to constraint the dimension `D` that
+/// implements this trait. Please see the [implementors section](#implementors)
+/// for the supported dimensions.
 ///
 /// **This trait is sealed and cannot be implemented outside of this crate.**
+/// The API of this trait is not public and may change in the future.
 #[allow(private_bounds)]
 pub trait EfdDim<const D: usize>: Sealed {
     /// Rotation type of the dimension `D`.
@@ -149,12 +154,13 @@ pub trait EfdDim<const D: usize>: Sealed {
             m.tr_mul(&psi_mat).transpose_to(m);
         }
         // Scaling factor
-        // |u1| == |a1| (after rotation)
+        // |u1| == a1 (after rotation normalized)
         let scale = if rot.is_some() {
             1.
         } else {
             let scale = coeffs[0][0];
             coeffs.iter_mut().for_each(|m| *m /= scale);
+            debug_assert!(scale.is_sign_positive());
             scale
         };
         GeoVar::new([0.; D], psi, scale)
@@ -169,12 +175,12 @@ pub trait EfdDim<const D: usize>: Sealed {
         coeffs
             .iter()
             .enumerate()
-            .map(|(n, c)| {
+            .map(|(n, m)| {
                 let t = (n + 1) as f64 * &t;
-                c * na::Matrix2xX::from_rows(&[t.map(f64::cos), t.map(f64::sin)])
+                m * na::Matrix2xX::from_rows(&[t.map(f64::cos), t.map(f64::sin)])
             })
             .reduce(|a, b| a + b)
-            .unwrap_or_else(|| MatrixRxX::from_vec(Vec::new()))
+            .unwrap_or_else(|| MatrixRxX::from_vec(Vec::new())) // empty coeffs
             .column_iter()
             .map(|row| row.into())
             .collect()
