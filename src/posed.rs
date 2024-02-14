@@ -22,8 +22,9 @@ fn uvec<const D: usize>(v: [f64; D]) -> Coord<D> {
     v.map(|x| x / norm)
 }
 
-/// Control the posed EFD is using open curve as the signature or not.
-pub const IS_OPEN: bool = false;
+/// A global setting controls the posed EFD is using open curve as the signature
+/// or not.
+pub const IS_OPEN: bool = true;
 
 /// Calculate the number of harmonics for posed EFD.
 ///
@@ -41,6 +42,38 @@ pub const fn harmonic(len1: usize, len2: usize) -> usize {
     } else {
         len
     }
+}
+
+/// Get the path signature and its guide from a curve and its unit vectors.
+pub fn path_signature<C, V, const D: usize>(
+    curve: C,
+    vectors: V,
+    geo_inv: GeoVar<Rot<D>, D>,
+) -> (Vec<Coord<D>>, Vec<f64>)
+where
+    U<D>: EfdDim<D>,
+    C: Curve<D>,
+    V: Curve<D>,
+{
+    // A constant length to define unit vectors
+    const LENGTH: f64 = 1.;
+    let mut curve = geo_inv.transform(curve);
+    let dxyz = zip(&curve, &curve[1..])
+        .map(|(a, b)| a.l2_norm(b))
+        .collect::<Vec<_>>();
+    let mut guide = dxyz.clone();
+    guide.reserve(dxyz.len() + 2);
+    guide.push(LENGTH);
+    guide.extend(dxyz.into_iter().rev());
+    if !IS_OPEN {
+        guide.push(LENGTH);
+    }
+    let vectors = geo_inv.only_rot().transform(vectors);
+    for (i, v) in vectors.into_iter().enumerate().rev() {
+        let p = &curve[i];
+        curve.push(array::from_fn(|i| p[i] + LENGTH * v[i]));
+    }
+    (curve, guide)
 }
 
 /// A shape with a pose described by EFD.
@@ -190,23 +223,7 @@ where
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let (_, geo1) = get_target_pos(curve.as_curve(), is_open);
-        let geo_inv = geo1.inverse();
-        let mut curve = geo_inv.transform(curve);
-        // A constant length to define unit vectors
-        const LENGTH: f64 = 1.;
-        let dxyz = zip(&curve, &curve[1..])
-            .map(|(a, b)| a.l2_norm(b))
-            .collect::<Vec<_>>();
-        let mut guide = dxyz.clone();
-        guide.reserve(dxyz.len() + 2);
-        guide.push(LENGTH);
-        guide.extend(dxyz.into_iter().rev());
-        guide.push(LENGTH); // for closed curve
-        let vectors = zip(&curve, geo_inv.only_rot().transform(vectors))
-            .map(|(p, v)| array::from_fn(|i| p[i] + LENGTH * v[i]))
-            .rev()
-            .collect::<Vec<_>>();
-        curve.extend(vectors);
+        let (curve, guide) = path_signature(curve, vectors, geo1.inverse());
         let (_, coeffs, geo2) = U::get_coeff(&curve, IS_OPEN, harmonic, Some(&guide));
         let efd = Efd::from_parts_unchecked(coeffs, geo1 * geo2);
         Self { efd, is_open }
