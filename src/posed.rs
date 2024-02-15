@@ -57,8 +57,8 @@ where
 {
     // A constant length to define unit vectors
     const LENGTH: f64 = 1.;
-    let mut curve = geo_inv.transform(curve);
-    let dxyz = zip(&curve, &curve[1..])
+    let mut sig = geo_inv.transform(curve);
+    let dxyz = zip(&sig, &sig[1..])
         .map(|(a, b)| a.l2_norm(b))
         .collect::<Vec<_>>();
     let mut guide = dxyz.clone();
@@ -70,10 +70,10 @@ where
     }
     let vectors = geo_inv.only_rot().transform(vectors);
     for (i, v) in vectors.into_iter().enumerate().rev() {
-        let p = &curve[i];
-        curve.push(array::from_fn(|i| p[i] + LENGTH * v[i]));
+        let p = &sig[i];
+        sig.push(array::from_fn(|i| p[i] + LENGTH * v[i]));
     }
-    (curve, guide)
+    (sig, guide)
 }
 
 /// A shape with a pose described by EFD.
@@ -223,8 +223,8 @@ where
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let (_, geo1) = get_target_pos(curve.as_curve(), is_open);
-        let (curve, guide) = path_signature(curve, vectors, geo1.inverse());
-        let (_, coeffs, geo2) = U::get_coeff(&curve, IS_OPEN, harmonic, Some(&guide));
+        let (sig, guide) = path_signature(curve, vectors, geo1.inverse());
+        let (_, coeffs, geo2) = U::get_coeff(&sig, IS_OPEN, harmonic, Some(&guide));
         let efd = Efd::from_parts_unchecked(coeffs, geo1 * geo2);
         Self { efd, is_open }
     }
