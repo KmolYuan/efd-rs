@@ -1,4 +1,4 @@
-use alloc::vec::Vec;
+use alloc::{borrow::Cow, vec::Vec};
 
 /// Coordinate type of the dimension `D`.
 pub type Coord<const D: usize> = [f64; D];
@@ -54,7 +54,7 @@ pub trait Curve<const D: usize>: Sized {
     /// Check if a curve's first and end points are the same.
     fn is_closed(&self) -> bool {
         let curve = self.as_curve();
-        matches!((curve.first(), curve.last()), (Some(a), Some(b)) if a == b)
+        curve.first() == curve.last()
     }
 }
 
@@ -88,7 +88,7 @@ impl<const D: usize> Curve<D> for &[Coord<D>] {
     impl_slice!();
 }
 
-impl<const D: usize> Curve<D> for alloc::borrow::Cow<'_, [Coord<D>]> {
+impl<const D: usize> Curve<D> for Cow<'_, [Coord<D>]> {
     impl_slice!();
 }
 

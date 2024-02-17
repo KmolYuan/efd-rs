@@ -32,7 +32,7 @@ pub const IS_OPEN: bool = true;
 /// And if the curve is open accroding to [`IS_OPEN`], the number is doubled.
 ///
 /// ```
-/// assert_eq!(efd::posed::harmonic(2, 3), 7);
+/// assert_eq!(efd::posed::harmonic(2, 3), 14);
 /// ```
 #[inline]
 pub const fn harmonic(len1: usize, len2: usize) -> usize {
@@ -44,8 +44,41 @@ pub const fn harmonic(len1: usize, len2: usize) -> usize {
     }
 }
 
-/// Get the path signature and its guide from a curve and its unit vectors.
+/// Transform 2D angles to unit vectors.
+pub fn ang2vec(angles: &[f64]) -> Vec<Coord<2>> {
+    angles.iter().map(|a| [a.cos(), a.sin()]).collect()
+}
+
+/// Get the path signature and its target position from a curve and its unit
+/// vectors.
+///
+/// ```
+/// use efd::posed::{ang2vec, path_signature};
+/// # let curve = efd::tests::CURVE2D_POSE;
+/// # let angles = efd::tests::ANGLE2D_POSE;
+///
+/// let (sig, t, geo) = path_signature(curve, ang2vec(angles), true);
+/// ```
+/// See also [`get_target_pos()`].
 pub fn path_signature<C, V, const D: usize>(
+    curve: C,
+    vectors: V,
+    is_open: bool,
+) -> (Vec<Coord<D>>, Vec<f64>, GeoVar<Rot<D>, D>)
+where
+    U<D>: EfdDim<D>,
+    C: Curve<D>,
+    V: Curve<D>,
+{
+    let (_, geo1) = get_target_pos(curve.as_curve(), is_open);
+    let (sig, guide) = impl_path_signature(curve, vectors, geo1.inverse());
+    // Same as `get_target_pos()`
+    let (mut t, mut coeffs, geo2) = U::get_coeff(&sig, IS_OPEN, 1, Some(&guide));
+    let geo = geo1 * geo2 * U::coeff_norm(&mut coeffs, Some(&mut t), None);
+    (sig, t, geo)
+}
+
+fn impl_path_signature<C, V, const D: usize>(
     curve: C,
     vectors: V,
     geo_inv: GeoVar<Rot<D>, D>,
@@ -112,11 +145,7 @@ impl PosedEfd2 {
     where
         C: Curve<2>,
     {
-        let vectors = angles
-            .iter()
-            .map(|a| [a.cos(), a.sin()])
-            .collect::<Vec<_>>();
-        Self::from_uvec_harmonic_unchecked(curve, vectors, is_open, harmonic)
+        Self::from_uvec_harmonic_unchecked(curve, ang2vec(angles), is_open, harmonic)
     }
 }
 
@@ -223,7 +252,7 @@ where
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let (_, geo1) = get_target_pos(curve.as_curve(), is_open);
-        let (sig, guide) = path_signature(curve, vectors, geo1.inverse());
+        let (sig, guide) = impl_path_signature(curve, vectors, geo1.inverse());
         let (_, coeffs, geo2) = U::get_coeff(&sig, IS_OPEN, harmonic, Some(&guide));
         let efd = Efd::from_parts_unchecked(coeffs, geo1 * geo2);
         Self { efd, is_open }
