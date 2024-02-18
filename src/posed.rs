@@ -70,11 +70,11 @@ where
     C: Curve<D>,
     V: Curve<D>,
 {
-    let (_, geo1) = get_target_pos(curve.as_curve(), is_open);
-    let (sig, guide) = impl_path_signature(curve, vectors, geo1.inverse());
-    // Same as `get_target_pos()`
-    let (mut t, mut coeffs, geo2) = U::get_coeff(&sig, IS_OPEN, 1, Some(&guide));
-    let geo = geo1 * geo2 * U::coeff_norm(&mut coeffs, Some(&mut t), None);
+    let (_, geo) = get_target_pos(curve.as_curve(), is_open);
+    let (sig, guide) = impl_path_signature(curve, vectors, geo.inverse());
+    let (mut t, mut coeffs, _) = U::get_coeff(&sig, IS_OPEN, 1, Some(&guide));
+    // Only normalize the target position
+    U::coeff_norm(&mut coeffs, Some(&mut t), None);
     (sig, t, geo)
 }
 
