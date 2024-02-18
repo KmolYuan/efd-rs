@@ -17,11 +17,6 @@ pub type PosedEfd2 = PosedEfd<2>;
 /// A 3D shape with a pose described by EFD.
 pub type PosedEfd3 = PosedEfd<3>;
 
-fn uvec<const D: usize>(v: [f64; D]) -> Coord<D> {
-    let norm = v.l2_norm(&[0.; D]);
-    v.map(|x| x / norm)
-}
-
 /// A global setting controls the posed EFD is using open curve as the signature
 /// or not.
 pub const IS_OPEN: bool = true;
@@ -87,8 +82,8 @@ where
     C: Curve<D>,
     V: Curve<D>,
 {
-    // A constant length to define unit vectors
-    const LENGTH: f64 = 1.;
+    // Get the length of the unit vectors
+    let length = vectors.as_curve()[0].l2_norm(&[0.; D]);
     let (_, geo) = get_target_pos(curve.as_curve(), is_open);
     let geo_inv = geo.inverse();
     let mut sig = geo_inv.transform(curve);
@@ -97,15 +92,18 @@ where
         .collect::<Vec<_>>();
     let mut guide = dxyz.clone();
     guide.reserve(dxyz.len() + 2);
-    guide.push(LENGTH);
+    guide.push(length);
     guide.extend(dxyz.into_iter().rev());
     if !IS_OPEN {
-        guide.push(LENGTH);
+        guide.push(length);
     }
-    let vectors = geo_inv.only_rot().transform(vectors);
+    let vectors = geo_inv
+        .only_rot()
+        .with_scale(length.recip())
+        .transform(vectors);
     for (i, v) in vectors.into_iter().enumerate().rev() {
         let p = &sig[i];
-        sig.push(array::from_fn(|i| p[i] + LENGTH * v[i]));
+        sig.push(array::from_fn(|i| p[i] + length * v[i]));
     }
     (sig, guide, geo)
 }
@@ -146,7 +144,7 @@ impl PosedEfd2 {
     where
         C: Curve<2>,
     {
-        Self::from_uvec_harmonic_unchecked(curve, ang2vec(angles), is_open, harmonic)
+        Self::from_uvec_harmonic(curve, ang2vec(angles), is_open, harmonic)
     }
 }
 
@@ -191,61 +189,33 @@ where
         C2: Curve<D>,
     {
         let vectors = zip(curve1.as_curve(), curve2.as_curve())
-            .map(|(a, b)| uvec(array::from_fn(|i| b[i] - a[i])))
+            .map(|(a, b)| array::from_fn(|i| b[i] - a[i]))
             .collect::<Vec<_>>();
-        Self::from_uvec_harmonic_unchecked(curve1, vectors, is_open, harmonic)
+        Self::from_uvec_harmonic(curve1, vectors, is_open, harmonic)
     }
 
     /// Calculate the coefficients from a curve and its unit vectors from each
     /// point.
     ///
-    /// See also [`PosedEfd::from_uvec_unchecked()`] if you want to skip the
-    /// unit vector calculation.
+    /// If the unit vectors is not normalized, the length of the first vector
+    /// will be used as the scaling factor.
     pub fn from_uvec<C, V>(curve: C, vectors: V, is_open: bool) -> Self
     where
         C: Curve<D>,
         V: Curve<D>,
     {
         let harmonic = harmonic(curve.len(), vectors.len());
-        Self::from_uvec_harmonic(curve, vectors, is_open, harmonic)
+        Self::from_uvec_harmonic(curve, vectors, is_open, harmonic).fourier_power_anaysis(None)
     }
 
     /// Calculate the coefficients from a curve and its unit vectors from each
     /// point.
     ///
-    /// See also [`PosedEfd::from_uvec_harmonic_unchecked()`] if you want to
-    /// skip the unit vector calculation.
-    pub fn from_uvec_harmonic<C, V>(curve: C, vectors: V, is_open: bool, harmonic: usize) -> Self
-    where
-        C: Curve<D>,
-        V: Curve<D>,
-    {
-        let vectors = vectors.to_curve().into_iter().map(uvec).collect::<Vec<_>>();
-        Self::from_uvec_harmonic_unchecked(curve, vectors, is_open, harmonic)
-    }
-
-    /// Calculate the coefficients from a curve and its unit vectors from each
-    /// point.
-    pub fn from_uvec_unchecked<C, V>(curve: C, vectors: V, is_open: bool) -> Self
-    where
-        C: Curve<D>,
-        V: Curve<D>,
-    {
-        let harmonic = harmonic(curve.len(), vectors.len());
-        Self::from_uvec_harmonic_unchecked(curve, vectors, is_open, harmonic)
-            .fourier_power_anaysis(None)
-    }
-
-    /// Calculate the coefficients from a curve and its unit vectors from each
-    /// point.
+    /// If the unit vectors is not normalized, the length of the first vector
+    /// will be used as the scaling factor.
     ///
     /// The `harmonic` is the number of the coefficients to be calculated.
-    pub fn from_uvec_harmonic_unchecked<C, V>(
-        curve: C,
-        vectors: V,
-        is_open: bool,
-        harmonic: usize,
-    ) -> Self
+    pub fn from_uvec_harmonic<C, V>(curve: C, vectors: V, is_open: bool, harmonic: usize) -> Self
     where
         C: Curve<D>,
         V: Curve<D>,

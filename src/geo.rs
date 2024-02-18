@@ -95,6 +95,12 @@ where
         Self::from_rot(self.inner.isometry.rotation)
     }
 
+    /// Set the scaling property.
+    pub fn with_scale(mut self, scale: f64) -> Self {
+        self.inner.set_scaling(scale);
+        self
+    }
+
     /// Merge inverse `self` and `rhs`. (`rhs * self^T`)
     ///
     /// It can be used on a not normalized contour `a` transforming to `b`.
