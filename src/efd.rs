@@ -57,8 +57,7 @@ where
     C: Curve<D>,
     U<D>: EfdDim<D>,
 {
-    let (mut t, mut coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, 1, None);
-    let geo = geo * U::coeff_norm(&mut coeffs, Some(&mut t), None);
+    let (Efd { geo, .. }, t) = Efd::from_curve_harmonic_and_get(curve, is_open, 1);
     (t, geo)
 }
 
@@ -226,6 +225,12 @@ where
 
     /// Same as [`Efd::from_curve_harmonic()`] but get the the theta value of
     /// each point coordinate of the curve.
+    ///
+    /// ```
+    /// let curve = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
+    /// let (efd, t) = efd::Efd::from_curve_harmonic_and_get(curve, true, 1);
+    /// assert_eq!(t.len(), 4);
+    /// ```
     ///
     /// See also [`get_target_pos()`] if you want to ignore the coefficients.
     ///
