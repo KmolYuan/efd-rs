@@ -70,19 +70,18 @@ where
     C: Curve<D>,
     V: Curve<D>,
 {
-    let (_, geo) = get_target_pos(curve.as_curve(), is_open);
-    let (sig, guide) = impl_path_signature(curve, vectors, geo.inverse());
-    let (mut t, mut coeffs, _) = U::get_coeff(&sig, IS_OPEN, 1, Some(&guide));
+    let (sig, guide, geo1) = impl_path_signature(curve, vectors, is_open);
+    let (mut t, mut coeffs, geo2) = U::get_coeff(&sig, IS_OPEN, 1, Some(&guide));
     // Only normalize the target position
     U::coeff_norm(&mut coeffs, Some(&mut t), None);
-    (sig, t, geo)
+    (sig, t, geo1 * geo2)
 }
 
 fn impl_path_signature<C, V, const D: usize>(
     curve: C,
     vectors: V,
-    geo_inv: GeoVar<Rot<D>, D>,
-) -> (Vec<Coord<D>>, Vec<f64>)
+    is_open: bool,
+) -> (Vec<Coord<D>>, Vec<f64>, GeoVar<Rot<D>, D>)
 where
     U<D>: EfdDim<D>,
     C: Curve<D>,
@@ -90,6 +89,8 @@ where
 {
     // A constant length to define unit vectors
     const LENGTH: f64 = 1.;
+    let (_, geo) = get_target_pos(curve.as_curve(), is_open);
+    let geo_inv = geo.inverse();
     let mut sig = geo_inv.transform(curve);
     let dxyz = zip(&sig, &sig[1..])
         .map(|(a, b)| a.l2_norm(b))
@@ -106,7 +107,7 @@ where
         let p = &sig[i];
         sig.push(array::from_fn(|i| p[i] + LENGTH * v[i]));
     }
-    (sig, guide)
+    (sig, guide, geo)
 }
 
 /// A shape with a pose described by EFD.
@@ -251,8 +252,7 @@ where
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (_, geo1) = get_target_pos(curve.as_curve(), is_open);
-        let (sig, guide) = impl_path_signature(curve, vectors, geo1.inverse());
+        let (sig, guide, geo1) = impl_path_signature(curve, vectors, is_open);
         let (_, coeffs, geo2) = U::get_coeff(&sig, IS_OPEN, harmonic, Some(&guide));
         let efd = Efd::from_parts_unchecked(coeffs, geo1 * geo2);
         Self { efd, is_open }

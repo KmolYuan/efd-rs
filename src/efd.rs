@@ -46,7 +46,7 @@ pub const fn harmonic_nyquist(is_open: bool, len: usize) -> usize {
 /// use efd::get_target_pos;
 ///
 /// let curve = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
-/// let (t, _geo) = get_target_pos(curve, true);
+/// let (t, geo) = get_target_pos(curve, true);
 /// assert_eq!(t.len(), 4);
 /// ```
 ///
