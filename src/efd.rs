@@ -487,10 +487,10 @@ where
     /// If the input angle is obtained from [`get_target_pos()`], the
     /// reconstruction must use this method.
     pub fn generate_norm_by_t(&self, t: &[f64]) -> Vec<Coord<D>> {
-        if self.is_open() || self.harmonic() <= 1 {
-            self.generate_norm_by(t)
-        } else {
+        if !self.is_open() && self.harmonic() > 1 {
             U::reconstruct(&self.coeffs, t.iter().map(|t| t + PI))
+        } else {
+            self.generate_norm_by(t)
         }
     }
 }
