@@ -15,7 +15,7 @@ pub fn curve_diff<const D: usize>(a: impl Curve<D>, b: impl Curve<D>) -> f64 {
     zip(a.as_curve(), b.as_curve())
         .map(|(a, b)| a.l2_norm(b))
         .sum::<f64>()
-        / a.len() as f64
+        / a.len().min(b.len()) as f64
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn efd2d() {
     let (t, _) = get_target_pos(CURVE2D, false);
     let target = efd.generate_norm_by_t(&t);
     let curve = efd.as_geo().inverse().transform(CURVE2D);
-    assert!(curve_diff(target, curve) < 0.01695);
+    assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.01695);
 }
 
 #[test]
@@ -88,7 +88,7 @@ fn efd2d_open() {
     let (t, _) = get_target_pos(CURVE2D_OPEN, true);
     let target = efd.generate_norm_by_t(&t);
     let curve = efd.as_geo().inverse().transform(CURVE2D_OPEN);
-    assert!(curve_diff(target, curve) < 0.0143);
+    assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.0143);
 }
 
 #[test]
@@ -125,7 +125,7 @@ fn efd3d() {
     let (t, _) = get_target_pos(CURVE3D, false);
     let target = efd.generate_norm_by(&t);
     let curve = efd.as_geo().inverse().transform(CURVE3D);
-    assert!(curve_diff(target, curve) < 0.00412);
+    assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.00412);
 }
 
 #[test]

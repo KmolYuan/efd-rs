@@ -1,8 +1,6 @@
 use crate::{util::*, *};
 use alloc::{format, vec::Vec};
 use core::f64::consts::{PI, TAU};
-#[cfg(not(feature = "std"))]
-use num_traits::*;
 
 /// Calculate the number of harmonics.
 ///
@@ -126,10 +124,10 @@ where
     ///
     /// Return none if the harmonic is zero.
     pub fn try_from_coeffs(mut coeffs: Coeffs<D>) -> Option<Self> {
-        (!coeffs.is_empty()).then(|| Self {
-            geo: U::coeff_norm(&mut coeffs, None, None),
-            coeffs,
-        })
+        match coeffs.is_empty() {
+            true => None,
+            false => Some(Self { geo: U::coeff_norm(&mut coeffs, None), coeffs }),
+        }
     }
 
     /// Create object from a matrix with boundary check.
@@ -247,12 +245,14 @@ where
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (t, mut coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, harmonic, None);
-        let geo = geo * U::coeff_norm(&mut coeffs, None, None);
+        let (mut t, mut coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, harmonic, None);
+        let geo = geo * U::coeff_norm(&mut coeffs, Some(&mut t));
         (Self { coeffs, geo }, t)
     }
 
     /// Same as [`Efd::from_curve_harmonic()`] but without normalization.
+    ///
+    /// See also [`Efd::normalized()`] if you want to normalize later.
     pub fn from_curve_harmonic_unnorm<C>(curve: C, is_open: bool, harmonic: usize) -> Self
     where
         C: Curve<D>,
@@ -307,12 +307,14 @@ where
     /// If the coefficients are constructed by `*_unnorm` or `*_unchecked`
     /// methods, this method will normalize them.
     ///
+    /// See also [`Efd::from_curve_harmonic_unnorm()`].
+    ///
     /// # Panics
     ///
     /// Panics if the harmonic is zero.
     pub fn normalized(self) -> Self {
         let Self { mut coeffs, geo } = self;
-        let geo = geo * U::coeff_norm(&mut coeffs, None, None);
+        let geo = geo * U::coeff_norm(&mut coeffs, None);
         Self { coeffs, geo }
     }
 
@@ -339,6 +341,9 @@ where
     }
 
     /// Get a mutable iterator over all the coefficients per harmonic.
+    ///
+    /// **Warning: If you want to change the coefficients, the geometric
+    /// variables will be wrong.**
     pub fn coeffs_iter_mut(&mut self) -> impl Iterator<Item = &mut Kernel<D>> {
         self.coeffs.iter_mut()
     }
@@ -367,15 +372,12 @@ where
     /// Check if the coefficients are valid.
     ///
     /// + The harmonic number must be greater than 0.
-    /// + All the coefficients must not be `NaN` or zero.
+    /// + All the coefficients must be finite number.
     ///
     /// It is only helpful if this object is constructed by
     /// [`Efd::from_parts_unchecked()`].
     pub fn is_valid(&self) -> bool {
-        !self.coeffs.is_empty()
-            && !self
-                .coeffs_iter()
-                .any(|m| m.iter().all(|x| x.abs() < f64::EPSILON) || m.iter().any(|x| x.is_nan()))
+        self.harmonic() > 0 && self.coeffs_iter().flatten().all(|x| x.is_finite())
     }
 
     /// Calculate the L1 distance between two coefficient set.

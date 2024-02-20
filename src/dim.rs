@@ -114,11 +114,7 @@ pub trait EfdDim<const D: usize>: Sealed {
     }
 
     #[doc(hidden)]
-    fn coeff_norm(
-        coeffs: &mut [Kernel<D>],
-        t: Option<&mut [f64]>,
-        rot: Option<&Self::Rot>,
-    ) -> GeoVar<Self::Rot, D> {
+    fn coeff_norm(coeffs: &mut [Kernel<D>], t: Option<&mut [f64]>) -> GeoVar<Self::Rot, D> {
         // Angle of starting point (theta)
         // theta = atan2(2 * sum(m[:, 0] * m[:, 1]), sum(m[:, 0]^2) - sum(m[:, 1]^2))
         // theta = 0 if is open curve
@@ -148,21 +144,16 @@ pub trait EfdDim<const D: usize>: Sealed {
         }
         // Rotation angle (psi)
         // m = psi' * m
-        let psi = rot.cloned().unwrap_or_else(|| Self::get_rot(coeffs));
+        let psi = Self::get_rot(coeffs);
         let psi_mat = psi.clone().matrix();
         for m in coeffs.iter_mut() {
             m.tr_mul(&psi_mat).transpose_to(m);
         }
         // Scaling factor
         // |u1| == a1 (after rotation normalized)
-        let scale = if rot.is_some() {
-            1.
-        } else {
-            let scale = coeffs[0][0];
-            coeffs.iter_mut().for_each(|m| *m /= scale);
-            debug_assert!(scale.is_sign_positive());
-            scale
-        };
+        let scale = coeffs[0][0];
+        coeffs.iter_mut().for_each(|m| *m /= scale);
+        debug_assert!(scale.is_sign_positive());
         GeoVar::new([0.; D], psi, scale)
     }
 

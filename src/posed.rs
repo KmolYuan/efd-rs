@@ -68,7 +68,7 @@ where
     let (sig, guide, geo1) = impl_path_signature(curve, vectors, is_open);
     let (mut t, mut coeffs, geo2) = U::get_coeff(&sig, IS_OPEN, 1, Some(&guide));
     // Only normalize the target position
-    U::coeff_norm(&mut coeffs, Some(&mut t), None);
+    U::coeff_norm(&mut coeffs, Some(&mut t));
     (sig, t, geo1 * geo2)
 }
 
