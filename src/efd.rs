@@ -384,7 +384,7 @@ where
     ///
     /// For more distance methods, please see [`Distance`].
     pub fn distance(&self, rhs: &Self) -> f64 {
-        self.l1_norm(rhs)
+        self.l1_err(rhs)
     }
 
     /// Reverse the order of described curve then return a mutable reference.

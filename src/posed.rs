@@ -83,12 +83,12 @@ where
     V: Curve<D>,
 {
     // Get the length of the unit vectors
-    let length = vectors.as_curve()[0].l2_norm(&[0.; D]);
+    let length = vectors.as_curve()[0].l2_norm();
     let (_, geo) = get_target_pos(curve.as_curve(), is_open);
     let geo_inv = geo.inverse();
     let mut sig = geo_inv.transform(curve);
     let dxyz = zip(&sig, &sig[1..])
-        .map(|(a, b)| a.l2_norm(b))
+        .map(|(a, b)| a.l2_err(b))
         .collect::<Vec<_>>();
     let mut guide = dxyz.clone();
     guide.reserve(dxyz.len() + 2);

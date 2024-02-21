@@ -13,7 +13,7 @@ pub const RES: usize = 1000;
 /// Error between two curves, the length of the curves must be the same.
 pub fn curve_diff<const D: usize>(a: impl Curve<D>, b: impl Curve<D>) -> f64 {
     zip(a.as_curve(), b.as_curve())
-        .map(|(a, b)| a.l2_norm(b))
+        .map(|(a, b)| a.l2_err(b))
         .sum::<f64>()
         / a.len().min(b.len()) as f64
 }
@@ -44,14 +44,14 @@ fn efd2d() {
         .copied()
         .collect::<Vec<_>>();
     let efd_half = Efd2::from_curve(curve, false);
-    assert_abs_diff_eq!(efd.l1_norm(&efd_half), 0., epsilon = 1e-12);
+    assert_abs_diff_eq!(efd.l1_err(&efd_half), 0., epsilon = 1e-12);
     assert_eq!(efd.harmonic(), 8);
     // Test rotation
     for ang in 0..6 {
         let ang = core::f64::consts::TAU * ang as f64 / 6.;
         let curve = GeoVar::from_rot(na::UnitComplex::new(ang)).transform(CURVE2D);
         let efd_rot = Efd2::from_curve_harmonic(curve, false, efd.harmonic());
-        assert_abs_diff_eq!(efd_rot.l1_norm(&efd), 0., epsilon = 1e-12);
+        assert_abs_diff_eq!(efd_rot.l1_err(&efd), 0., epsilon = 1e-12);
     }
     // Test transformation
     let geo = efd.as_geo();
@@ -76,7 +76,7 @@ fn efd2d_open() {
         let ang = core::f64::consts::TAU * ang as f64 / 6.;
         let curve = GeoVar::from_rot(na::UnitComplex::new(ang)).transform(CURVE2D_OPEN);
         let efd_rot = Efd2::from_curve_harmonic(curve, true, efd.harmonic());
-        assert_abs_diff_eq!(efd_rot.l1_norm(&efd), 0., epsilon = 1e-12);
+        assert_abs_diff_eq!(efd_rot.l1_err(&efd), 0., epsilon = 1e-12);
     }
     // Test transformation
     let geo = efd.as_geo();
@@ -104,7 +104,7 @@ fn efd3d() {
         .copied()
         .collect::<Vec<_>>();
     let efd_half = Efd3::from_curve(curve, false);
-    assert_abs_diff_eq!(efd.l1_norm(&efd_half), 0., epsilon = 1e-12);
+    assert_abs_diff_eq!(efd.l1_err(&efd_half), 0., epsilon = 1e-12);
     assert_eq!(efd.harmonic(), 5);
     // Test rotation
     for ang in 0..6 {
@@ -112,7 +112,7 @@ fn efd3d() {
         let curve = GeoVar::from_rot(na::UnitQuaternion::new(na::matrix![1.; 1.; 0.] * ang))
             .transform(CURVE3D);
         let efd_rot = Efd3::from_curve_harmonic(curve, false, efd.harmonic());
-        assert_abs_diff_eq!(efd.l1_norm(&efd_rot), 0., epsilon = 1e-12);
+        assert_abs_diff_eq!(efd.l1_err(&efd_rot), 0., epsilon = 1e-12);
     }
     // Test transformation
     let geo = efd.as_geo();
@@ -138,7 +138,7 @@ fn posed_efd_open() {
         let curve = GeoVar::from_rot(na::UnitComplex::new(ang)).transform(CURVE2D_POSE);
         let angles = ANGLE2D_POSE.iter().map(|a| a + ang).collect::<Vec<_>>();
         let efd_rot = PosedEfd2::from_angles(curve, &angles, true);
-        assert_abs_diff_eq!(efd.l1_norm(&efd_rot), 0., epsilon = 1e-12);
+        assert_abs_diff_eq!(efd.l1_err(&*efd_rot), 0., epsilon = 1e-12);
     }
 }
 

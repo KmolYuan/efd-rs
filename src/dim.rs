@@ -77,7 +77,7 @@ pub trait EfdDim<const D: usize>: Sealed {
         // Length to angle
         let phi = &t * TAU / zt * if is_open { 0.5 } else { 1. };
         // Scalar for coefficients
-        let scalar = zt / (PI * PI) * if is_open { 2. } else { 0.5 };
+        let scalar = zt / pow2(PI) * if is_open { 2. } else { 0.5 };
         // Coefficients (2dim * N)
         // [x_cos, y_cos, z_cos, x_sin, y_sin, z_sin]'
         let mut coeff = vec![Kernel::<D>::zeros(); harmonic];
