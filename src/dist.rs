@@ -22,6 +22,37 @@ fn sum(x: f64, y: f64) -> f64 {
     x + y
 }
 
+fn impl_err<A, B, F1, F2>(a: &A, b: &B, map: F1, fold: F2) -> f64
+where
+    A: Distance + ?Sized,
+    B: Distance + ?Sized,
+    F1: Fn(f64) -> f64,
+    F2: Fn(f64, f64) -> f64,
+{
+    macro_rules! err_calc {
+        ($iter:expr) => {
+            $iter.map(|x| map(cmp(x))).fold(0., fold)
+        };
+    }
+    #[inline]
+    fn cmp((a, b): (&f64, &f64)) -> f64 {
+        a - b
+    }
+    let a = a.as_components();
+    let b = b.as_components();
+    match (a.size_hint().1, b.size_hint().1) {
+        (None, None) => panic!("The size of the data is unknown"),
+        (Some(n), Some(m)) if n != m => {
+            if n > m {
+                err_calc!(zip(a, b.chain(repeat(&0.))))
+            } else {
+                err_calc!(zip(b, a.chain(repeat(&0.))))
+            }
+        }
+        _ => err_calc!(zip(a, b)),
+    }
+}
+
 /// Be able to calculate the distance between two instances.
 ///
 /// Each data number has the same weight by default, but you can change it by
@@ -33,44 +64,9 @@ pub trait Distance {
     /// the data.
     fn as_components(&self) -> impl Iterator<Item = &f64>;
 
-    /// Calculate the error between each pair of data.
-    ///
-    /// # Panics
-    ///
-    /// This method panics if the size of both data is unknown.
-    fn err_buf<Rhs, F1, F2>(&self, rhs: &Rhs, map: F1, fold: F2) -> f64
-    where
-        Rhs: Distance,
-        F1: Fn(f64) -> f64,
-        F2: Fn(f64, f64) -> f64,
-    {
-        macro_rules! err_calc {
-            ($iter:expr) => {
-                $iter.map(|x| map(cmp(x))).fold(0., fold)
-            };
-        }
-        #[inline]
-        fn cmp((a, b): (&f64, &f64)) -> f64 {
-            a - b
-        }
-        let a = self.as_components();
-        let b = rhs.as_components();
-        match (a.size_hint().1, b.size_hint().1) {
-            (None, None) => panic!("The size of the data is unknown"),
-            (Some(n), Some(m)) if n != m => {
-                if n > m {
-                    err_calc!(zip(a, b.chain(repeat(&0.))))
-                } else {
-                    err_calc!(zip(b, a.chain(repeat(&0.))))
-                }
-            }
-            _ => err_calc!(zip(a, b)),
-        }
-    }
-
     /// Calculate the square error.
     fn square_err(&self, rhs: &impl Distance) -> f64 {
-        self.err_buf(rhs, util::pow2, sum)
+        impl_err(self, rhs, util::pow2, sum)
     }
 
     /// Calculate the L0 norm of the error.
@@ -79,14 +75,14 @@ pub trait Distance {
     /// errors that are less than the epsilon.
     fn l0_err(&self, rhs: &impl Distance) -> f64 {
         let bin = |x: f64| (x.abs() < f64::EPSILON) as u8 as f64;
-        self.err_buf(rhs, bin, sum)
+        impl_err(self, rhs, bin, sum)
     }
 
     /// Calculate the L1 norm of the error.
     ///
     /// This method is also called Manhattan distance.
     fn l1_err(&self, rhs: &impl Distance) -> f64 {
-        self.err_buf(rhs, |x| x.abs(), sum)
+        impl_err(self, rhs, |x| x.abs(), sum)
     }
 
     /// Calculate the L2 norm of the error.
@@ -100,14 +96,14 @@ pub trait Distance {
     ///
     /// This method is also called Minkowski distance.
     fn lp_err(&self, rhs: &impl Distance, p: f64) -> f64 {
-        self.err_buf(rhs, |x| x.abs().powf(p), sum).powf(p.recip())
+        impl_err(self, rhs, |x| x.abs().powf(p), sum).powf(p.recip())
     }
 
     /// Calculate the Linf norm of the error.
     ///
     /// This method is also called Chebyshev distance.
     fn linf_err(&self, rhs: &impl Distance) -> f64 {
-        self.err_buf(rhs, |x| x.abs(), f64::max)
+        impl_err(self, rhs, |x| x.abs(), f64::max)
     }
 
     impl_norm!(

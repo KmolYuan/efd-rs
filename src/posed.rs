@@ -17,95 +17,68 @@ pub type PosedEfd2 = PosedEfd<2>;
 /// A 3D shape with a pose described by EFD.
 pub type PosedEfd3 = PosedEfd<3>;
 
-/// A global setting controls the posed EFD is using open curve as the signature
-/// or not.
-pub const IS_OPEN: bool = true;
-
-/// Calculate the number of harmonics for posed EFD.
-///
-/// The number of harmonics is calculated by the minimum length of the curves.
-/// And if the curve is open accroding to [`IS_OPEN`], the number is doubled.
-///
-/// ```
-/// assert_eq!(efd::posed::harmonic(2, 3), 14);
-/// ```
-#[inline]
-pub const fn harmonic(len1: usize, len2: usize) -> usize {
-    let len = len1 + len2 + 2;
-    if IS_OPEN {
-        len * 2
-    } else {
-        len
-    }
-}
-
 /// Transform 2D angles to unit vectors.
 pub fn ang2vec(angles: &[f64]) -> Vec<Coord<2>> {
     angles.iter().map(|a| [a.cos(), a.sin()]).collect()
 }
 
-/// Get the path signature and its target position from a curve and its unit
-/// vectors.
-///
-/// ```
-/// use efd::posed::{ang2vec, path_signature};
-/// # let curve = efd::tests::CURVE2D_POSE;
-/// # let angles = efd::tests::ANGLE2D_POSE;
-///
-/// let (sig, t, geo) = path_signature(curve, ang2vec(angles), true);
-/// ```
-/// See also [`get_target_pos()`].
-pub fn path_signature<C, V, const D: usize>(
-    curve: C,
-    vectors: V,
-    is_open: bool,
-) -> (Vec<Coord<D>>, Vec<f64>, GeoVar<Rot<D>, D>)
+/// Motion signature with the target position.
+pub struct MotionSig<const D: usize>
 where
     U<D>: EfdDim<D>,
-    C: Curve<D>,
-    V: Curve<D>,
 {
-    let (sig, guide, geo1) = impl_path_signature(curve, vectors, is_open);
-    let (mut t, mut coeffs, geo2) = U::get_coeff(&sig, IS_OPEN, 1, Some(&guide));
-    // Only normalize the target position
-    U::coeff_norm(&mut coeffs, Some(&mut t));
-    (sig, t, geo1 * geo2)
+    curve: Vec<Coord<D>>,
+    vectors: Vec<Coord<D>>,
+    t: Vec<f64>,
+    geo: GeoVar<Rot<D>, D>,
 }
 
-fn impl_path_signature<C, V, const D: usize>(
-    curve: C,
-    vectors: V,
-    is_open: bool,
-) -> (Vec<Coord<D>>, Vec<f64>, GeoVar<Rot<D>, D>)
+impl<const D: usize> MotionSig<D>
 where
     U<D>: EfdDim<D>,
-    C: Curve<D>,
-    V: Curve<D>,
 {
-    // Get the length of the unit vectors
-    let length = vectors.as_curve()[0].l2_norm();
-    let (_, geo) = get_target_pos(curve.as_curve(), is_open);
-    let geo_inv = geo.inverse();
-    let mut sig = geo_inv.transform(curve);
-    let dxyz = zip(&sig, &sig[1..])
-        .map(|(a, b)| a.l2_err(b))
-        .collect::<Vec<_>>();
-    let mut guide = dxyz.clone();
-    guide.reserve(dxyz.len() + 2);
-    guide.push(length);
-    guide.extend(dxyz.into_iter().rev());
-    if !IS_OPEN {
-        guide.push(length);
+    /// Get the path signature and its target position from a curve and its unit
+    /// vectors.
+    ///
+    /// ```
+    /// use efd::posed::{ang2vec, MotionSig};
+    /// # let curve = efd::tests::CURVE2D_POSE;
+    /// # let angles = efd::tests::ANGLE2D_POSE;
+    ///
+    /// let sig = MotionSig::new(curve, ang2vec(angles));
+    /// ```
+    ///
+    /// See also [`PathSig`].
+    pub fn new<C, V>(curve: C, vectors: V) -> Self
+    where
+        C: Curve<D>,
+        V: Curve<D>,
+    {
+        Self::new_with_guide(curve, vectors).0
     }
-    let vectors = geo_inv
-        .only_rot()
-        .with_scale(length.recip())
-        .transform(vectors);
-    for (i, v) in vectors.into_iter().enumerate().rev() {
-        let p = &sig[i];
-        sig.push(array::from_fn(|i| p[i] + length * v[i]));
+
+    fn new_with_guide<C, V>(curve: C, vectors: V) -> (Self, Vec<f64>)
+    where
+        C: Curve<D>,
+        V: Curve<D>,
+    {
+        let PathSig { t, geo, .. } = PathSig::new(curve.as_curve(), true);
+        let geo_inv = geo.inverse();
+        let curve = geo_inv.transform(curve);
+        let guide = zip(&curve, &curve[1..])
+            .map(|(a, b)| a.l2_err(b))
+            .collect::<Vec<_>>();
+        let mut vectors = geo_inv.only_rot().transform(vectors);
+        for (p, v) in zip(&curve, &mut vectors) {
+            *v = array::from_fn(|i| p[i] + v[i]);
+        }
+        (Self { curve, vectors, t, geo }, guide)
     }
-    (sig, guide, geo)
+
+    /// Get the reference of geometric variables.
+    pub fn as_geo(&self) -> &GeoVar<Rot<D>, D> {
+        &self.geo
+    }
 }
 
 /// A shape with a pose described by EFD.
@@ -123,28 +96,28 @@ pub struct PosedEfd<const D: usize>
 where
     U<D>: EfdDim<D>,
 {
-    efd: Efd<D>,
-    is_open: bool,
+    curve: Efd<D>,
+    pose: Efd<D>,
 }
 
 impl PosedEfd2 {
     /// Calculate the coefficients from a curve and its angles from each point.
-    pub fn from_angles<C>(curve: C, angles: &[f64], is_open: bool) -> Self
+    pub fn from_angles<C>(curve: C, angles: &[f64]) -> Self
     where
         C: Curve<2>,
     {
-        let harmonic = harmonic(curve.len(), angles.len());
-        Self::from_angles_harmonic(curve, angles, is_open, harmonic).fourier_power_anaysis(None)
+        let harmonic = harmonic(false, curve.len());
+        Self::from_angles_harmonic(curve, angles, harmonic).fourier_power_anaysis(None)
     }
 
     /// Calculate the coefficients from a curve and its angles from each point.
     ///
     /// The `harmonic` is the number of the coefficients to be calculated.
-    pub fn from_angles_harmonic<C>(curve: C, angles: &[f64], is_open: bool, harmonic: usize) -> Self
+    pub fn from_angles_harmonic<C>(curve: C, angles: &[f64], harmonic: usize) -> Self
     where
         C: Curve<2>,
     {
-        Self::from_uvec_harmonic(curve, ang2vec(angles), is_open, harmonic)
+        Self::from_uvec_harmonic(curve, ang2vec(angles), harmonic)
     }
 }
 
@@ -158,32 +131,27 @@ where
     /// describe this motion signature.
     ///
     /// See also [`PosedEfd::into_inner()`].
-    pub const fn from_efd(efd: Efd<D>, is_open: bool) -> Self {
-        Self { efd, is_open }
+    pub const fn from_parts_unchecked(efd: Efd<D>, posed: Efd<D>) -> Self {
+        Self { curve: efd, pose: posed }
     }
 
     /// Calculate the coefficients from two series of points.
     ///
     /// The second series is the pose series, the `curve2[i]` has the same time
     /// as `curve[i]`.
-    pub fn from_series<C1, C2>(curve1: C1, curve2: C2, is_open: bool) -> Self
+    pub fn from_series<C1, C2>(curve1: C1, curve2: C2) -> Self
     where
         C1: Curve<D>,
         C2: Curve<D>,
     {
-        let harmonic = harmonic(curve1.len(), curve2.len());
-        Self::from_series_harmonic(curve1, curve2, is_open, harmonic).fourier_power_anaysis(None)
+        let harmonic = harmonic(true, curve1.len());
+        Self::from_series_harmonic(curve1, curve2, harmonic).fourier_power_anaysis(None)
     }
 
     /// Calculate the coefficients from two series of points.
     ///
     /// The `harmonic` is the number of the coefficients to be calculated.
-    pub fn from_series_harmonic<C1, C2>(
-        curve1: C1,
-        curve2: C2,
-        is_open: bool,
-        harmonic: usize,
-    ) -> Self
+    pub fn from_series_harmonic<C1, C2>(curve1: C1, curve2: C2, harmonic: usize) -> Self
     where
         C1: Curve<D>,
         C2: Curve<D>,
@@ -191,7 +159,7 @@ where
         let vectors = zip(curve1.as_curve(), curve2.as_curve())
             .map(|(a, b)| array::from_fn(|i| b[i] - a[i]))
             .collect::<Vec<_>>();
-        Self::from_uvec_harmonic(curve1, vectors, is_open, harmonic)
+        Self::from_uvec_harmonic(curve1, vectors, harmonic)
     }
 
     /// Calculate the coefficients from a curve and its unit vectors from each
@@ -199,13 +167,13 @@ where
     ///
     /// If the unit vectors is not normalized, the length of the first vector
     /// will be used as the scaling factor.
-    pub fn from_uvec<C, V>(curve: C, vectors: V, is_open: bool) -> Self
+    pub fn from_uvec<C, V>(curve: C, vectors: V) -> Self
     where
         C: Curve<D>,
         V: Curve<D>,
     {
-        let harmonic = harmonic(curve.len(), vectors.len());
-        Self::from_uvec_harmonic(curve, vectors, is_open, harmonic).fourier_power_anaysis(None)
+        let harmonic = harmonic(true, curve.len());
+        Self::from_uvec_harmonic(curve, vectors, harmonic).fourier_power_anaysis(None)
     }
 
     /// Calculate the coefficients from a curve and its unit vectors from each
@@ -215,17 +183,24 @@ where
     /// will be used as the scaling factor.
     ///
     /// The `harmonic` is the number of the coefficients to be calculated.
-    pub fn from_uvec_harmonic<C, V>(curve: C, vectors: V, is_open: bool, harmonic: usize) -> Self
+    pub fn from_uvec_harmonic<C, V>(curve: C, vectors: V, harmonic: usize) -> Self
     where
         C: Curve<D>,
         V: Curve<D>,
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (sig, guide, geo1) = impl_path_signature(curve, vectors, is_open);
-        let (_, coeffs, geo2) = U::get_coeff(&sig, IS_OPEN, harmonic, Some(&guide));
-        let efd = Efd::from_parts_unchecked(coeffs, geo1 * geo2);
-        Self { efd, is_open }
+        debug_assert!(
+            curve.len() == vectors.len(),
+            "the curve length must be equal to the vectors length"
+        );
+        let (MotionSig { curve, vectors, geo, .. }, guide) =
+            MotionSig::new_with_guide(curve, vectors);
+        let (_, coeffs, _) = U::get_coeff(&curve, true, harmonic, None);
+        let curve = Efd::from_parts_unchecked(coeffs, geo);
+        let (_, coeffs, geo) = U::get_coeff(&vectors, true, harmonic, Some(&guide));
+        let pose = Efd::from_parts_unchecked(coeffs, geo);
+        Self { curve, pose }
     }
 
     /// Use Fourier Power Anaysis (FPA) to reduce the harmonic number.
@@ -239,36 +214,50 @@ where
     /// Panics if the threshold is not in 0..1, or the harmonic is zero.
     pub fn fourier_power_anaysis<T>(mut self, threshold: T) -> Self
     where
-        Option<f64>: From<T>,
+        Option<f64>: From<T> + Clone,
     {
-        self.efd = self.efd.fourier_power_anaysis(threshold);
+        let threshold = Option::from(threshold);
+        let [harmonic1, harmonic2] = [&self.curve, &self.pose].map(|efd| {
+            let lut = efd.coeffs_iter().map(|m| m.map(util::pow2).sum()).collect();
+            fourier_power_anaysis(lut, threshold)
+        });
+        let harmonic = harmonic1.max(harmonic2);
+        self.curve.set_harmonic(harmonic);
+        self.pose.set_harmonic(harmonic);
         self
-    }
-
-    /// Check if the descibed curve is open.
-    ///
-    /// Unlike [`Efd::is_open()`], this method is not the `is_open` of the
-    /// coefficients.
-    pub const fn is_open(&self) -> bool {
-        self.is_open
     }
 
     /// Consume self and return the parts of this type. The first is the curve
     /// coefficients, and the second is the pose coefficients.
     ///
-    /// See also [`PosedEfd::from_efd()`].
-    pub fn into_inner(self) -> Efd<D> {
-        self.efd
+    /// See also [`PosedEfd::from_parts_unchecked()`].
+    pub fn into_inner(self) -> (Efd<D>, Efd<D>) {
+        (self.curve, self.pose)
     }
-}
 
-impl<const D: usize> core::ops::Deref for PosedEfd<D>
-where
-    U<D>: EfdDim<D>,
-{
-    type Target = Efd<D>;
+    /// Get the reference of geometric variables.
+    pub fn as_geo(&self) -> &GeoVar<Rot<D>, D> {
+        self.curve.as_geo()
+    }
 
-    fn deref(&self) -> &Self::Target {
-        &self.efd
+    /// Get the harmonic number of the coefficients.
+    #[inline]
+    pub fn harmonic(&self) -> usize {
+        self.curve.harmonic()
+    }
+
+    /// Calculate the error between two [`PosedEfd`].
+    pub fn err(&self, rhs: &Self) -> f64 {
+        (2. * self.curve.err(&rhs.curve))
+            .max(self.pose.err(&rhs.pose))
+            .max((self.pose.as_geo().trans()).l2_err(&rhs.pose.as_geo().trans()))
+    }
+
+    /// Calculate the error from a [`MotionSig`].
+    pub fn err_sig(&self, sig: &MotionSig<D>) -> f64 {
+        let curve =
+            zip(self.curve.recon_norm_by(&sig.t), &sig.curve).map(|(a, b)| 2. * a.l2_err(b));
+        let pose = zip(self.pose.recon_by(&sig.t), &sig.vectors).map(|(a, b)| a.l2_err(b));
+        curve.chain(pose).fold(0., f64::max)
     }
 }

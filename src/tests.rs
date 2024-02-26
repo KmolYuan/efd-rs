@@ -43,15 +43,15 @@ fn efd2d() {
         .take(CURVE2D.len())
         .copied()
         .collect::<Vec<_>>();
-    let efd_half = Efd2::from_curve(curve, false);
-    assert_abs_diff_eq!(efd.l1_err(&efd_half), 0., epsilon = 1e-12);
+    let efd_half = Efd2::from_curve_harmonic(curve, false, efd.harmonic());
+    assert_abs_diff_eq!(efd.err(&efd_half), 0., epsilon = 1e-12);
     assert_eq!(efd.harmonic(), 8);
     // Test rotation
     for ang in 0..6 {
         let ang = core::f64::consts::TAU * ang as f64 / 6.;
         let curve = GeoVar::from_rot(na::UnitComplex::new(ang)).transform(CURVE2D);
         let efd_rot = Efd2::from_curve_harmonic(curve, false, efd.harmonic());
-        assert_abs_diff_eq!(efd_rot.l1_err(&efd), 0., epsilon = 1e-12);
+        assert_abs_diff_eq!(efd_rot.err(&efd), 0., epsilon = 1e-12);
     }
     // Test transformation
     let geo = efd.as_geo();
@@ -60,8 +60,8 @@ fn efd2d() {
     assert_abs_diff_eq!(geo.rot().angle(), -2.49925101855502);
     assert_abs_diff_eq!(geo.scale(), 48.16765830752243);
     // Test reconstruction
-    let (t, _) = get_target_pos(CURVE2D, false);
-    let target = efd.generate_norm_by_t(&t);
+    let t = PathSig::new(CURVE2D, false).t;
+    let target = efd.recon_norm_by_t(&t);
     let curve = efd.as_geo().inverse().transform(CURVE2D);
     assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.01695);
 }
@@ -76,7 +76,7 @@ fn efd2d_open() {
         let ang = core::f64::consts::TAU * ang as f64 / 6.;
         let curve = GeoVar::from_rot(na::UnitComplex::new(ang)).transform(CURVE2D_OPEN);
         let efd_rot = Efd2::from_curve_harmonic(curve, true, efd.harmonic());
-        assert_abs_diff_eq!(efd_rot.l1_err(&efd), 0., epsilon = 1e-12);
+        assert_abs_diff_eq!(efd_rot.err(&efd), 0., epsilon = 1e-12);
     }
     // Test transformation
     let geo = efd.as_geo();
@@ -85,8 +85,8 @@ fn efd2d_open() {
     assert_abs_diff_eq!(geo.rot().angle(), 2.7330524299596815);
     assert_abs_diff_eq!(geo.scale(), 33.930916934329495);
     // Test reconstruction
-    let (t, _) = get_target_pos(CURVE2D_OPEN, true);
-    let target = efd.generate_norm_by_t(&t);
+    let t = PathSig::new(CURVE2D_OPEN, true).t;
+    let target = efd.recon_norm_by_t(&t);
     let curve = efd.as_geo().inverse().transform(CURVE2D_OPEN);
     assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.0143);
 }
@@ -103,8 +103,8 @@ fn efd3d() {
         .take(CURVE3D.len())
         .copied()
         .collect::<Vec<_>>();
-    let efd_half = Efd3::from_curve(curve, false);
-    assert_abs_diff_eq!(efd.l1_err(&efd_half), 0., epsilon = 1e-12);
+    let efd_half = Efd3::from_curve_harmonic(curve, false, efd.harmonic());
+    assert_abs_diff_eq!(efd.err(&efd_half), 0., epsilon = 1e-12);
     assert_eq!(efd.harmonic(), 5);
     // Test rotation
     for ang in 0..6 {
@@ -112,7 +112,7 @@ fn efd3d() {
         let curve = GeoVar::from_rot(na::UnitQuaternion::new(na::matrix![1.; 1.; 0.] * ang))
             .transform(CURVE3D);
         let efd_rot = Efd3::from_curve_harmonic(curve, false, efd.harmonic());
-        assert_abs_diff_eq!(efd.l1_err(&efd_rot), 0., epsilon = 1e-12);
+        assert_abs_diff_eq!(efd.err(&efd_rot), 0., epsilon = 1e-12);
     }
     // Test transformation
     let geo = efd.as_geo();
@@ -122,23 +122,22 @@ fn efd3d() {
     assert_abs_diff_eq!(geo.rot().angle(), 2.9160714030359416);
     assert_abs_diff_eq!(geo.scale(), 0.5629099155595344);
     // Test reconstruction
-    let (t, _) = get_target_pos(CURVE3D, false);
-    let target = efd.generate_norm_by(&t);
+    let t = PathSig::new(CURVE3D, false).t;
+    let target = efd.recon_norm_by_t(&t);
     let curve = efd.as_geo().inverse().transform(CURVE3D);
     assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.00412);
 }
 
 #[test]
 fn posed_efd_open() {
-    let efd = PosedEfd2::from_angles(CURVE2D_POSE, ANGLE2D_POSE, true);
-    assert!(efd.is_open());
+    let efd = PosedEfd2::from_angles(CURVE2D_POSE, ANGLE2D_POSE);
     // Test rotation
     for ang in 0..6 {
         let ang = core::f64::consts::TAU * ang as f64 / 6.;
         let curve = GeoVar::from_rot(na::UnitComplex::new(ang)).transform(CURVE2D_POSE);
         let angles = ANGLE2D_POSE.iter().map(|a| a + ang).collect::<Vec<_>>();
-        let efd_rot = PosedEfd2::from_angles(curve, &angles, true);
-        assert_abs_diff_eq!(efd.l1_err(&*efd_rot), 0., epsilon = 1e-12);
+        let efd_rot = PosedEfd2::from_angles(curve, &angles);
+        assert_abs_diff_eq!(efd.err(&efd_rot), 0., epsilon = 1e-12);
     }
 }
 
@@ -217,7 +216,7 @@ fn plot2d(coeff: Coeffs2, path: &str) -> Result<(), Box<dyn std::error::Error>> 
     }
 
     let efd = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
-    let curve = efd.generate(360);
+    let curve = efd.recon(360);
     let [x_min, x_max, y_min, y_max] = bounding_box(&curve);
     let b = SVGBackend::new(path, (1200, 1200));
     let root = b.into_drawing_area();
@@ -275,7 +274,7 @@ fn plot3d(coeff: Coeffs3, path: &str) -> Result<(), Box<dyn std::error::Error>> 
     }
 
     let efd = Efd3::try_from_coeffs_unnorm(coeff).unwrap();
-    let curve = efd.generate(360);
+    let curve = efd.recon(360);
     let [x_min, x_max, y_min, y_max, z_min, z_max] = bounding_box(&curve);
     let b = SVGBackend::new(path, (1200, 1200));
     let root = b.into_drawing_area();

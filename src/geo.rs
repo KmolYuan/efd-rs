@@ -82,7 +82,12 @@ where
 
     /// Create a new instance from rotation.
     pub fn from_rot(rot: R) -> Self {
-        Self::new([0.; D], rot, 1.)
+        Self::from_rot_scale(rot, 1.)
+    }
+
+    /// Create a new instance from rotation and scaling.
+    pub fn from_rot_scale(rot: R, scale: f64) -> Self {
+        Self::new([0.; D], rot, scale)
     }
 
     /// Create a new instance from translation.
@@ -93,6 +98,12 @@ where
     /// Create a new instance from rotation.
     pub fn only_rot(self) -> Self {
         Self::from_rot(self.inner.isometry.rotation)
+    }
+
+    /// Create a new instance from rotation and scaling.
+    pub fn only_rot_scale(self) -> Self {
+        let scale = self.inner.scaling();
+        Self::from_rot_scale(self.inner.isometry.rotation, scale)
     }
 
     /// Set the scaling property.
@@ -129,8 +140,8 @@ where
     /// # let curve = CURVE2D;
     ///
     /// let efd = Efd2::from_curve(curve, false);
-    /// let curve = efd.generate(curve.len());
-    /// let curve_norm = efd.generate_norm(curve.len());
+    /// let curve = efd.recon(curve.len());
+    /// let curve_norm = efd.recon_norm(curve.len());
     /// let curve = efd.as_geo().inverse().transform(curve);
     /// # assert!(curve_diff(&curve, &curve_norm) < EPS);
     /// ```

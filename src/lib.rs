@@ -14,7 +14,7 @@ extern crate alloc;
 pub extern crate nalgebra as na;
 
 #[doc(inline)]
-pub use crate::posed::{PosedEfd, PosedEfd1, PosedEfd2, PosedEfd3};
+pub use crate::posed::{MotionSig, PosedEfd, PosedEfd1, PosedEfd2, PosedEfd3};
 pub use crate::{curve::*, dim::*, dist::*, efd::*, geo::*};
 
 mod curve;
