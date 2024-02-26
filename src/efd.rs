@@ -390,7 +390,7 @@ where
     pub fn reverse_inplace(&mut self) {
         for m in &mut self.coeffs {
             let mut m = m.column_mut(1);
-            m *= -1.
+            m *= -1.;
         }
     }
 
