@@ -196,7 +196,7 @@ where
         );
         let (MotionSig { curve, vectors, geo, .. }, guide) =
             MotionSig::new_with_guide(curve, vectors);
-        let (_, coeffs, _) = U::get_coeff(&curve, true, harmonic, None);
+        let (_, coeffs, _) = U::get_coeff(&curve, true, harmonic, Some(&guide));
         let curve = Efd::from_parts_unchecked(coeffs, geo);
         let (_, coeffs, geo) = U::get_coeff(&vectors, true, harmonic, Some(&guide));
         let pose = Efd::from_parts_unchecked(coeffs, geo);
