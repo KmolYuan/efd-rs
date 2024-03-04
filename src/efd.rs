@@ -76,6 +76,16 @@ where
         Self { curve, t, geo }
     }
 
+    /// Get the reference of normalized curve.
+    pub fn as_curve(&self) -> &[Coord<D>] {
+        &self.curve
+    }
+
+    /// Get the reference of normalized time parameters.
+    pub fn as_t(&self) -> &[f64] {
+        &self.t
+    }
+
     /// Get the reference of geometric variables.
     pub fn as_geo(&self) -> &efd::GeoVar<efd::Rot<D>, D> {
         &self.geo
@@ -133,6 +143,11 @@ where
     /// See also [`Efd::into_inner()`].
     pub const fn from_parts_unchecked(coeffs: Coeffs<D>, geo: GeoVar<Rot<D>, D>) -> Self {
         Self { coeffs, geo }
+    }
+
+    /// Create object from coefficients without boundary check.
+    pub fn from_coeffs_unchecked(coeffs: Coeffs<D>) -> Self {
+        Self { coeffs, geo: GeoVar::identity() }
     }
 
     /// Create object from a matrix with boundary check and normalization.
@@ -533,7 +548,7 @@ impl<const D: usize> core::fmt::Debug for CoeffFmt<'_, D> {
 }
 
 pub(crate) fn fourier_power_anaysis(lut: Vec<f64>, threshold: Option<f64>) -> usize {
-    let threshold = Option::from(threshold).unwrap_or(0.9999);
+    let threshold = threshold.unwrap_or(0.9999);
     assert!((0.0..1.0).contains(&threshold), "threshold must in 0..1");
     let lut = cumsum(na::Matrix1xX::from_vec(lut));
     let target = lut[lut.len() - 1] * threshold;

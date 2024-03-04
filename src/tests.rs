@@ -60,8 +60,7 @@ fn efd2d() {
     assert_abs_diff_eq!(geo.rot().angle(), -2.49925101855502);
     assert_abs_diff_eq!(geo.scale(), 48.16765830752243);
     // Test reconstruction
-    let t = PathSig::new(CURVE2D, false).t;
-    let target = efd.recon_norm_by_t(&t);
+    let target = efd.recon_norm_by_t(PathSig::new(CURVE2D, false).as_t());
     let curve = efd.as_geo().inverse().transform(CURVE2D);
     assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.01695);
 }
@@ -85,8 +84,7 @@ fn efd2d_open() {
     assert_abs_diff_eq!(geo.rot().angle(), 2.7330524299596815);
     assert_abs_diff_eq!(geo.scale(), 33.930916934329495);
     // Test reconstruction
-    let t = PathSig::new(CURVE2D_OPEN, true).t;
-    let target = efd.recon_norm_by_t(&t);
+    let target = efd.recon_norm_by_t(PathSig::new(CURVE2D_OPEN, true).as_t());
     let curve = efd.as_geo().inverse().transform(CURVE2D_OPEN);
     assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.0143);
 }
@@ -122,8 +120,7 @@ fn efd3d() {
     assert_abs_diff_eq!(geo.rot().angle(), 2.9160714030359416);
     assert_abs_diff_eq!(geo.scale(), 0.5629099155595344);
     // Test reconstruction
-    let t = PathSig::new(CURVE3D, false).t;
-    let target = efd.recon_norm_by_t(&t);
+    let target = efd.recon_norm_by_t(PathSig::new(CURVE3D, false).as_t());
     let curve = efd.as_geo().inverse().transform(CURVE3D);
     assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.00412);
 }
@@ -143,46 +140,61 @@ fn posed_efd_open() {
 
 #[test]
 #[cfg(feature = "std")]
+fn plot2d_harmonic() -> Result<(), Box<dyn std::error::Error>> {
+    let mut efd = Efd2::from_curve_harmonic(ORIGIN_CURVE, false, 4);
+    *efd.as_geo_mut() *= GeoVar2::from_scale(20.);
+    plot2d(&efd, "img/2dh4.svg")?;
+    efd.set_harmonic(3);
+    plot2d(&efd, "img/2dh3.svg")?;
+    efd.set_harmonic(2);
+    plot2d(&efd, "img/2dh2.svg")?;
+    efd.set_harmonic(1);
+    plot2d(&efd, "img/2dh1.svg")?;
+    Ok(())
+}
+
+#[test]
+#[cfg(feature = "std")]
 fn plot2d_closed() -> Result<(), Box<dyn std::error::Error>> {
-    let coeff = vec![
+    let efd = Efd::from_coeffs_unchecked(vec![
         na::matrix![12., 35.; 35., 13.],
         na::matrix![5., 21.; 21., 5.],
         na::matrix![1., 12.; 12., 1.],
-    ];
-    plot2d(coeff, "img/2d.svg")
+    ]);
+    plot2d(&efd, "img/2d.svg")
 }
 
 #[test]
 #[cfg(feature = "std")]
 fn plot2d_open() -> Result<(), Box<dyn std::error::Error>> {
-    let coeff = vec![
+    let efd = Efd::from_coeffs_unchecked(vec![
         na::matrix![35., 0.; 8., 0.],
         na::matrix![10., 0.; 24., 0.],
         na::matrix![5., 0.; -8., 0.],
-    ];
-    plot2d(coeff, "img/2d_open.svg")
+    ]);
+    plot2d(&efd, "img/2d_open.svg")
 }
 
 #[test]
 #[cfg(feature = "std")]
 fn plot3d_closed() -> Result<(), Box<dyn std::error::Error>> {
-    let coeff = vec![
+    let efd = Efd::from_coeffs_unchecked(vec![
         na::matrix![12., 22.; 35., 5.; 20., 21.],
         na::matrix![21., 12.; 5., 12.; 1., 1.],
         na::matrix![3., 3.; 7., 5.; 12., 21.],
-    ];
-    plot3d(coeff, "img/3d.svg")
+    ]);
+    plot3d(&efd, "img/3d.svg")
 }
 
 #[test]
 #[cfg(feature = "std")]
 fn plot3d_open() -> Result<(), Box<dyn std::error::Error>> {
-    let coeff = vec![
+    let efd = Efd::from_coeffs_unchecked(vec![
         na::matrix![16., 0.; 35., 0.; 27., 0.],
         na::matrix![21., 0.; 8., 0.; 16., 0.],
         na::matrix![3., 0.; 7., 0.; 12., 0.],
-    ];
-    plot3d(coeff, "img/3d_open.svg")
+    ]);
+    plot3d(&efd, "img/3d_open.svg")
 }
 
 #[cfg(all(test, feature = "std"))]
@@ -195,7 +207,7 @@ fn get_area<const D: usize>(pts: &[[f64; D]]) -> [[f64; 2]; D] {
 }
 
 #[cfg(all(test, feature = "std"))]
-fn plot2d(coeff: Coeffs2, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn plot2d(efd: &Efd2, path: &str) -> Result<(), Box<dyn std::error::Error>> {
     use plotters::prelude::*;
 
     fn bounding_box(pts: &[[f64; 2]]) -> [f64; 4] {
@@ -215,7 +227,6 @@ fn plot2d(coeff: Coeffs2, path: &str) -> Result<(), Box<dyn std::error::Error>> 
         }
     }
 
-    let efd = Efd2::try_from_coeffs_unnorm(coeff).unwrap();
     let curve = efd.recon(360);
     let [x_min, x_max, y_min, y_max] = bounding_box(&curve);
     let b = SVGBackend::new(path, (1200, 1200));
@@ -255,7 +266,7 @@ fn plot2d(coeff: Coeffs2, path: &str) -> Result<(), Box<dyn std::error::Error>> 
 }
 
 #[cfg(all(test, feature = "std"))]
-fn plot3d(coeff: Coeffs3, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn plot3d(efd: &Efd3, path: &str) -> Result<(), Box<dyn std::error::Error>> {
     use plotters::prelude::*;
 
     fn bounding_box(pts: &[[f64; 3]]) -> [f64; 6] {
@@ -273,7 +284,6 @@ fn plot3d(coeff: Coeffs3, path: &str) -> Result<(), Box<dyn std::error::Error>> 
         [x_min, x_max, y_min, y_max, z_min, z_max]
     }
 
-    let efd = Efd3::try_from_coeffs_unnorm(coeff).unwrap();
     let curve = efd.recon(360);
     let [x_min, x_max, y_min, y_max, z_min, z_max] = bounding_box(&curve);
     let b = SVGBackend::new(path, (1200, 1200));
@@ -415,3 +425,22 @@ pub const CURVE2D_POSE: &[[f64; 2]] = &[
     [7.8, -4.9],
 ];
 pub const ANGLE2D_POSE: &[f64] = &[-0.9, 0., 0.7, 1.5, 2.8, -2.3, -2., -1.9, -2.1];
+pub const ORIGIN_CURVE: &[[f64; 2]] = &[
+    [0., 0.],
+    [1., 1.],
+    [1., 2.],
+    [0., 3.],
+    [1., 3.],
+    [2., 3.],
+    [3., 3.],
+    [2., 2.],
+    [2., 1.],
+    [3., 0.],
+    [3., -1.],
+    [3., -2.],
+    [2., -2.],
+    [1., -2.],
+    [0., -2.],
+    [0., -1.],
+    [0., 0.],
+];

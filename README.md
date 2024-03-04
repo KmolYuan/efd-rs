@@ -25,6 +25,13 @@ assert!(efd::util::valid_curve(&curve).is_some());
 let described_curve = efd::Efd2::from_curve(curve, false).recon(20);
 ```
 
+<div>
+<img width="20%" alt="1h" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2dh1.svg"/>
+<img width="20%" alt="2h" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2dh2.svg"/>
+<img width="20%" alt="3h" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2dh3.svg"/>
+<img width="20%" alt="4h" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2dh4.svg"/>
+</div>
+
 ## Example Images
 
 2D and 3D closed curve:

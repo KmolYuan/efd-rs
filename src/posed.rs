@@ -75,6 +75,21 @@ where
         (Self { curve, vectors, t, geo }, guide)
     }
 
+    /// Get the reference of normalized curve.
+    pub fn as_curve(&self) -> &[Coord<D>] {
+        &self.curve
+    }
+
+    /// Get the reference of normalized vectors.
+    pub fn as_vectors(&self) -> &[Coord<D>] {
+        &self.vectors
+    }
+
+    /// Get the reference of normalized time parameters.
+    pub fn as_t(&self) -> &[f64] {
+        &self.t
+    }
+
     /// Get the reference of geometric variables.
     pub fn as_geo(&self) -> &GeoVar<Rot<D>, D> {
         &self.geo

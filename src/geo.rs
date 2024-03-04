@@ -36,7 +36,20 @@ impl RotHint<3> for na::UnitQuaternion<f64> {
 
 /// Geometric variables.
 ///
-/// This type record the information of raw coefficients.
+/// This type record the information of raw coefficients. You can merge two
+/// instance with `*`/`*=` operator.
+///
+/// ```
+/// use efd::{tests::*, Efd2};
+/// # use efd::Curve as _;
+/// # let curve1 = CURVE2D;
+/// # let curve2 = CURVE2D;
+///
+/// let a = Efd2::from_curve(curve1, false);
+/// let b = Efd2::from_curve(curve2, false);
+/// let geo = b.as_geo() * a.as_geo().inverse();
+/// assert!(curve_diff(&geo.transform(curve1), curve2) < EPS);
+/// ```
 #[derive(Clone)]
 pub struct GeoVar<R: RotHint<D>, const D: usize> {
     inner: Sim<R, D>,
@@ -83,6 +96,11 @@ where
     /// Create a new instance from rotation.
     pub fn from_rot(rot: R) -> Self {
         Self::from_rot_scale(rot, 1.)
+    }
+
+    /// Create a new instance from rotation.
+    pub fn from_scale(scale: f64) -> Self {
+        Self::from_rot_scale(R::identity(), scale)
     }
 
     /// Create a new instance from rotation and scaling.
@@ -216,30 +234,27 @@ where
 }
 
 macro_rules! impl_mul {
-    ($ty1:ty, $ty2:ty) => {
-        /// Merge `self` and `rhs`.
-        ///
-        /// ```
-        /// use efd::{tests::*, Efd2};
-        /// # use efd::Curve as _;
-        /// # let curve1 = CURVE2D;
-        /// # let curve2 = CURVE2D;
-        ///
-        /// let a = Efd2::from_curve(curve1, false);
-        /// let b = Efd2::from_curve(curve2, false);
-        /// let geo = b.as_geo() * a.as_geo().inverse();
-        /// assert!(curve_diff(&geo.transform(curve1), curve2) < EPS);
-        /// ```
+    ($ty:ty) => {
+        impl_mul!(@$ty, $ty, &$ty, $ty, $ty, &$ty, &$ty, &$ty);
+    };
+    (@$($ty1:ty, $ty2:ty),+) => {$(
         impl<R: RotHint<D>, const D: usize> core::ops::Mul<$ty2> for $ty1 {
             type Output = GeoVar<R, D>;
             fn mul(self, rhs: $ty2) -> Self::Output {
                 GeoVar { inner: &self.inner * &rhs.inner }
             }
         }
-    };
+    )+};
 }
 
-impl_mul!(GeoVar<R, D>, Self);
-impl_mul!(&GeoVar<R, D>, Self);
-impl_mul!(GeoVar<R, D>, &Self);
-impl_mul!(&GeoVar<R, D>, GeoVar<R, D>);
+impl_mul!(GeoVar<R, D>);
+impl<R: RotHint<D>, const D: usize> core::ops::MulAssign<Self> for GeoVar<R, D> {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self *= &rhs;
+    }
+}
+impl<R: RotHint<D>, const D: usize> core::ops::MulAssign<&Self> for GeoVar<R, D> {
+    fn mul_assign(&mut self, rhs: &Self) {
+        self.inner *= &rhs.inner;
+    }
+}
