@@ -149,7 +149,7 @@ where
     /// let curve = Efd2::from_parts_unchecked(vec![], GeoVar::identity()).recon(20);
     /// ```
     pub fn from_parts_unchecked(coeffs: Coeffs<D>, geo: GeoVar<Rot<D>, D>) -> Self {
-        assert!(coeffs.len() > 0, "the harmonic must be greater than 0");
+        assert!(!coeffs.is_empty(), "the harmonic must be greater than 0");
         Self { coeffs, geo }
     }
 
