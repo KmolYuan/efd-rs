@@ -41,7 +41,12 @@ pub const fn harmonic_nyquist(is_open: bool, len: usize) -> usize {
     harmonic(is_open, len) / 2
 }
 
-/// Path signature with the target position.
+/// Path signature.
+///
+/// Contains:
+/// + Normalized curve.
+/// + Normalized time parameters.
+/// + Geometric variables.
 pub struct PathSig<const D: usize>
 where
     U<D>: EfdDim<D>,
@@ -55,11 +60,11 @@ impl<const D: usize> PathSig<D>
 where
     U<D>: EfdDim<D>,
 {
-    /// Get the theta value `t` of each point coordinate and the normalized
+    /// Get the time parameter `t` of each point coordinate and the normalized
     /// geometric variables of the curve.
     ///
     /// This function is faster than building [`Efd`] since it only calculates
-    /// **one harmonic**.
+    /// **two harmonics**.
     ///
     /// ```
     /// let curve = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
@@ -70,7 +75,7 @@ where
         C: Curve<D>,
     {
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (mut t, mut coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, 1, None);
+        let (mut t, mut coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, 2, None);
         let geo = geo * U::coeff_norm(&mut coeffs, Some(&mut t));
         let curve = geo.inverse().transform(curve);
         Self { curve, t, geo }
@@ -108,14 +113,6 @@ where
 /// the coefficients are normalized with regard to the absolute value of A₁.
 ///
 /// Please see [`GeoVar`] for more information.
-///
-/// # Raw Coefficients
-///
-/// The coefficients is contained with [`na::Matrix`], use
-/// [`Efd::try_from_coeffs()`] to input the coefficients externally.
-///
-/// See also [`Efd::from_parts_unchecked()`] and [`Efd::into_inner()`] without
-/// checking data.
 #[derive(Clone)]
 pub struct Efd<const D: usize>
 where
@@ -131,44 +128,34 @@ where
 {
     /// Create object from coefficients and geometric variables.
     ///
-    /// Zero harmonic is allowed but meaningless. If the harmonic is zero, some
-    /// operations will panic.
+    /// # Raw Coefficients
     ///
-    /// ```
+    /// There is no "check method" for the input coefficients. Please use
+    /// [`Efd::from_curve()`] and its related methods to create the object. This
+    /// method is designed for loading coefficients from external sources.
+    ///
+    /// See also [`Efd::from_coeffs_unchecked()`] and [`Efd::into_inner()`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if the harmonic is zero. (`coeffs.len() == 0`)
+    ///
+    /// ```should_panic
     /// use efd::{Efd2, GeoVar};
     /// let curve = Efd2::from_parts_unchecked(vec![], GeoVar::identity()).recon(20);
-    /// assert_eq!(curve.len(), 0);
     /// ```
-    ///
-    /// See also [`Efd::into_inner()`].
-    pub const fn from_parts_unchecked(coeffs: Coeffs<D>, geo: GeoVar<Rot<D>, D>) -> Self {
+    pub fn from_parts_unchecked(coeffs: Coeffs<D>, geo: GeoVar<Rot<D>, D>) -> Self {
+        assert!(coeffs.len() > 0, "the harmonic must be greater than 0");
         Self { coeffs, geo }
     }
 
-    /// Create object from coefficients without boundary check.
+    /// Create object from coefficients without check.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the harmonic is zero. (`coeffs.len() == 0`)
     pub fn from_coeffs_unchecked(coeffs: Coeffs<D>) -> Self {
-        Self { coeffs, geo: GeoVar::identity() }
-    }
-
-    /// Create object from a matrix with boundary check and normalization.
-    ///
-    /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
-    ///
-    /// Return none if the harmonic is zero.
-    pub fn try_from_coeffs(mut coeffs: Coeffs<D>) -> Option<Self> {
-        match coeffs.is_empty() {
-            true => None,
-            false => Some(Self { geo: U::coeff_norm(&mut coeffs, None), coeffs }),
-        }
-    }
-
-    /// Create object from a matrix with boundary check.
-    ///
-    /// The array size is (harmonic) x (dimension x 2). The dimension is `D`.
-    ///
-    /// Return none if the harmonic is zero.
-    pub fn try_from_coeffs_unnorm(coeffs: Coeffs<D>) -> Option<Self> {
-        (!coeffs.is_empty()).then_some(Self { coeffs, geo: GeoVar::identity() })
+        Self::from_parts_unchecked(coeffs, GeoVar::identity())
     }
 
     /// Fully automated coefficient calculation.
@@ -186,15 +173,15 @@ where
     /// The open curve option is for the curve that duplicated a reversed part
     /// of itself. For example,
     ///
-    /// ```no_run
-    /// # let curve_open = [];
+    /// ```
+    /// # let curve_open = efd::tests::CURVE2D_OPEN.to_vec();
     /// let efd = efd::Efd2::from_curve(curve_open, true);
     /// ```
     ///
     /// is equivalent to
     ///
-    /// ```no_run
-    /// # let curve_open = [];
+    /// ```
+    /// # let curve_open = efd::tests::CURVE2D_OPEN.to_vec();
     /// let curve_closed = curve_open
     ///     .iter()
     ///     .chain(curve_open.iter().rev().skip(1))
@@ -396,7 +383,7 @@ where
 
     /// Calculate the distance from a [`PathSig`].
     pub fn err_sig(&self, sig: &PathSig<D>) -> f64 {
-        core::iter::zip(self.recon_norm_by_t(&sig.t), &sig.curve)
+        core::iter::zip(self.recon_norm_by(&sig.t), &sig.curve)
             .map(|(a, b)| a.l2_err(b))
             .fold(0., f64::max)
     }
@@ -409,68 +396,43 @@ where
         }
     }
 
-    /// Consume and return a reversed version of the coefficients. This method
-    /// can avoid mutable require.
+    /// Consume and return a reversed version of the coefficients.
     ///
-    /// Please clone the object if you want to do self-comparison.
+    /// This method can avoid mutable require.
     pub fn reversed(mut self) -> Self {
         self.reverse_inplace();
         self
     }
 
-    /// Reconstruct the described curve. (`theta=0~TAU`)
+    /// Reconstruct the described curve.
     ///
-    /// # Panics
-    ///
-    /// Panics if the number of the points `n` is less than 2.
+    /// If the described curve is open, the time series is `0..PI` instead of
+    /// `0..TAU`.
     pub fn recon(&self, n: usize) -> Vec<Coord<D>> {
-        self.recon_in(n, TAU)
-    }
-
-    /// Reconstruct a half of the described curve. (`theta=0~PI`)
-    ///
-    /// # Panics
-    ///
-    /// Panics if the number of the points `n` is less than 2.
-    pub fn recon_half(&self, n: usize) -> Vec<Coord<D>> {
-        self.recon_in(n, PI)
-    }
-
-    fn recon_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
-        let mut curve = self.recon_norm_in(n, theta);
+        let mut curve = self.recon_norm(n);
         self.geo.transform_inplace(&mut curve);
         curve
     }
 
-    /// Reconstruct the described curve. (`theta=0~TAU`)
+    /// Reconstruct the described curve. (`t=0~TAU`)
     ///
     /// Normalized curve is **without** transformation.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the number of the points `n` is less than 2.
     pub fn recon_norm(&self, n: usize) -> Vec<Coord<D>> {
-        self.recon_norm_in(n, TAU)
-    }
-
-    /// Reconstruct a half of the described curve. (`t=0~PI`)
-    ///
-    /// Normalized curve is **without** transformation.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the number of the points `n` is less than 2.
-    pub fn recon_norm_half(&self, n: usize) -> Vec<Coord<D>> {
-        self.recon_norm_in(n, PI)
-    }
-
-    fn recon_norm_in(&self, n: usize, theta: f64) -> Vec<Coord<D>> {
-        debug_assert!(n > 2, "n ({n}) must larger than 2");
-        let iter = (0..n).map(|i| i as f64 / (n - 1) as f64 * theta);
+        let t = if self.is_open() { PI } else { TAU };
+        let iter = (0..n).map(|i| i as f64 / (n - 1) as f64 * t);
         U::reconstruct(&self.coeffs, iter)
     }
 
     /// Reconstruct a described curve in a time series `t`.
+    ///
+    /// ```
+    /// # let curve = efd::tests::CURVE2D;
+    /// let efd = efd::Efd2::from_curve(curve, false);
+    /// let sig = efd::PathSig::new(curve, false);
+    /// let curve_recon = efd.recon_by(sig.as_t());
+    /// ```
+    ///
+    /// See also [`PathSig`].
     pub fn recon_by(&self, t: &[f64]) -> Vec<Coord<D>> {
         let mut curve = U::reconstruct(&self.coeffs, t.iter().copied());
         self.geo.transform_inplace(&mut curve);
@@ -480,30 +442,10 @@ where
     /// Reconstruct a normalized curve in a time series `t`.
     ///
     /// Normalized curve is **without** transformation.
+    ///
+    /// See also [`Efd::recon_by()`].
     pub fn recon_norm_by(&self, t: &[f64]) -> Vec<Coord<D>> {
         U::reconstruct(&self.coeffs, t.iter().copied())
-    }
-
-    /// Reconstruct a described curve in a normalized time series `t`.
-    ///
-    /// If the input angle is obtained from [`PathSig`], the
-    /// reconstruction must use this method.
-    pub fn recon_by_t(&self, t: &[f64]) -> Vec<Coord<D>> {
-        let mut curve = self.recon_norm_by_t(t);
-        self.geo.transform_inplace(&mut curve);
-        curve
-    }
-
-    /// Reconstruct a normalized curve in a normalized time series `t`.
-    ///
-    /// If the input angle is obtained from [`PathSig`], the
-    /// reconstruction must use this method.
-    pub fn recon_norm_by_t(&self, t: &[f64]) -> Vec<Coord<D>> {
-        if D == 2 && !self.is_open() && self.harmonic() > 1 {
-            U::reconstruct(&self.coeffs, t.iter().map(|t| t + PI))
-        } else {
-            self.recon_norm_by(t)
-        }
     }
 }
 

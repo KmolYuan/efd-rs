@@ -108,7 +108,7 @@ pub trait EfdDim<const D: usize>: Sealed {
     }
 
     #[doc(hidden)]
-    fn coeff_norm(coeffs: &mut [Kernel<D>], t: Option<&mut [f64]>) -> GeoVar<Self::Rot, D> {
+    fn coeff_norm(coeffs: &mut [Kernel<D>], mut t: Option<&mut [f64]>) -> GeoVar<Self::Rot, D> {
         // Angle of starting point (theta)
         // theta = atan2(2 * sum(m[:, 0] * m[:, 1]), sum(m[:, 0]^2) - sum(m[:, 1]^2))
         // theta = 0 if is open curve
@@ -124,17 +124,22 @@ pub trait EfdDim<const D: usize>: Sealed {
                 let theta = na::Rotation2::new((i + 1) as f64 * theta);
                 m.copy_from(&(*m * theta));
             }
-            if let Some(t) = t {
+            if let Some(t) = &mut t {
                 t.iter_mut().for_each(|v| *v -= theta);
             }
         }
         // Normalize coefficients sign (zeta)
+        // - Check 1st and 2nd harmonics if two local coordinate systems are the closest
+        // - Plus PI to time parameters if zeta is -1
         if coeffs.len() > 1 && {
             let [u1, v1] = [coeffs[0].column(0), coeffs[0].column(1)];
             let [u2, v2] = [coeffs[1].column(0), coeffs[1].column(1)];
             (u1 - u2).norm() + (v1 - v2).norm() > (u1 + u2).norm() + (v1 + v2).norm()
         } {
             coeffs.iter_mut().step_by(2).for_each(|s| *s *= -1.);
+            if let Some(t) = t {
+                t.iter_mut().for_each(|v| *v += PI);
+            }
         }
         // Rotation angle (psi)
         // m = psi' * m
