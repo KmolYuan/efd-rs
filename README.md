@@ -25,13 +25,19 @@ assert!(efd::util::valid_curve(&curve).is_some());
 let described_curve = efd::Efd2::from_curve(curve, false).recon(20);
 ```
 
-The harmonic number can be set with `efd::Efd::from_curve_harmonic()` method. The following figures show the reconstruction of a 2D closed curve with 1-4 harmonics.
+The harmonic number can be set with `efd::Efd::from_curve_harmonic()` method. The following figures show the reconstruction of a 2D closed curve with 1-8 harmonics.
 
 <div>
 <img width="20%" alt="1h" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2dh1.svg"/>
 <img width="20%" alt="2h" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2dh2.svg"/>
 <img width="20%" alt="3h" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2dh3.svg"/>
 <img width="20%" alt="4h" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2dh4.svg"/>
+</div>
+<div>
+<img width="20%" alt="5h" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2dh5.svg"/>
+<img width="20%" alt="6h" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2dh6.svg"/>
+<img width="20%" alt="7h" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2dh7.svg"/>
+<img width="20%" alt="8h" src="https://raw.githubusercontent.com/KmolYuan/efd-rs/main/img/2dh8.svg"/>
 </div>
 
 ## Example Images

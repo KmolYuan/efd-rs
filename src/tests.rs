@@ -141,15 +141,14 @@ fn posed_efd_open() {
 #[test]
 #[cfg(feature = "std")]
 fn plot2d_harmonic() -> Result<(), Box<dyn std::error::Error>> {
-    let mut efd = Efd2::from_curve_harmonic(ORIGIN_CURVE, false, 4);
+    const N: usize = 8;
+    let mut efd = Efd2::from_curve_harmonic(ORIGIN_CURVE, false, N);
     *efd.as_geo_mut() *= GeoVar2::from_scale(20.);
-    plot2d(&efd, "img/2dh4.svg")?;
-    efd.set_harmonic(3);
-    plot2d(&efd, "img/2dh3.svg")?;
-    efd.set_harmonic(2);
-    plot2d(&efd, "img/2dh2.svg")?;
-    efd.set_harmonic(1);
-    plot2d(&efd, "img/2dh1.svg")?;
+    plot2d(&efd, format!("img/2dh{N}.svg"))?;
+    for n in (1..N).rev() {
+        efd.set_harmonic(n);
+        plot2d(&efd, format!("img/2dh{n}.svg"))?;
+    }
     Ok(())
 }
 
@@ -207,7 +206,7 @@ fn get_area<const D: usize>(pts: &[[f64; D]]) -> [[f64; 2]; D] {
 }
 
 #[cfg(all(test, feature = "std"))]
-fn plot2d(efd: &Efd2, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn plot2d(efd: &Efd2, path: impl AsRef<std::path::Path>) -> Result<(), Box<dyn std::error::Error>> {
     use plotters::prelude::*;
 
     fn bounding_box(pts: &[[f64; 2]]) -> [f64; 4] {
@@ -229,7 +228,7 @@ fn plot2d(efd: &Efd2, path: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     let curve = efd.recon(360);
     let [x_min, x_max, y_min, y_max] = bounding_box(&curve);
-    let b = SVGBackend::new(path, (1200, 1200));
+    let b = SVGBackend::new(&path, (1200, 1200));
     let root = b.into_drawing_area();
     root.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&root).build_cartesian_2d(x_min..x_max, y_min..y_max)?;
@@ -266,7 +265,7 @@ fn plot2d(efd: &Efd2, path: &str) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[cfg(all(test, feature = "std"))]
-fn plot3d(efd: &Efd3, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn plot3d(efd: &Efd3, path: impl AsRef<std::path::Path>) -> Result<(), Box<dyn std::error::Error>> {
     use plotters::prelude::*;
 
     fn bounding_box(pts: &[[f64; 3]]) -> [f64; 6] {
@@ -286,7 +285,7 @@ fn plot3d(efd: &Efd3, path: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     let curve = efd.recon(360);
     let [x_min, x_max, y_min, y_max, z_min, z_max] = bounding_box(&curve);
-    let b = SVGBackend::new(path, (1200, 1200));
+    let b = SVGBackend::new(&path, (1200, 1200));
     let root = b.into_drawing_area();
     root.fill(&WHITE)?;
     let mut chart =

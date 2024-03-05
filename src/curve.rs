@@ -14,7 +14,7 @@ where
 
 /// Copy-on-write curve type.
 ///
-/// Instead of using [`Cow<Coord<D>>`](std::borrow::Cow), this is a trait, which
+/// Instead of using [`std::borrow::Cow<Coord<D>>`], this is a trait, which
 /// does not require any conversion.
 pub trait Curve<const D: usize>: Sized {
     /// Move or copy curve type into the owned type [`Vec`].

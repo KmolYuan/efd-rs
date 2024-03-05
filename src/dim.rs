@@ -11,12 +11,6 @@ use num_traits::*;
 /// EFD dimension marker.
 pub enum U<const D: usize> {}
 
-/// 1D Coefficients type.
-pub type Coeffs1 = Coeffs<1>;
-/// 2D Coefficients type.
-pub type Coeffs2 = Coeffs<2>;
-/// 3D Coefficients type.
-pub type Coeffs3 = Coeffs<3>;
 /// Coefficients type.
 pub type Coeffs<const D: usize> = Vec<Kernel<D>>;
 /// An owned matrix of specific coefficients. (Dx2)
@@ -27,7 +21,7 @@ pub type Rot<const D: usize> = <U<D> as EfdDim<D>>::Rot;
 trait Sealed {}
 impl<const D: usize> Sealed for U<D> {}
 
-/// Trait for the dimension [`U<D>`](U) of EFD.
+/// Trait for the dimension [`U<D>`] of EFD.
 ///
 /// Use `where U<D>: EfdDim<D>` bound to constraint the dimension `D` that
 /// implements this trait. Please see the [implementors section](#implementors)
