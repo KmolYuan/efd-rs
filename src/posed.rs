@@ -18,7 +18,7 @@ pub type PosedEfd2 = PosedEfd<2>;
 pub type PosedEfd3 = PosedEfd<3>;
 
 /// Transform 2D angles to unit vectors.
-pub fn ang2vec(angles: &[f64]) -> Vec<Coord<2>> {
+pub fn ang2vec(angles: &[f64]) -> Vec<[f64; 2]> {
     angles.iter().map(|a| [a.cos(), a.sin()]).collect()
 }
 
@@ -27,8 +27,8 @@ pub struct MotionSig<const D: usize>
 where
     U<D>: EfdDim<D>,
 {
-    curve: Vec<Coord<D>>,
-    vectors: Vec<Coord<D>>,
+    curve: Vec<[f64; D]>,
+    vectors: Vec<[f64; D]>,
     t: Vec<f64>,
     geo: GeoVar<Rot<D>, D>,
 }
@@ -76,12 +76,12 @@ where
     }
 
     /// Get the reference of normalized curve.
-    pub fn as_curve(&self) -> &[Coord<D>] {
+    pub fn as_curve(&self) -> &[[f64; D]] {
         &self.curve
     }
 
     /// Get the reference of normalized vectors.
-    pub fn as_vectors(&self) -> &[Coord<D>] {
+    pub fn as_vectors(&self) -> &[[f64; D]] {
         &self.vectors
     }
 

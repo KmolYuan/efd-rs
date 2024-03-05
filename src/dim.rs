@@ -43,7 +43,7 @@ pub trait EfdDim<const D: usize>: Sealed {
     #[doc(hidden)]
     #[allow(clippy::type_complexity)]
     fn get_coeff(
-        curve: &[Coord<D>],
+        curve: &[[f64; D]],
         is_open: bool,
         harmonic: usize,
         guide: Option<&[f64]>,
@@ -160,7 +160,7 @@ pub trait EfdDim<const D: usize>: Sealed {
     fn reconstruct(
         coeffs: &[Kernel<D>],
         t_iter: impl ExactSizeIterator<Item = f64>,
-    ) -> Vec<Coord<D>> {
+    ) -> Vec<[f64; D]> {
         let t = na::Matrix1xX::from_iterator(t_iter.len(), t_iter);
         coeffs
             .iter()

@@ -55,7 +55,7 @@ pub struct PathSig<const D: usize>
 where
     U<D>: EfdDim<D>,
 {
-    curve: Vec<efd::Coord<D>>,
+    curve: Vec<[f64; D]>,
     pub(crate) t: Vec<f64>,
     pub(crate) geo: efd::GeoVar<efd::Rot<D>, D>,
 }
@@ -86,7 +86,7 @@ where
     }
 
     /// Get the reference of normalized curve.
-    pub fn as_curve(&self) -> &[Coord<D>] {
+    pub fn as_curve(&self) -> &[[f64; D]] {
         &self.curve
     }
 
@@ -412,7 +412,7 @@ where
     ///
     /// If the described curve is open, the time series is `0..PI` instead of
     /// `0..TAU`.
-    pub fn recon(&self, n: usize) -> Vec<Coord<D>> {
+    pub fn recon(&self, n: usize) -> Vec<[f64; D]> {
         let mut curve = self.recon_norm(n);
         self.geo.transform_inplace(&mut curve);
         curve
@@ -421,7 +421,7 @@ where
     /// Reconstruct the described curve. (`t=0~TAU`)
     ///
     /// Normalized curve is **without** transformation.
-    pub fn recon_norm(&self, n: usize) -> Vec<Coord<D>> {
+    pub fn recon_norm(&self, n: usize) -> Vec<[f64; D]> {
         let t = if self.is_open() { PI } else { TAU };
         let iter = (0..n).map(|i| i as f64 / (n - 1) as f64 * t);
         U::reconstruct(&self.coeffs, iter)
@@ -437,7 +437,7 @@ where
     /// ```
     ///
     /// See also [`PathSig`].
-    pub fn recon_by(&self, t: &[f64]) -> Vec<Coord<D>> {
+    pub fn recon_by(&self, t: &[f64]) -> Vec<[f64; D]> {
         let mut curve = U::reconstruct(&self.coeffs, t.iter().copied());
         self.geo.transform_inplace(&mut curve);
         curve
@@ -448,7 +448,7 @@ where
     /// Normalized curve is **without** transformation.
     ///
     /// See also [`Efd::recon_by()`].
-    pub fn recon_norm_by(&self, t: &[f64]) -> Vec<Coord<D>> {
+    pub fn recon_norm_by(&self, t: &[f64]) -> Vec<[f64; D]> {
         U::reconstruct(&self.coeffs, t.iter().copied())
     }
 }

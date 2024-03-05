@@ -84,12 +84,12 @@ where
     }
 
     /// Create a new instance.
-    pub fn new(trans: Coord<D>, rot: R, scale: f64) -> Self {
+    pub fn new(trans: [f64; D], rot: R, scale: f64) -> Self {
         Self { inner: Sim::from_parts(trans.into(), rot, scale) }
     }
 
     /// Create a new instance from translation.
-    pub fn from_trans(trans: Coord<D>) -> Self {
+    pub fn from_trans(trans: [f64; D]) -> Self {
         Self::new(trans, R::identity(), 1.)
     }
 
@@ -164,7 +164,7 @@ where
     }
 
     /// Get the translate property.
-    pub fn trans(&self) -> Coord<D> {
+    pub fn trans(&self) -> [f64; D] {
         self.inner.isometry.translation.vector.data.0[0]
     }
 
@@ -179,7 +179,7 @@ where
     }
 
     /// Set the translate property.
-    pub fn set_trans(&mut self, trans: Coord<D>) {
+    pub fn set_trans(&mut self, trans: [f64; D]) {
         self.inner.isometry.translation = trans.into();
     }
 
@@ -197,7 +197,7 @@ where
     ///
     /// Please see [`GeoVar::transform()`] for more information.
     #[must_use = "The transformed point is returned as a new value"]
-    pub fn transform_pt(&self, p: Coord<D>) -> Coord<D> {
+    pub fn transform_pt(&self, p: [f64; D]) -> [f64; D] {
         self.inner.transform_point(&na::Point::from(p)).into()
     }
 
@@ -213,7 +213,7 @@ where
     /// let curve_norm = efd.as_geo().inverse().transform(&curve);
     /// ```
     #[must_use = "The transformed point is returned as a new value"]
-    pub fn transform<C>(&self, curve: C) -> Vec<Coord<D>>
+    pub fn transform<C>(&self, curve: C) -> Vec<[f64; D]>
     where
         C: Curve<D>,
     {
@@ -227,7 +227,7 @@ where
     /// Transform a contour in-placed with this information.
     pub fn transform_inplace<C>(&self, mut curve: C)
     where
-        C: AsMut<[Coord<D>]>,
+        C: AsMut<[[f64; D]]>,
     {
         for c in curve.as_mut() {
             *c = self.transform_pt(*c);
@@ -235,9 +235,9 @@ where
     }
 
     /// Transform an iterator contour and return a new iterator.
-    pub fn transform_iter<'a, C>(&'a self, curve: C) -> impl Iterator<Item = Coord<D>> + 'a
+    pub fn transform_iter<'a, C>(&'a self, curve: C) -> impl Iterator<Item = [f64; D]> + 'a
     where
-        C: IntoIterator<Item = Coord<D>> + 'a,
+        C: IntoIterator<Item = [f64; D]> + 'a,
     {
         curve.into_iter().map(|c| self.transform_pt(c))
     }

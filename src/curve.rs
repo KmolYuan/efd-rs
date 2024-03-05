@@ -1,8 +1,5 @@
 use alloc::{borrow::Cow, vec::Vec};
 
-/// Coordinate type of the dimension `D`.
-pub type Coord<const D: usize> = [f64; D];
-
 pub(crate) type MatrixRxX<const D: usize> = na::OMatrix<f64, na::Const<D>, na::Dyn>;
 
 pub(crate) fn to_mat<C, const D: usize>(curve: C) -> MatrixRxX<D>
@@ -14,14 +11,14 @@ where
 
 /// Copy-on-write curve type.
 ///
-/// Instead of using [`std::borrow::Cow<Coord<D>>`], this is a trait, which
+/// Instead of using [`std::borrow::Cow<[f64; D]>`], this is a trait, which
 /// does not require any conversion.
 pub trait Curve<const D: usize>: Sized {
     /// Move or copy curve type into the owned type [`Vec`].
-    fn to_curve(self) -> Vec<Coord<D>>;
+    fn to_curve(self) -> Vec<[f64; D]>;
 
     /// Elements view.
-    fn as_curve(&self) -> &[Coord<D>];
+    fn as_curve(&self) -> &[[f64; D]];
 
     /// Length of the curve.
     fn len(&self) -> usize {
@@ -38,14 +35,14 @@ pub trait Curve<const D: usize>: Sized {
     /// # Panics
     ///
     /// Panics if the curve is empty.
-    fn closed_lin(self) -> Vec<Coord<D>> {
+    fn closed_lin(self) -> Vec<[f64; D]> {
         let mut c = self.to_curve();
         c.push(c[0]);
         c
     }
 
     /// Remove the last element.
-    fn popped_last(self) -> Vec<Coord<D>> {
+    fn popped_last(self) -> Vec<[f64; D]> {
         let mut curve = self.to_curve();
         curve.pop();
         curve
@@ -58,46 +55,46 @@ pub trait Curve<const D: usize>: Sized {
     }
 }
 
-impl<const D: usize> Curve<D> for Vec<Coord<D>> {
-    fn to_curve(self) -> Vec<Coord<D>> {
+impl<const D: usize> Curve<D> for Vec<[f64; D]> {
+    fn to_curve(self) -> Vec<[f64; D]> {
         self
     }
 
-    fn as_curve(&self) -> &[Coord<D>] {
+    fn as_curve(&self) -> &[[f64; D]] {
         self
     }
 }
 
 macro_rules! impl_slice {
     () => {
-        fn to_curve(self) -> Vec<Coord<D>> {
+        fn to_curve(self) -> Vec<[f64; D]> {
             self.to_vec()
         }
 
-        fn as_curve(&self) -> &[Coord<D>] {
+        fn as_curve(&self) -> &[[f64; D]] {
             self
         }
     };
 }
 
-impl<const D: usize, const N: usize> Curve<D> for [Coord<D>; N] {
+impl<const D: usize, const N: usize> Curve<D> for [[f64; D]; N] {
     impl_slice!();
 }
 
-impl<const D: usize> Curve<D> for &[Coord<D>] {
+impl<const D: usize> Curve<D> for &[[f64; D]] {
     impl_slice!();
 }
 
-impl<const D: usize> Curve<D> for Cow<'_, [Coord<D>]> {
+impl<const D: usize> Curve<D> for Cow<'_, [[f64; D]]> {
     impl_slice!();
 }
 
 impl<const D: usize, T: Curve<D> + Clone> Curve<D> for &T {
-    fn to_curve(self) -> Vec<Coord<D>> {
+    fn to_curve(self) -> Vec<[f64; D]> {
         self.clone().to_curve()
     }
 
-    fn as_curve(&self) -> &[Coord<D>] {
+    fn as_curve(&self) -> &[[f64; D]] {
         (*self).as_curve()
     }
 }
