@@ -18,6 +18,8 @@ pub type Efd3 = Efd<3>;
 /// let is_open = true;
 /// assert_eq!(efd::harmonic(is_open, 3), 6);
 /// ```
+///
+/// See also [`Efd::from_curve_harmonic()`].
 #[inline]
 pub const fn harmonic(is_open: bool, len: usize) -> usize {
     if is_open {
@@ -36,6 +38,8 @@ pub const fn harmonic(is_open: bool, len: usize) -> usize {
 /// let is_open = false;
 /// assert_eq!(efd::harmonic_nyquist(is_open, 6), 3);
 /// ```
+///
+/// See also [`harmonic()`] and [`Efd::from_curve_nyquist()`].
 #[inline]
 pub const fn harmonic_nyquist(is_open: bool, len: usize) -> usize {
     harmonic(is_open, len) / 2
@@ -102,9 +106,9 @@ where
 ///
 /// Start with [`Efd::from_curve()`] and its related methods.
 ///
-/// # Transformation
+/// # Normalization
 ///
-/// The transformation of normalized coefficients.
+/// The geometric normalization of EFD coefficients.
 ///
 /// Implements Kuhl and Giardina method of normalizing the coefficients
 /// An, Bn, Cn, Dn. Performs 3 separate normalizations. First, it makes the
@@ -112,7 +116,7 @@ where
 /// Secondly, the data is rotated with respect to the major axis. Thirdly,
 /// the coefficients are normalized with regard to the absolute value of A₁.
 ///
-/// Please see [`GeoVar`] for more information.
+/// Please see [`Efd::as_geo()`] and [`GeoVar`] for more information.
 #[derive(Clone)]
 pub struct Efd<const D: usize>
 where
@@ -206,12 +210,9 @@ where
     }
 
     /// Same as [`Efd::from_curve()`], but if your sampling points are large,
-    /// use Nyquist Frequency as an initial harmonic number.
+    /// use Nyquist Frequency as the initial harmonic number.
     ///
-    /// Nyquist Frequency is half of the sample number.
-    ///
-    /// Please ensure the sampling points are generated from a known function
-    /// and are more than enough. Otherwise, it will cause undersampling.
+    /// Please ensure the sampling points meet the [Nyquist–Shannon sampling theorem](https://en.wikipedia.org/wiki/Nyquist%E2%80%93Shannon_sampling_theorem).
     ///
     /// See also [`harmonic_nyquist`].
     pub fn from_curve_nyquist<C>(curve: C, is_open: bool) -> Self
@@ -224,8 +225,11 @@ where
 
     /// Manual coefficient calculation.
     ///
-    /// 1. The initial harmonic is decide by user.
-    /// 1. No harmonic reduced. Please call [`Efd::fourier_power_anaysis()`].
+    /// 1. The initial harmonic is decided by user.
+    ///    + [`harmonic()`] is used in [`Efd::from_curve()`].
+    ///    + [`harmonic_nyquist()`] is used in [`Efd::from_curve_nyquist()`].
+    /// 1. No harmonic reduced.
+    ///    + Please call [`Efd::fourier_power_anaysis()`] manually.
     ///
     /// # Panics
     ///
@@ -246,7 +250,7 @@ where
 
     /// Same as [`Efd::from_curve_harmonic()`] but without normalization.
     ///
-    /// See also [`Efd::normalized()`] if you want to normalize later.
+    /// Please call [`Efd::normalized()`] if you want to normalize later.
     pub fn from_curve_harmonic_unnorm<C>(curve: C, is_open: bool, harmonic: usize) -> Self
     where
         C: Curve<D>,

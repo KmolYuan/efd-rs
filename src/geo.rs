@@ -95,17 +95,12 @@ where
 
     /// Create a new instance from rotation.
     pub fn from_rot(rot: R) -> Self {
-        Self::from_rot_scale(rot, 1.)
+        Self::new([0.; D], rot, 1.)
     }
 
     /// Create a new instance from rotation.
     pub fn from_scale(scale: f64) -> Self {
-        Self::from_rot_scale(R::identity(), scale)
-    }
-
-    /// Create a new instance from rotation and scaling.
-    pub fn from_rot_scale(rot: R, scale: f64) -> Self {
-        Self::new([0.; D], rot, scale)
+        Self::new([0.; D], R::identity(), scale)
     }
 
     /// Create a new instance from translation.
@@ -121,7 +116,7 @@ where
     /// Create a new instance from rotation and scaling.
     pub fn only_rot_scale(self) -> Self {
         let scale = self.inner.scaling();
-        Self::from_rot_scale(self.inner.isometry.rotation, scale)
+        Self::new([0.; D], self.inner.isometry.rotation, scale)
     }
 
     /// Set the scaling property.
@@ -181,6 +176,21 @@ where
     /// Get the scaling property.
     pub fn scale(&self) -> f64 {
         self.inner.scaling()
+    }
+
+    /// Set the translate property.
+    pub fn set_trans(&mut self, trans: Coord<D>) {
+        self.inner.isometry.translation = trans.into();
+    }
+
+    /// Set the rotation property.
+    pub fn set_rot(&mut self, rot: R) {
+        self.inner.isometry.rotation = rot;
+    }
+
+    /// Set the scaling property.
+    pub fn set_scale(&mut self, scale: f64) {
+        self.inner.set_scaling(scale);
     }
 
     /// Transform a point.
