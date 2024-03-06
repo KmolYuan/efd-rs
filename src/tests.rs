@@ -143,7 +143,7 @@ fn posed_efd_open() {
 fn plot2d_harmonic() -> Result<(), Box<dyn std::error::Error>> {
     const N: usize = 8;
     let mut efd = Efd2::from_curve_harmonic(ORIGIN_CURVE, false, N);
-    efd.as_geo_mut().set_scale(20.);
+    *efd.as_geo_mut() *= GeoVar2::from_scale(20.);
     plot2d(&efd, format!("img/2dh{N}.svg"))?;
     for n in (1..N).rev() {
         efd.set_harmonic(n);
