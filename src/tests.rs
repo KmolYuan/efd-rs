@@ -60,7 +60,7 @@ fn efd2d() {
     assert_abs_diff_eq!(geo.rot().angle(), -2.49925101855502);
     assert_abs_diff_eq!(geo.scale(), 48.16765830752243);
     // Test reconstruction
-    let target = efd.recon_norm_by(PathSig::new(CURVE2D, false).as_t());
+    let target = efd.recon_norm_by(&get_norm_t(CURVE2D, false));
     let curve = efd.as_geo().inverse().transform(CURVE2D);
     assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.01695);
 }
@@ -84,7 +84,7 @@ fn efd2d_open() {
     assert_abs_diff_eq!(geo.rot().angle(), 2.7330524299596815);
     assert_abs_diff_eq!(geo.scale(), 33.930916934329495);
     // Test reconstruction
-    let target = efd.recon_norm_by(PathSig::new(CURVE2D_OPEN, true).as_t());
+    let target = efd.recon_norm_by(&get_norm_t(CURVE2D_OPEN, true));
     let curve = efd.as_geo().inverse().transform(CURVE2D_OPEN);
     assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.0143);
 }
@@ -120,7 +120,7 @@ fn efd3d() {
     assert_abs_diff_eq!(geo.rot().angle(), 2.9160714030359416);
     assert_abs_diff_eq!(geo.scale(), 0.5629099155595344);
     // Test reconstruction
-    let target = efd.recon_norm_by(PathSig::new(CURVE3D, false).as_t());
+    let target = efd.recon_norm_by(&get_norm_t(CURVE3D, false));
     let curve = efd.as_geo().inverse().transform(CURVE3D);
     assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.00412);
 }

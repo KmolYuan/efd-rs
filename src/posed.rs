@@ -23,12 +23,17 @@ pub fn ang2vec(angles: &[f64]) -> Vec<[f64; 2]> {
 }
 
 /// Motion signature with the target position.
+///
+/// Used to present an "original motion". Can be compared with [`PosedEfd`] by
+/// [`PosedEfd::err_sig()`].
 pub struct MotionSig<const D: usize>
 where
     U<D>: EfdDim<D>,
 {
-    curve: Vec<[f64; D]>,
-    vectors: Vec<[f64; D]>,
+    /// Normalized curve
+    pub curve: Vec<[f64; D]>,
+    /// Normalized unit vectors
+    pub vectors: Vec<[f64; D]>,
     t: Vec<f64>,
     geo: GeoVar<Rot<D>, D>,
 }
@@ -62,27 +67,15 @@ where
         C: Curve<D>,
         V: Curve<D>,
     {
-        let PathSig { t, geo, .. } = PathSig::new(curve.as_curve(), true);
-        let geo_inv = geo.inverse();
-        let curve = geo_inv.transform(curve);
+        let PathSig { curve, t, geo } = PathSig::new(curve.as_curve(), true);
         let guide = zip(&curve, &curve[1..])
             .map(|(a, b)| a.l2_err(b))
             .collect::<Vec<_>>();
-        let mut vectors = geo_inv.only_rot().transform(vectors);
+        let mut vectors = geo.inverse().only_rot().transform(vectors);
         for (p, v) in zip(&curve, &mut vectors) {
             *v = array::from_fn(|i| p[i] + v[i]);
         }
         (Self { curve, vectors, t, geo }, guide)
-    }
-
-    /// Get the reference of normalized curve.
-    pub fn as_curve(&self) -> &[[f64; D]] {
-        &self.curve
-    }
-
-    /// Get the reference of normalized vectors.
-    pub fn as_vectors(&self) -> &[[f64; D]] {
-        &self.vectors
     }
 
     /// Get the reference of normalized time parameters.

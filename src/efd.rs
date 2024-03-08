@@ -45,19 +45,31 @@ pub const fn harmonic_nyquist(is_open: bool, len: usize) -> usize {
     harmonic(is_open, len) / 2
 }
 
-/// Path signature.
+/// Get the normalized time parameters of the curve.
 ///
-/// Contains:
-/// + Normalized curve.
-/// + Normalized time parameters.
-/// + Geometric variables.
+/// See also [`PathSig`].
+pub fn get_norm_t<C, const D: usize>(curve: C, is_open: bool) -> Vec<f64>
+where
+    C: Curve<D>,
+    U<D>: EfdDim<D>,
+{
+    PathSig::new(curve, is_open).t
+}
+
+/// Path signature with the target position.
+///
+/// Use to present an "original path". Can be compared with [`Efd`] by
+/// [`Efd::err_sig()`].
+///
+/// See also [`get_norm_t()`].
 pub struct PathSig<const D: usize>
 where
     U<D>: EfdDim<D>,
 {
-    curve: Vec<[f64; D]>,
+    /// Normalized curve
+    pub curve: Vec<[f64; D]>,
     pub(crate) t: Vec<f64>,
-    pub(crate) geo: efd::GeoVar<efd::Rot<D>, D>,
+    pub(crate) geo: GeoVar<Rot<D>, D>,
 }
 
 impl<const D: usize> PathSig<D>
@@ -85,18 +97,13 @@ where
         Self { curve, t, geo }
     }
 
-    /// Get the reference of normalized curve.
-    pub fn as_curve(&self) -> &[[f64; D]] {
-        &self.curve
-    }
-
     /// Get the reference of normalized time parameters.
     pub fn as_t(&self) -> &[f64] {
         &self.t
     }
 
     /// Get the reference of geometric variables.
-    pub fn as_geo(&self) -> &efd::GeoVar<efd::Rot<D>, D> {
+    pub fn as_geo(&self) -> &GeoVar<Rot<D>, D> {
         &self.geo
     }
 }
