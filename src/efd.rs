@@ -248,11 +248,7 @@ where
     where
         C: Curve<D>,
     {
-        debug_assert!(harmonic != 0, "harmonic must not be 0");
-        debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (_, mut coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, harmonic, None);
-        let geo = geo * U::coeff_norm(&mut coeffs, None);
-        Self { coeffs, geo }
+        Self::from_curve_harmonic_unnorm(curve, is_open, harmonic).normalized()
     }
 
     /// Same as [`Efd::from_curve_harmonic()`] but without normalization.
@@ -266,11 +262,6 @@ where
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         let (_, coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, harmonic, None);
         Self { coeffs, geo }
-    }
-
-    /// A builder method for changing geometric variables.
-    pub fn with_geo(self, geo: GeoVar<Rot<D>, D>) -> Self {
-        Self { geo, ..self }
     }
 
     /// A builder method using Fourier Power Anaysis (FPA) to reduce the

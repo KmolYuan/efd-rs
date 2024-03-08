@@ -197,7 +197,6 @@ where
         V: Curve<D>,
     {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
-        debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         debug_assert!(
             curve.len() == vectors.len(),
             "the curve length must be equal to the vectors length"
