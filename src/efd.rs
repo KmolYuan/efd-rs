@@ -205,8 +205,8 @@ where
     /// # Panics
     ///
     /// Panics if the curve length is not greater than 2 in debug mode. This
-    /// function check the lengths only. Please use [`valid_curve()`] to
-    /// verify the curve if there has NaN input.
+    /// function check the lengths only. Please use [`valid_curve()`] to verify
+    /// the curve if there has NaN input.
     pub fn from_curve<C>(curve: C, is_open: bool) -> Self
     where
         C: Curve<D>,
@@ -241,8 +241,8 @@ where
     ///
     /// Panics if the specific harmonic is zero or the curve length is not
     /// greater than 2 in the **debug mode**. This function check the lengths
-    /// only. Please use [`valid_curve()`] to verify the curve if there has
-    /// NaN input.
+    /// only. Please use [`valid_curve()`] to verify the curve if there has NaN
+    /// input.
     pub fn from_curve_harmonic<C>(curve: C, is_open: bool, harmonic: usize) -> Self
     where
         C: Curve<D>,
