@@ -196,7 +196,6 @@ where
         C: Curve<D>,
         V: Curve<D>,
     {
-        debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(
             curve.len() == vectors.len(),
             "the curve length must be equal to the vectors length"

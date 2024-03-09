@@ -90,8 +90,7 @@ where
     where
         C: Curve<D>,
     {
-        debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (mut t, mut coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, 2, None);
+        let (Efd { mut coeffs, geo }, mut t) = Efd::get_all_unnorm(curve.as_curve(), is_open, 2);
         let geo = geo * U::coeff_norm(&mut coeffs, Some(&mut t));
         let curve = geo.inverse().transform(curve);
         Self { curve, t, geo }
@@ -258,10 +257,18 @@ where
     where
         C: Curve<D>,
     {
+        Self::get_all_unnorm(curve, is_open, harmonic).0
+    }
+
+    #[track_caller]
+    fn get_all_unnorm<C>(curve: C, is_open: bool, harmonic: usize) -> (Self, Vec<f64>)
+    where
+        C: Curve<D>,
+    {
         debug_assert!(harmonic != 0, "harmonic must not be 0");
         debug_assert!(curve.len() > 2, "the curve length must greater than 2");
-        let (_, coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, harmonic, None);
-        Self { coeffs, geo }
+        let (t, coeffs, geo) = U::get_coeff(curve.as_curve(), is_open, harmonic, None);
+        (Self { coeffs, geo }, t)
     }
 
     /// A builder method using Fourier Power Anaysis (FPA) to reduce the
