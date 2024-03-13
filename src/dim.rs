@@ -108,7 +108,7 @@ pub trait EfdDim<const D: usize>: Sealed {
     }
 
     #[doc(hidden)]
-    fn coeff_norm(coeffs: &mut [Kernel<D>], mut t: Option<&mut [f64]>) -> GeoVar<Self::Rot, D> {
+    fn norm_coeff(coeffs: &mut [Kernel<D>], mut t: Option<&mut [f64]>) -> GeoVar<Self::Rot, D> {
         // Angle of starting point (theta)
         // theta = atan2(2 * sum(m[:, 0] * m[:, 1]), sum(m[:, 0]^2) - sum(m[:, 1]^2))
         // theta = 0 if is open curve
@@ -131,16 +131,7 @@ pub trait EfdDim<const D: usize>: Sealed {
         // Normalize coefficients sign (zeta)
         // - Check 1st and 2nd harmonics if two local coordinate systems are the closest
         // - Plus PI to time parameters if zeta is -1
-        if coeffs.len() > 1 && {
-            let [u1, v1] = [coeffs[0].column(0), coeffs[0].column(1)];
-            let [u2, v2] = [coeffs[1].column(0), coeffs[1].column(1)];
-            (u1 - u2).norm() + (v1 - v2).norm() > (u1 + u2).norm() + (v1 + v2).norm()
-        } {
-            coeffs.iter_mut().step_by(2).for_each(|s| *s *= -1.);
-            if let Some(t) = t {
-                t.iter_mut().for_each(|v| *v += PI);
-            }
-        }
+        Self::norm_zeta(coeffs, t);
         // Rotation angle (psi)
         // m = psi' * m
         let psi = Self::get_rot(coeffs);
@@ -154,6 +145,20 @@ pub trait EfdDim<const D: usize>: Sealed {
         coeffs.iter_mut().for_each(|m| *m /= scale);
         debug_assert!(scale.is_sign_positive());
         GeoVar::new([0.; D], psi, scale)
+    }
+
+    #[doc(hidden)]
+    fn norm_zeta(coeffs: &mut [Kernel<D>], t: Option<&mut [f64]>) {
+        if coeffs.len() > 1 && {
+            let [u1, v1] = [coeffs[0].column(0), coeffs[0].column(1)];
+            let [u2, v2] = [coeffs[1].column(0), coeffs[1].column(1)];
+            (u1 - u2).norm() + (v1 - v2).norm() > (u1 + u2).norm() + (v1 + v2).norm()
+        } {
+            coeffs.iter_mut().step_by(2).for_each(|s| *s *= -1.);
+            if let Some(t) = t {
+                t.iter_mut().for_each(|v| *v += PI);
+            }
+        }
     }
 
     #[doc(hidden)]

@@ -91,7 +91,7 @@ where
         C: Curve<D>,
     {
         let (Efd { mut coeffs, geo }, mut t) = Efd::get_all_unnorm(curve.as_curve(), is_open, 2);
-        let geo = geo * U::coeff_norm(&mut coeffs, Some(&mut t));
+        let geo = geo * U::norm_coeff(&mut coeffs, Some(&mut t));
         let curve = geo.inverse().transform(curve);
         Self { curve, t, geo }
     }
@@ -317,7 +317,7 @@ where
     /// Panics if the harmonic is zero.
     pub fn normalized(self) -> Self {
         let Self { mut coeffs, geo } = self;
-        let geo = geo * U::coeff_norm(&mut coeffs, None);
+        let geo = geo * U::norm_coeff(&mut coeffs, None);
         Self { coeffs, geo }
     }
 

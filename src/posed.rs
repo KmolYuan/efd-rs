@@ -59,23 +59,12 @@ where
         C: Curve<D>,
         V: Curve<D>,
     {
-        Self::new_with_guide(curve, vectors).0
-    }
-
-    fn new_with_guide<C, V>(curve: C, vectors: V) -> (Self, Vec<f64>)
-    where
-        C: Curve<D>,
-        V: Curve<D>,
-    {
         let PathSig { curve, t, geo } = PathSig::new(curve.as_curve(), true);
-        let guide = zip(&curve, &curve[1..])
-            .map(|(a, b)| a.l2_err(b))
-            .collect::<Vec<_>>();
         let mut vectors = geo.inverse().only_rot().transform(vectors);
         for (p, v) in zip(&curve, &mut vectors) {
             *v = array::from_fn(|i| p[i] + v[i]);
         }
-        (Self { curve, vectors, t, geo }, guide)
+        Self { curve, vectors, t, geo }
     }
 
     /// Get the reference of normalized time parameters.
@@ -89,7 +78,7 @@ where
     }
 }
 
-/// A shape with a pose described by EFD.
+/// An open-curve shape with a pose described by EFD.
 ///
 /// These are the same as [`Efd`] except that it has a pose, and the data are
 /// always normalized and readonly.
@@ -147,27 +136,30 @@ where
     ///
     /// The second series is the pose series, the `curve2[i]` has the same time
     /// as `curve[i]`.
-    pub fn from_series<C1, C2>(curve1: C1, curve2: C2) -> Self
+    pub fn from_series<C1, C2>(curve_p: C1, curve_q: C2) -> Self
     where
         C1: Curve<D>,
         C2: Curve<D>,
     {
-        let harmonic = harmonic(true, curve1.len());
-        Self::from_series_harmonic(curve1, curve2, harmonic).fourier_power_anaysis(None)
+        let harmonic = harmonic(true, curve_p.len());
+        Self::from_series_harmonic(curve_p, curve_q, harmonic).fourier_power_anaysis(None)
     }
 
     /// Calculate the coefficients from two series of points.
     ///
     /// The `harmonic` is the number of the coefficients to be calculated.
-    pub fn from_series_harmonic<C1, C2>(curve1: C1, curve2: C2, harmonic: usize) -> Self
+    pub fn from_series_harmonic<C1, C2>(curve_p: C1, curve_q: C2, harmonic: usize) -> Self
     where
         C1: Curve<D>,
         C2: Curve<D>,
     {
-        let vectors = zip(curve1.as_curve(), curve2.as_curve())
-            .map(|(a, b)| array::from_fn(|i| b[i] - a[i]))
+        let vectors = zip(curve_p.as_curve(), curve_q.as_curve())
+            .map(|(p, q)| {
+                let norm = p.l2_err(q);
+                array::from_fn(|i| (q[i] - p[i]) / norm)
+            })
             .collect::<Vec<_>>();
-        Self::from_uvec_harmonic(curve1, vectors, harmonic)
+        Self::from_uvec_harmonic(curve_p, vectors, harmonic)
     }
 
     /// Calculate the coefficients from a curve and its unit vectors from each
@@ -196,16 +188,28 @@ where
         C: Curve<D>,
         V: Curve<D>,
     {
+        debug_assert!(harmonic != 0, "harmonic must not be 0");
+        debug_assert!(curve.len() > 2, "the curve length must greater than 2");
         debug_assert!(
             curve.len() == vectors.len(),
             "the curve length must be equal to the vectors length"
         );
-        let (MotionSig { curve, vectors, geo, .. }, guide) =
-            MotionSig::new_with_guide(curve, vectors);
-        let (_, coeffs, _) = U::get_coeff(&curve, true, harmonic, Some(&guide));
+        let curve = curve.as_curve();
+        let guide = zip(curve, &curve[1..])
+            .map(|(a, b)| a.l2_err(b))
+            .collect::<Vec<_>>();
+        let (_, mut coeffs, geo) = U::get_coeff(curve, true, harmonic, Some(&guide));
+        let geo = geo * U::norm_coeff(&mut coeffs, None);
+        let geo_inv = geo.inverse();
+        let p_norm = geo_inv.transform(curve);
+        let mut q_norm = geo_inv.only_rot().transform(vectors);
+        for (p, q) in zip(p_norm, &mut q_norm) {
+            *q = array::from_fn(|i| p[i] + q[i]);
+        }
         let curve = Efd::from_parts_unchecked(coeffs, geo);
-        let (_, coeffs, geo) = U::get_coeff(&vectors, true, harmonic, Some(&guide));
-        let pose = Efd::from_parts_unchecked(coeffs, geo);
+        let (_, mut coeffs, q_trans) = U::get_coeff(&q_norm, true, harmonic, Some(&guide));
+        U::norm_zeta(&mut coeffs, None);
+        let pose = Efd::from_parts_unchecked(coeffs, q_trans);
         Self { curve, pose }
     }
 
@@ -222,10 +226,10 @@ where
     where
         Option<f64>: From<T> + Clone,
     {
-        let threshold = Option::from(threshold);
+        let threshold = Option::from(threshold).unwrap_or(0.999999);
         let [harmonic1, harmonic2] = [&self.curve, &self.pose].map(|efd| {
             let lut = efd.coeffs_iter().map(|m| m.map(util::pow2).sum()).collect();
-            fourier_power_anaysis(lut, threshold)
+            fourier_power_anaysis(lut, Some(threshold))
         });
         let harmonic = harmonic1.max(harmonic2);
         self.curve.set_harmonic(harmonic);

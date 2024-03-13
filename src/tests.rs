@@ -126,7 +126,7 @@ fn efd3d() {
 }
 
 #[test]
-fn posed_efd_open() {
+fn posed_efd2d_open() {
     let efd = PosedEfd2::from_angles(CURVE2D_POSE, ANGLE2D_POSE);
     // Test rotation
     for ang in 0..6 {
