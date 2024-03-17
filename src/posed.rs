@@ -245,6 +245,16 @@ where
         (self.curve, self.pose)
     }
 
+    /// Get the reference of the curve coefficients.
+    pub fn as_curve(&self) -> &Efd<D> {
+        &self.curve
+    }
+
+    /// Get the reference of the pose coefficients.
+    pub fn as_pose(&self) -> &Efd<D> {
+        &self.pose
+    }
+
     /// Get the reference of geometric variables.
     pub fn as_geo(&self) -> &GeoVar<Rot<D>, D> {
         self.curve.as_geo()
