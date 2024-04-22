@@ -152,7 +152,7 @@ pub trait EfdDim<const D: usize>: Sealed {
         if coeffs.len() > 1 && {
             let [u1, v1] = [coeffs[0].column(0), coeffs[0].column(1)];
             let [u2, v2] = [coeffs[1].column(0), coeffs[1].column(1)];
-            (u1 - u2).norm() + (v1 - v2).norm() > (u1 + u2).norm() + (v1 + v2).norm()
+            (u2 - u1).norm() + (v2 - v1).norm() > (u2 + u1).norm() + (v2 + v1).norm()
         } {
             coeffs.iter_mut().step_by(2).for_each(|s| *s *= -1.);
             if let Some(t) = t {
