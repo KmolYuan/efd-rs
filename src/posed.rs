@@ -34,8 +34,10 @@ where
     pub curve: Vec<[f64; D]>,
     /// Normalized unit vectors
     pub vectors: Vec<[f64; D]>,
-    t: Vec<f64>,
-    geo: GeoVar<Rot<D>, D>,
+    /// Normalized time parameters
+    pub t: Vec<f64>,
+    /// Geometric variables
+    pub geo: GeoVar<Rot<D>, D>,
 }
 
 impl<const D: usize> MotionSig<D>

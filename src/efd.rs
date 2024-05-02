@@ -68,8 +68,10 @@ where
 {
     /// Normalized curve
     pub curve: Vec<[f64; D]>,
-    pub(crate) t: Vec<f64>,
-    pub(crate) geo: GeoVar<Rot<D>, D>,
+    /// Normalized time parameters
+    pub t: Vec<f64>,
+    /// Geometric variables
+    pub geo: GeoVar<Rot<D>, D>,
 }
 
 impl<const D: usize> PathSig<D>
