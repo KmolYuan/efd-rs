@@ -62,6 +62,7 @@ where
 /// [`Efd::err_sig()`].
 ///
 /// See also [`get_norm_t()`].
+#[derive(Clone)]
 pub struct PathSig<const D: usize>
 where
     U<D>: EfdDim<D>,

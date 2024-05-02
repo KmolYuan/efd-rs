@@ -26,6 +26,7 @@ pub fn ang2vec(angles: &[f64]) -> Vec<[f64; 2]> {
 ///
 /// Used to present an "original motion". Can be compared with [`PosedEfd`] by
 /// [`PosedEfd::err_sig()`].
+#[derive(Clone)]
 pub struct MotionSig<const D: usize>
 where
     U<D>: EfdDim<D>,
