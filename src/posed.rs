@@ -225,19 +225,23 @@ where
     /// # Panics
     ///
     /// Panics if the threshold is not in 0..1, or the harmonic is zero.
-    pub fn fourier_power_anaysis<T>(mut self, threshold: T) -> Self
-    where
-        Option<f64>: From<T> + Clone,
-    {
-        let threshold = Option::from(threshold).unwrap_or(0.999999);
-        let [harmonic1, harmonic2] = [&self.curve, &self.pose].map(|efd| {
-            let lut = efd.coeffs_iter().map(|m| m.map(util::pow2).sum()).collect();
-            fourier_power_anaysis(lut, Some(threshold))
-        });
-        let harmonic = harmonic1.max(harmonic2);
-        self.curve.set_harmonic(harmonic);
-        self.pose.set_harmonic(harmonic);
+    pub fn fourier_power_anaysis(mut self, threshold: impl Into<Option<f64>>) -> Self {
+        self.fpa_inplace(threshold);
         self
+    }
+
+    /// Use Fourier Power Anaysis (FPA) to reduce the harmonic number.
+    ///
+    /// **Note**: The curve coefficients and the pose coefficients maybe
+    /// different.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the threshold is not in 0..1, or the harmonic is zero.
+    pub fn fpa_inplace(&mut self, threshold: impl Into<Option<f64>>) {
+        let threshold = threshold.into();
+        self.curve.fpa_inplace(threshold);
+        self.pose.fpa_inplace(threshold);
     }
 
     /// Consume self and return the parts of this type. The first is the curve
@@ -263,7 +267,10 @@ where
         self.curve.as_geo()
     }
 
-    /// Get the harmonic number of the coefficients.
+    /// Get the harmonic number of the curve coefficients.
+    ///
+    /// **Note**: The pose coefficients may have a different harmonic number.
+    /// Use `self.as_pose().harmonic()` to get the harmonic number of the pose.
     #[inline]
     pub fn harmonic(&self) -> usize {
         self.curve.harmonic()

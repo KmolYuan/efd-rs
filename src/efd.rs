@@ -285,13 +285,19 @@ where
     /// # Panics
     ///
     /// Panics if the threshold is not in 0..1, or the harmonic is zero.
-    pub fn fourier_power_anaysis<T>(mut self, threshold: T) -> Self
-    where
-        Option<f64>: From<T>,
-    {
+    pub fn fourier_power_anaysis(mut self, threshold: impl Into<Option<f64>>) -> Self {
+        self.fpa_inplace(threshold);
+        self
+    }
+
+    /// Fourier Power Anaysis (FPA) function with in-place operation.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the threshold is not in 0..1, or the harmonic is zero.
+    pub fn fpa_inplace(&mut self, threshold: impl Into<Option<f64>>) {
         let lut = self.coeffs.iter().map(|m| m.map(pow2).sum()).collect();
         self.set_harmonic(fourier_power_anaysis(lut, threshold.into()));
-        self
     }
 
     /// Set the harmonic number of the coefficients.
