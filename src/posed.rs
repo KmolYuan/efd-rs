@@ -240,8 +240,13 @@ where
     /// Panics if the threshold is not in 0..1, or the harmonic is zero.
     pub fn fpa_inplace(&mut self, threshold: impl Into<Option<f64>>) {
         let threshold = threshold.into();
-        self.curve.fpa_inplace(threshold);
-        self.pose.fpa_inplace(threshold);
+        let [harmonic1, harmonic2] = [&self.curve, &self.pose].map(|efd| {
+            let lut = efd.coeffs_iter().map(|m| m.map(util::pow2).sum()).collect();
+            fourier_power_anaysis(lut, threshold)
+        });
+        let harmonic = harmonic1.max(harmonic2);
+        self.curve.set_harmonic(harmonic);
+        self.pose.set_harmonic(harmonic);
     }
 
     /// Consume self and return the parts of this type. The first is the curve

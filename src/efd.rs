@@ -47,6 +47,8 @@ pub const fn harmonic_nyquist(is_open: bool, len: usize) -> usize {
 
 /// Get the normalized time parameters of the curve.
 ///
+/// Same as `PathSig::new(curve, is_open).t`.
+///
 /// See also [`PathSig`].
 pub fn get_norm_t<C, const D: usize>(curve: C, is_open: bool) -> Vec<f64>
 where
