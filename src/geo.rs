@@ -38,7 +38,6 @@ impl RotHint<3> for na::UnitQuaternion<f64> {
 ///
 /// This type record the information of raw coefficients. You can merge two
 /// instance with `*`/`*=` operator.
-///
 /// ```
 /// use efd::{tests::*, Efd2};
 /// # use efd::Curve as _;
@@ -128,7 +127,6 @@ where
     /// Merge inverse `self` and `rhs`. (`rhs * self^T`)
     ///
     /// It can be used on a not normalized contour `a` transforming to `b`.
-    ///
     /// ```
     /// use efd::{tests::*, Efd2};
     /// # use efd::Curve as _;
@@ -146,7 +144,6 @@ where
     }
 
     /// Inverse `self`. (`self^T`/`self^-1`)
-    ///
     /// ```
     /// use efd::{tests::*, Efd2};
     /// # use efd::Curve as _;
@@ -204,7 +201,6 @@ where
     /// Transform a contour with this information.
     ///
     /// This function rotates first, then translates.
-    ///
     /// ```
     /// use efd::{tests::*, *};
     /// # let curve = CURVE2D;

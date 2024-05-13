@@ -1,10 +1,8 @@
 #![doc = include_str!("../README.md")]
 //!
 //! # Features
-//!
 //! This crate supports no-std solution. Disable the "std" feature will
 //! enable it.
-//!
 //! ```toml
 //! default-features = false
 //! ```

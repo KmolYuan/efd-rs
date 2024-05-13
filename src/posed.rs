@@ -50,7 +50,6 @@ where
     ///
     /// This function is faster than building [`PosedEfd`] since it only
     /// calculates **two harmonics**.
-    ///
     /// ```
     /// use efd::posed::{ang2vec, MotionSig};
     /// # let curve = efd::tests::CURVE2D_POSE;
@@ -58,7 +57,6 @@ where
     ///
     /// let sig = MotionSig::new(curve, ang2vec(angles), true);
     /// ```
-    ///
     /// See also [`PathSig`].
     pub fn new<C, V>(curve: C, vectors: V, is_open: bool) -> Self
     where
@@ -89,7 +87,8 @@ where
 /// These are the same as [`Efd`] except that it has a pose, and the data are
 /// always normalized and readonly.
 ///
-/// Start with [`PosedEfd::from_series()`] and its related methods.
+/// Start with [`PosedEfd::from_angles()`] / [`PosedEfd::from_series()`] /
+/// [`PosedEfd::from_uvec()`] and their related methods.
 ///
 /// # Pose Representation
 /// Pose is represented by an unit vector, which is rotated by the rotation
@@ -226,25 +225,23 @@ where
 
     /// Use Fourier Power Anaysis (FPA) to reduce the harmonic number.
     ///
-    /// The default threshold is 99.99%.
+    /// The posed EFD will set the harmonic number to the maximum harmonic
+    /// number of the curve and the pose.
     ///
     /// See also [`Efd::fourier_power_anaysis()`].
     ///
     /// # Panics
-    ///
     /// Panics if the threshold is not in 0..1, or the harmonic is zero.
     pub fn fourier_power_anaysis(mut self, threshold: impl Into<Option<f64>>) -> Self {
         self.fpa_inplace(threshold);
         self
     }
 
-    /// Use Fourier Power Anaysis (FPA) to reduce the harmonic number.
+    /// Fourier Power Anaysis (FPA) function with in-place operation.
     ///
-    /// **Note**: The curve coefficients and the pose coefficients maybe
-    /// different.
+    /// See also [`PosedEfd::fourier_power_anaysis()`].
     ///
     /// # Panics
-    ///
     /// Panics if the threshold is not in 0..1, or the harmonic is zero.
     pub fn fpa_inplace(&mut self, threshold: impl Into<Option<f64>>) {
         let threshold = threshold.into();
@@ -252,7 +249,16 @@ where
             let lut = efd.coeffs_iter().map(|m| m.map(util::pow2).sum()).collect();
             fourier_power_anaysis(lut, threshold)
         });
-        let harmonic = harmonic1.max(harmonic2);
+        self.set_harmonic(harmonic1.max(harmonic2));
+    }
+
+    /// Set the harmonic number of the coefficients.
+    ///
+    /// See also [`Efd::set_harmonic()`].
+    ///
+    /// # Panics
+    /// Panics if the harmonic is zero.
+    pub fn set_harmonic(&mut self, harmonic: usize) {
         self.curve.set_harmonic(harmonic);
         self.pose.set_harmonic(harmonic);
     }
@@ -266,18 +272,35 @@ where
     }
 
     /// Get the reference of the curve coefficients.
+    ///
+    /// **Note**: There is no mutable reference, please use
+    /// [`PosedEfd::into_inner()`] instead.
+    /// ```
+    /// # let curve = efd::tests::CURVE2D_POSE;
+    /// # let angles = efd::tests::ANGLE2D_POSE;
+    /// let efd = efd::PosedEfd2::from_angles(curve, angles, true);
+    /// let curve_efd = efd.as_curve();
+    /// let (mut curve_efd, _) = efd.into_inner();
+    /// ```
+    /// See also [`PosedEfd::as_pose()`].
     pub fn as_curve(&self) -> &Efd<D> {
         &self.curve
     }
 
     /// Get the reference of the pose coefficients.
+    ///
+    /// **Note**: There is no mutable reference, please use
+    /// [`PosedEfd::into_inner()`] instead.
+    /// ```
+    /// # let curve = efd::tests::CURVE2D_POSE;
+    /// # let angles = efd::tests::ANGLE2D_POSE;
+    /// let efd = efd::PosedEfd2::from_angles(curve, angles, true);
+    /// let pose_efd = efd.as_pose();
+    /// let (_, mut pose_efd) = efd.into_inner();
+    /// ```
+    /// See also [`PosedEfd::as_curve()`].
     pub fn as_pose(&self) -> &Efd<D> {
         &self.pose
-    }
-
-    /// Get the reference of geometric variables.
-    pub fn as_geo(&self) -> &GeoVar<Rot<D>, D> {
-        self.curve.as_geo()
     }
 
     /// Check if the descibed motion is open.
@@ -285,10 +308,10 @@ where
         self.curve.is_open()
     }
 
-    /// Get the harmonic number of the curve coefficients.
+    /// Get the harmonic number of the coefficients.
     ///
-    /// **Note**: The pose coefficients may have a different harmonic number.
-    /// Use `self.as_pose().harmonic()` to get the harmonic number of the pose.
+    /// The curve and the pose coefficients are always have the same harmonic
+    /// number.
     #[inline]
     pub fn harmonic(&self) -> usize {
         self.curve.harmonic()

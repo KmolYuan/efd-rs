@@ -33,7 +33,6 @@ pub trait Curve<const D: usize>: Sized {
     /// Close the curve by the first element.
     ///
     /// # Panics
-    ///
     /// Panics if the curve is empty.
     fn closed_lin(self) -> Vec<[f64; D]> {
         let mut c = self.to_curve();

@@ -13,12 +13,10 @@ pub type Efd3 = Efd<3>;
 ///
 /// The number of harmonics is calculated by the minimum length of the curves.
 /// And if the curve is open, the number is doubled.
-///
 /// ```
 /// let is_open = true;
 /// assert_eq!(efd::harmonic(is_open, 3), 6);
 /// ```
-///
 /// See also [`Efd::from_curve_harmonic()`].
 #[inline]
 pub const fn harmonic(is_open: bool, len: usize) -> usize {
@@ -33,12 +31,10 @@ pub const fn harmonic(is_open: bool, len: usize) -> usize {
 ///
 /// This macro is similar to [`harmonic()`], but the number of harmonics is half
 /// if the given curve meets the Nyquist–Shannon sampling theorem.
-///
 /// ```
 /// let is_open = false;
 /// assert_eq!(efd::harmonic_nyquist(is_open, 6), 3);
 /// ```
-///
 /// See also [`harmonic()`] and [`Efd::from_curve_nyquist()`].
 #[inline]
 pub const fn harmonic_nyquist(is_open: bool, len: usize) -> usize {
@@ -118,7 +114,6 @@ where
 /// Start with [`Efd::from_curve()`] and its related methods.
 ///
 /// # Normalization
-///
 /// The geometric normalization of EFD coefficients.
 ///
 /// Implements Kuhl and Giardina method of normalizing the coefficients
@@ -144,7 +139,6 @@ where
     /// Create object from coefficients and geometric variables.
     ///
     /// # Raw Coefficients
-    ///
     /// There is no "check method" for the input coefficients. Please use
     /// [`Efd::from_curve()`] and its related methods to create the object. This
     /// method is designed for loading coefficients from external sources.
@@ -152,9 +146,7 @@ where
     /// See also [`Efd::from_coeffs_unchecked()`] and [`Efd::into_inner()`].
     ///
     /// # Panics
-    ///
     /// Panics if the harmonic is zero. (`coeffs.len() == 0`)
-    ///
     /// ```should_panic
     /// use efd::{Efd2, GeoVar};
     /// let curve = Efd2::from_parts_unchecked(vec![], GeoVar::identity()).recon(20);
@@ -167,7 +159,6 @@ where
     /// Create object from coefficients without check.
     ///
     /// # Panics
-    ///
     /// Panics if the harmonic is zero. (`coeffs.len() == 0`)
     pub fn from_coeffs_unchecked(coeffs: Coeffs<D>) -> Self {
         Self::from_parts_unchecked(coeffs, GeoVar::identity())
@@ -179,22 +170,17 @@ where
     /// 1. Fourier Power Anaysis (FPA) uses 99.99% threshold.
     ///
     /// # Tail End Closed
-    ///
     /// If `curve.first() != curve.last()`, the curve will be automatically
     /// closed when `is_open` is false.
     ///
     /// # Open Curve Option
-    ///
     /// The open curve option is for the curve that duplicated a reversed part
     /// of itself. For example,
-    ///
     /// ```
     /// # let curve_open = efd::tests::CURVE2D_OPEN.to_vec();
     /// let efd = efd::Efd2::from_curve(curve_open, true);
     /// ```
-    ///
     /// is equivalent to
-    ///
     /// ```
     /// # let curve_open = efd::tests::CURVE2D_OPEN.to_vec();
     /// let curve_closed = curve_open
@@ -204,11 +190,9 @@ where
     ///     .collect::<Vec<_>>();
     /// let efd = efd::Efd2::from_curve(curve_closed, false);
     /// ```
-    ///
     /// but not actually increase the data size.
     ///
     /// # Panics
-    ///
     /// Panics if the curve length is not greater than 2 in debug mode. This
     /// function check the lengths only. Please use [`valid_curve()`] to verify
     /// the curve if there has NaN input.
@@ -243,7 +227,6 @@ where
     ///    + Please call [`Efd::fourier_power_anaysis()`] manually.
     ///
     /// # Panics
-    ///
     /// Panics if the specific harmonic is zero or the curve length is not
     /// greater than 2 in the **debug mode**. This function check the lengths
     /// only. Please use [`valid_curve()`] to verify the curve if there has NaN
@@ -279,13 +262,14 @@ where
     /// A builder method using Fourier Power Anaysis (FPA) to reduce the
     /// harmonic number.
     ///
-    /// The coefficient memory will be saved but cannot be used twice due to
-    /// undersampling.
+    /// The coefficient memory will be saved but cannot be used multiple times
+    /// due to undersampling.
     ///
     /// The default threshold is 99.99%.
     ///
-    /// # Panics
+    /// See also [`Efd::fpa_inplace()`].
     ///
+    /// # Panics
     /// Panics if the threshold is not in 0..1, or the harmonic is zero.
     pub fn fourier_power_anaysis(mut self, threshold: impl Into<Option<f64>>) -> Self {
         self.fpa_inplace(threshold);
@@ -294,8 +278,9 @@ where
 
     /// Fourier Power Anaysis (FPA) function with in-place operation.
     ///
-    /// # Panics
+    /// See also [`Efd::fourier_power_anaysis()`].
     ///
+    /// # Panics
     /// Panics if the threshold is not in 0..1, or the harmonic is zero.
     pub fn fpa_inplace(&mut self, threshold: impl Into<Option<f64>>) {
         let lut = self.coeffs.iter().map(|m| m.map(pow2).sum()).collect();
@@ -304,16 +289,14 @@ where
 
     /// Set the harmonic number of the coefficients.
     ///
-    /// # Panics
+    /// If the harmonic is greater or equal to the current harmonic, this method
+    /// does nothing. (like the `truncate` method)
     ///
-    /// Panics if the harmonic is zero or greater than the current harmonic.
+    /// # Panics
+    /// Panics if the harmonic is zero.
     pub fn set_harmonic(&mut self, harmonic: usize) {
-        let current = self.harmonic();
-        assert!(
-            (1..=current).contains(&harmonic),
-            "harmonic must in 1..={current}"
-        );
-        self.coeffs.resize_with(harmonic, Kernel::zeros);
+        assert!(harmonic > 0, "harmonic must geater than 0");
+        self.coeffs.truncate(harmonic);
     }
 
     /// Force normalize the coefficients.
@@ -324,7 +307,6 @@ where
     /// See also [`Efd::from_curve_harmonic_unnorm()`].
     ///
     /// # Panics
-    ///
     /// Panics if the harmonic is zero.
     pub fn normalized(self) -> Self {
         let Self { mut coeffs, geo } = self;
@@ -444,14 +426,12 @@ where
     }
 
     /// Reconstruct a described curve in a time series `t`.
-    ///
     /// ```
     /// # let curve = efd::tests::CURVE2D;
     /// let efd = efd::Efd2::from_curve(curve, false);
     /// let sig = efd::PathSig::new(curve, false);
     /// let curve_recon = efd.recon_by(sig.as_t());
     /// ```
-    ///
     /// See also [`PathSig`].
     pub fn recon_by(&self, t: &[f64]) -> Vec<[f64; D]> {
         let mut curve = U::reconstruct(&self.coeffs, t.iter().copied());
@@ -518,6 +498,7 @@ pub(crate) fn fourier_power_anaysis(lut: Vec<f64>, threshold: Option<f64>) -> us
         .as_slice()
         .binary_search_by(|x| x.partial_cmp(&target).unwrap())
     {
+        // Get the nearest harmonic
         Ok(h) | Err(h) => h + 1,
     }
 }

@@ -1,5 +1,4 @@
 # EFD Rust Library
-
 [![dependency status](https://deps.rs/repo/github/KmolYuan/efd-rs/status.svg)](https://deps.rs/crate/efd/)
 [![documentation](https://docs.rs/efd/badge.svg)](https://docs.rs/efd)
 
@@ -11,7 +10,6 @@ Keyword Alias:
 + Elliptical Fourier Function (EFF)
 
 Example of re-describing a new closed curve:
-
 ```rust
 let curve = vec![
     [0., 0.],
@@ -66,12 +64,8 @@ Posed EFD combined a curve with a pose (unit vectors) to describe the orientatio
 </div>
 
 ## Citations
-
 ### Original
-
 + Kuhl, FP and Giardina, CR (1982). Elliptic Fourier features of a closed contour. Computer graphics and image processing, 18(3), 236-258. <https://doi.org/10.1016/0146-664X(82)90034-X>
-
 ### My Applications
-
 + Chang, Y., Chang, JL., Lee, JJ. (2024). Atlas-Based Path Synthesis of Planar Four-Bar Linkages Using Elliptical Fourier Descriptors. In: Okada, M. (eds) Advances in Mechanism and Machine Science. IFToMM WC 2023. Mechanisms and Machine Science, vol 149. Springer, Cham. <https://doi.org/10.1007/978-3-031-45709-8_20>
 + Chang, Y., Chang, JL. & Lee, JJ. Path Synthesis of Planar Four-bar Linkages for Closed and Open Curves Using Elliptical Fourier Descriptors. J Mech Sci Technol (2024). <http://doi.org/10.1007/s12206-024-0436-y>
