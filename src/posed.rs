@@ -48,21 +48,24 @@ where
     /// Get the path signature and its target position from a curve and its unit
     /// vectors.
     ///
+    /// This function is faster than building [`PosedEfd`] since it only
+    /// calculates **two harmonics**.
+    ///
     /// ```
     /// use efd::posed::{ang2vec, MotionSig};
     /// # let curve = efd::tests::CURVE2D_POSE;
     /// # let angles = efd::tests::ANGLE2D_POSE;
     ///
-    /// let sig = MotionSig::new(curve, ang2vec(angles));
+    /// let sig = MotionSig::new(curve, ang2vec(angles), true);
     /// ```
     ///
     /// See also [`PathSig`].
-    pub fn new<C, V>(curve: C, vectors: V) -> Self
+    pub fn new<C, V>(curve: C, vectors: V, is_open: bool) -> Self
     where
         C: Curve<D>,
         V: Curve<D>,
     {
-        let PathSig { curve, t, geo } = PathSig::new(curve.as_curve(), true);
+        let PathSig { curve, t, geo } = PathSig::new(curve.as_curve(), is_open);
         let mut vectors = geo.inverse().only_rot().transform(vectors);
         for (p, v) in zip(&curve, &mut vectors) {
             *v = array::from_fn(|i| p[i] + v[i]);
@@ -102,22 +105,22 @@ where
 
 impl PosedEfd2 {
     /// Calculate the coefficients from a curve and its angles from each point.
-    pub fn from_angles<C>(curve: C, angles: &[f64]) -> Self
+    pub fn from_angles<C>(curve: C, angles: &[f64], is_open: bool) -> Self
     where
         C: Curve<2>,
     {
         let harmonic = harmonic(false, curve.len());
-        Self::from_angles_harmonic(curve, angles, harmonic).fourier_power_anaysis(None)
+        Self::from_angles_harmonic(curve, angles, is_open, harmonic).fourier_power_anaysis(None)
     }
 
     /// Calculate the coefficients from a curve and its angles from each point.
     ///
     /// The `harmonic` is the number of the coefficients to be calculated.
-    pub fn from_angles_harmonic<C>(curve: C, angles: &[f64], harmonic: usize) -> Self
+    pub fn from_angles_harmonic<C>(curve: C, angles: &[f64], is_open: bool, harmonic: usize) -> Self
     where
         C: Curve<2>,
     {
-        Self::from_uvec_harmonic(curve, ang2vec(angles), harmonic)
+        Self::from_uvec_harmonic(curve, ang2vec(angles), is_open, harmonic)
     }
 }
 
@@ -131,27 +134,32 @@ where
     /// describe this motion signature.
     ///
     /// See also [`PosedEfd::into_inner()`].
-    pub const fn from_parts_unchecked(efd: Efd<D>, posed: Efd<D>) -> Self {
-        Self { curve: efd, pose: posed }
+    pub const fn from_parts_unchecked(curve: Efd<D>, pose: Efd<D>) -> Self {
+        Self { curve, pose }
     }
 
     /// Calculate the coefficients from two series of points.
     ///
     /// The second series is the pose series, the `curve2[i]` has the same time
     /// as `curve[i]`.
-    pub fn from_series<C1, C2>(curve_p: C1, curve_q: C2) -> Self
+    pub fn from_series<C1, C2>(curve_p: C1, curve_q: C2, is_open: bool) -> Self
     where
         C1: Curve<D>,
         C2: Curve<D>,
     {
         let harmonic = harmonic(true, curve_p.len());
-        Self::from_series_harmonic(curve_p, curve_q, harmonic).fourier_power_anaysis(None)
+        Self::from_series_harmonic(curve_p, curve_q, is_open, harmonic).fourier_power_anaysis(None)
     }
 
     /// Calculate the coefficients from two series of points.
     ///
     /// The `harmonic` is the number of the coefficients to be calculated.
-    pub fn from_series_harmonic<C1, C2>(curve_p: C1, curve_q: C2, harmonic: usize) -> Self
+    pub fn from_series_harmonic<C1, C2>(
+        curve_p: C1,
+        curve_q: C2,
+        is_open: bool,
+        harmonic: usize,
+    ) -> Self
     where
         C1: Curve<D>,
         C2: Curve<D>,
@@ -162,7 +170,7 @@ where
                 array::from_fn(|i| (q[i] - p[i]) / norm)
             })
             .collect::<Vec<_>>();
-        Self::from_uvec_harmonic(curve_p, vectors, harmonic)
+        Self::from_uvec_harmonic(curve_p, vectors, is_open, harmonic)
     }
 
     /// Calculate the coefficients from a curve and its unit vectors from each
@@ -170,13 +178,13 @@ where
     ///
     /// If the unit vectors is not normalized, the length of the first vector
     /// will be used as the scaling factor.
-    pub fn from_uvec<C, V>(curve: C, vectors: V) -> Self
+    pub fn from_uvec<C, V>(curve: C, vectors: V, is_open: bool) -> Self
     where
         C: Curve<D>,
         V: Curve<D>,
     {
         let harmonic = harmonic(true, curve.len());
-        Self::from_uvec_harmonic(curve, vectors, harmonic).fourier_power_anaysis(None)
+        Self::from_uvec_harmonic(curve, vectors, is_open, harmonic).fourier_power_anaysis(None)
     }
 
     /// Calculate the coefficients from a curve and its unit vectors from each
@@ -186,7 +194,7 @@ where
     /// will be used as the scaling factor.
     ///
     /// The `harmonic` is the number of the coefficients to be calculated.
-    pub fn from_uvec_harmonic<C, V>(curve: C, vectors: V, harmonic: usize) -> Self
+    pub fn from_uvec_harmonic<C, V>(curve: C, vectors: V, is_open: bool, harmonic: usize) -> Self
     where
         C: Curve<D>,
         V: Curve<D>,
@@ -201,7 +209,7 @@ where
         let guide = zip(curve, &curve[1..])
             .map(|(a, b)| a.l2_err(b))
             .collect::<Vec<_>>();
-        let (_, mut coeffs, geo) = U::get_coeff(curve, true, harmonic, Some(&guide));
+        let (_, mut coeffs, geo) = U::get_coeff(curve, is_open, harmonic, Some(&guide));
         let geo = geo * U::norm_coeff(&mut coeffs, None);
         let geo_inv = geo.inverse();
         let p_norm = geo_inv.transform(curve);
@@ -210,7 +218,7 @@ where
             *q = array::from_fn(|i| p[i] + q[i]);
         }
         let curve = Efd::from_parts_unchecked(coeffs, geo);
-        let (_, mut coeffs, q_trans) = U::get_coeff(&q_norm, true, harmonic, Some(&guide));
+        let (_, mut coeffs, q_trans) = U::get_coeff(&q_norm, is_open, harmonic, Some(&guide));
         U::norm_zeta(&mut coeffs, None);
         let pose = Efd::from_parts_unchecked(coeffs, q_trans);
         Self { curve, pose }
@@ -270,6 +278,11 @@ where
     /// Get the reference of geometric variables.
     pub fn as_geo(&self) -> &GeoVar<Rot<D>, D> {
         self.curve.as_geo()
+    }
+
+    /// Check if the descibed motion is open.
+    pub fn is_open(&self) -> bool {
+        self.curve.is_open()
     }
 
     /// Get the harmonic number of the curve coefficients.

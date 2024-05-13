@@ -127,13 +127,13 @@ fn efd3d() {
 
 #[test]
 fn posed_efd2d_open() {
-    let efd = PosedEfd2::from_angles(CURVE2D_POSE, ANGLE2D_POSE);
+    let efd = PosedEfd2::from_angles(CURVE2D_POSE, ANGLE2D_POSE, true);
     // Test rotation
     for ang in 0..6 {
         let ang = core::f64::consts::TAU * ang as f64 / 6.;
         let curve = GeoVar::from_rot(na::UnitComplex::new(ang)).transform(CURVE2D_POSE);
         let angles = ANGLE2D_POSE.iter().map(|a| a + ang).collect::<Vec<_>>();
-        let efd_rot = PosedEfd2::from_angles(curve, &angles);
+        let efd_rot = PosedEfd2::from_angles(curve, &angles, true);
         assert_abs_diff_eq!(efd.err(&efd_rot), 0., epsilon = 1e-12);
     }
 }
