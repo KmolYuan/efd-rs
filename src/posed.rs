@@ -321,7 +321,7 @@ where
     pub fn err(&self, rhs: &Self) -> f64 {
         (2. * self.curve.err(&rhs.curve))
             .max(self.pose.err(&rhs.pose))
-            .max((self.pose.as_geo().trans()).l2_err(&rhs.pose.as_geo().trans()))
+            .max((self.pose.as_geo().trans()).l2_err(rhs.pose.as_geo().trans()))
     }
 
     /// Calculate the error from a [`MotionSig`].

@@ -89,22 +89,22 @@ where
 
     /// Create a new instance from translation.
     pub fn from_trans(trans: [f64; D]) -> Self {
-        Self::new(trans, R::identity(), 1.)
+        Self::identity().with_trans(trans)
     }
 
     /// Create a new instance from rotation.
     pub fn from_rot(rot: R) -> Self {
-        Self::new([0.; D], rot, 1.)
+        Self::identity().with_rot(rot)
     }
 
     /// Create a new instance from rotation.
     pub fn from_scale(scale: f64) -> Self {
-        Self::new([0.; D], R::identity(), scale)
+        Self::identity().with_scale(scale)
     }
 
     /// Create a new instance from translation.
     pub fn only_trans(self) -> Self {
-        Self::from_trans(self.trans())
+        Self::from_trans(*self.trans())
     }
 
     /// Create a new instance from rotation.
@@ -114,11 +114,22 @@ where
 
     /// Create a new instance from rotation and scaling.
     pub fn only_rot_scale(self) -> Self {
-        let scale = self.inner.scaling();
-        Self::new([0.; D], self.inner.isometry.rotation, scale)
+        Self::from_scale(self.inner.scaling())
     }
 
-    /// Set the scaling property.
+    /// With the translate property.
+    pub fn with_trans(mut self, trans: [f64; D]) -> Self {
+        self.set_trans(trans);
+        self
+    }
+
+    /// With the rotation property.
+    pub fn with_rot(mut self, rot: R) -> Self {
+        self.set_rot(rot);
+        self
+    }
+
+    /// With the scaling property.
     pub fn with_scale(mut self, scale: f64) -> Self {
         self.inner.set_scaling(scale);
         self
@@ -156,36 +167,43 @@ where
     /// # assert!(curve_diff(&curve, &curve_norm) < EPS);
     /// ```
     #[must_use = "this returns the result of the operation, without modifying the original"]
+    #[inline]
     pub fn inverse(&self) -> Self {
         Self { inner: self.inner.inverse() }
     }
 
     /// Get the translate property.
-    pub fn trans(&self) -> [f64; D] {
-        self.inner.isometry.translation.vector.data.0[0]
+    #[inline]
+    pub fn trans(&self) -> &[f64; D] {
+        &self.inner.isometry.translation.vector.data.0[0]
     }
 
     /// Get the rotation property.
+    #[inline]
     pub fn rot(&self) -> &R {
         &self.inner.isometry.rotation
     }
 
     /// Get the scaling property.
+    #[inline]
     pub fn scale(&self) -> f64 {
         self.inner.scaling()
     }
 
     /// Set the translate property.
+    #[inline]
     pub fn set_trans(&mut self, trans: [f64; D]) {
         self.inner.isometry.translation = trans.into();
     }
 
     /// Set the rotation property.
+    #[inline]
     pub fn set_rot(&mut self, rot: R) {
         self.inner.isometry.rotation = rot;
     }
 
     /// Set the scaling property.
+    #[inline]
     pub fn set_scale(&mut self, scale: f64) {
         self.inner.set_scaling(scale);
     }
@@ -194,6 +212,7 @@ where
     ///
     /// Please see [`GeoVar::transform()`] for more information.
     #[must_use = "The transformed point is returned as a new value"]
+    #[inline]
     pub fn transform_pt(&self, p: [f64; D]) -> [f64; D] {
         self.inner.transform_point(&na::Point::from(p)).into()
     }
