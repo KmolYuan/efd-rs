@@ -205,10 +205,15 @@ where
             "the curve length must be equal to the vectors length"
         );
         let curve = curve.as_curve();
-        let guide = zip(curve, &curve[1..])
-            .map(|(a, b)| a.l2_err(b))
-            .collect::<Vec<_>>();
-        let (_, mut coeffs, geo) = U::get_coeff(curve, is_open, harmonic, Some(&guide));
+        let guide = {
+            let dxyz = util::diff(if !is_open && curve.first() != curve.last() {
+                to_mat(curve.closed_lin())
+            } else {
+                to_mat(curve)
+            });
+            dxyz.map(util::pow2).row_sum().map(f64::sqrt)
+        };
+        let (_, mut coeffs, geo) = U::get_coeff(curve, is_open, harmonic, Some(guide.as_slice()));
         let geo = geo * U::norm_coeff(&mut coeffs, None);
         let geo_inv = geo.inverse();
         let p_norm = geo_inv.transform(curve);
@@ -217,7 +222,8 @@ where
             *q = array::from_fn(|i| p[i] + q[i]);
         }
         let curve = Efd::from_parts_unchecked(coeffs, geo);
-        let (_, mut coeffs, q_trans) = U::get_coeff(&q_norm, is_open, harmonic, Some(&guide));
+        let (_, mut coeffs, q_trans) =
+            U::get_coeff(&q_norm, is_open, harmonic, Some(guide.as_slice()));
         U::norm_zeta(&mut coeffs, None);
         let pose = Efd::from_parts_unchecked(coeffs, q_trans);
         Self { curve, pose }
