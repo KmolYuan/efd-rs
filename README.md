@@ -2,7 +2,10 @@
 [![dependency status](https://deps.rs/repo/github/KmolYuan/efd-rs/status.svg)](https://deps.rs/crate/efd/)
 [![documentation](https://docs.rs/efd/badge.svg)](https://docs.rs/efd)
 
-Elliptical Fourier Descriptor (EFD) implementation in Rust. This crate implements 1D/2D/3D EFD and its related functions.
+Elliptical Fourier Descriptor (EFD) implementation in Rust.
+This crate implements 1D/2D/3D EFD and its related functions.
+
+This implementation is totally safe and supports `no-std + alloc` environment.
 
 Keyword Alias:
 
