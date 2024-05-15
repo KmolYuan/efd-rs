@@ -97,3 +97,33 @@ impl<const D: usize, T: Curve<D> + Clone> Curve<D> for &T {
         (*self).as_curve()
     }
 }
+
+impl<const D: usize> Curve<D> for core::slice::Iter<'_, [f64; D]> {
+    fn to_curve(self) -> Vec<[f64; D]> {
+        self.copied().collect()
+    }
+
+    fn as_curve(&self) -> &[[f64; D]] {
+        self.as_slice()
+    }
+}
+
+impl<const D: usize, const N: usize> Curve<D> for core::array::IntoIter<[f64; D], N> {
+    fn to_curve(self) -> Vec<[f64; D]> {
+        self.collect()
+    }
+
+    fn as_curve(&self) -> &[[f64; D]] {
+        self.as_slice()
+    }
+}
+
+impl<const D: usize> Curve<D> for alloc::vec::IntoIter<[f64; D]> {
+    fn to_curve(self) -> Vec<[f64; D]> {
+        self.collect()
+    }
+
+    fn as_curve(&self) -> &[[f64; D]] {
+        self.as_slice()
+    }
+}
