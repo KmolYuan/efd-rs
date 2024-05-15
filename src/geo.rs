@@ -11,7 +11,9 @@ pub type GeoVar3 = GeoVar<na::UnitQuaternion<f64>, 3>;
 type Sim<R, const D: usize> = na::Similarity<f64, R, D>;
 
 /// Rotation hint for [`GeoVar`].
-pub trait RotHint<const D: usize>: na::AbstractRotation<f64, D> + core::fmt::Debug {
+pub trait RotHint<const D: usize>:
+    na::AbstractRotation<f64, D> + Sync + Send + core::fmt::Debug
+{
     /// Get the rotation matrix.
     fn matrix(self) -> na::SMatrix<f64, D, D>;
 }

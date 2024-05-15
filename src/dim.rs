@@ -30,7 +30,7 @@ impl<const D: usize> Sealed for U<D> {}
 /// **This trait is sealed and cannot be implemented outside of this crate.**
 /// The API of this trait is not public and may change in the future.
 #[allow(private_bounds)]
-pub trait EfdDim<const D: usize>: Sealed {
+pub trait EfdDim<const D: usize>: Sync + Send + Sealed {
     /// Rotation type of the dimension `D`.
     ///
     /// For the memory efficiency, the generic rotation matrix [`na::Rotation`]
