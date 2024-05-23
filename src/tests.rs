@@ -4,19 +4,13 @@ use crate::*;
 use alloc::{vec, vec::Vec};
 #[cfg(test)]
 use approx::assert_abs_diff_eq;
+#[cfg(test)]
 use core::iter::zip;
+pub use util::dist_err as curve_diff;
 
 /// Epsilon for curve difference.
 pub const EPS: f64 = 2.2e-14;
 pub const RES: usize = 1000;
-
-/// Error between two curves, the length of the curves must be the same.
-pub fn curve_diff<const D: usize>(a: impl Curve<D>, b: impl Curve<D>) -> f64 {
-    zip(a.as_curve(), b.as_curve())
-        .map(|(a, b)| a.l2_err(b))
-        .sum::<f64>()
-        / a.len().min(b.len()) as f64
-}
 
 #[test]
 fn error() {
@@ -62,7 +56,7 @@ fn efd2d() {
     // Test reconstruction
     let target = efd.recon_norm_by(&get_norm_t(CURVE2D, false));
     let curve = efd.as_geo().inverse().transform(CURVE2D);
-    assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.01695);
+    assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.0029);
 }
 
 #[test]
@@ -86,7 +80,7 @@ fn efd2d_open() {
     // Test reconstruction
     let target = efd.recon_norm_by(&get_norm_t(CURVE2D_OPEN, true));
     let curve = efd.as_geo().inverse().transform(CURVE2D_OPEN);
-    assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.0143);
+    assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.0411);
 }
 
 #[test]
@@ -122,7 +116,7 @@ fn efd3d() {
     // Test reconstruction
     let target = efd.recon_norm_by(&get_norm_t(CURVE3D, false));
     let curve = efd.as_geo().inverse().transform(CURVE3D);
-    assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.00412);
+    assert_abs_diff_eq!(curve_diff(target, curve), 0., epsilon = 0.0013);
 }
 
 #[test]
