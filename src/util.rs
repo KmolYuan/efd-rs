@@ -84,6 +84,9 @@ pub fn dist_err_zipped<const D: usize>(curve1: impl Curve<D>, curve2: impl Curve
 ///
 /// See also [`dist_err_zipped()`] for faster computation if the curve points
 /// are corresponded.
+///
+/// # Panics
+/// Panics if the curve contains an invalid coordinate.
 pub fn dist_err<const D: usize>(curve1: impl Curve<D>, curve2: impl Curve<D>) -> f64 {
     if curve1.is_empty() || curve2.is_empty() {
         return 0.;
