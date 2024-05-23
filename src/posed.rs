@@ -18,8 +18,32 @@ pub type PosedEfd2 = PosedEfd<2>;
 pub type PosedEfd3 = PosedEfd<3>;
 
 /// Transform 2D angles to unit vectors.
+/// ```
+/// # let angles = efd::tests::ANGLE2D_POSE;
+/// let vectors = efd::posed::ang2vec(angles);
+/// ```
 pub fn ang2vec(angles: &[f64]) -> Vec<[f64; 2]> {
     angles.iter().map(|a| [a.cos(), a.sin()]).collect()
+}
+
+/// Create a guide curve from a curve and its unit vectors.
+/// ```
+/// # let curve_p = efd::tests::CURVE2D_POSE;
+/// # let vectors = efd::posed::ang2vec(efd::tests::ANGLE2D_POSE);
+/// // A custom length
+/// let length = 20.;
+/// let curve_q = efd::posed::guide_from_curve(curve_p, vectors, length);
+/// let efd = efd::posed::PosedEfd2::from_series(curve_p, curve_q, true);
+/// ```
+/// See also [`PosedEfd::from_uvec()`] / [`PosedEfd::from_series()`].
+pub fn guide_from_curve<C, V, const D: usize>(curve: C, vectors: V, length: f64) -> Vec<[f64; D]>
+where
+    C: Curve<D>,
+    V: Curve<D>,
+{
+    zip(curve.as_curve(), vectors.as_curve())
+        .map(|(p, v)| std::array::from_fn(|i| p[i] + length * v[i]))
+        .collect()
 }
 
 /// Motion signature with the target position.
@@ -139,8 +163,8 @@ where
 
     /// Calculate the coefficients from two series of points.
     ///
-    /// The second series is the pose series, the `curve2[i]` has the same time
-    /// as `curve[i]`.
+    /// The second series is the pose series, the `curve_q[i]` has the same time
+    /// as `curve_p[i]`.
     pub fn from_series<C1, C2>(curve_p: C1, curve_q: C2, is_open: bool) -> Self
     where
         C1: Curve<D>,
@@ -164,10 +188,7 @@ where
         C2: Curve<D>,
     {
         let vectors = zip(curve_p.as_curve(), curve_q.as_curve())
-            .map(|(p, q)| {
-                let norm = p.l2_err(q);
-                array::from_fn(|i| (q[i] - p[i]) / norm)
-            })
+            .map(|(p, q)| array::from_fn(|i| q[i] - p[i]))
             .collect::<Vec<_>>();
         Self::from_uvec_harmonic(curve_p, vectors, is_open, harmonic)
     }
