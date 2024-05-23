@@ -42,7 +42,7 @@ where
     V: Curve<D>,
 {
     zip(curve.as_curve(), vectors.as_curve())
-        .map(|(p, v)| std::array::from_fn(|i| p[i] + length * v[i]))
+        .map(|(p, v)| core::array::from_fn(|i| p[i] + length * v[i]))
         .collect()
 }
 

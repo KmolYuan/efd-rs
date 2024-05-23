@@ -11,8 +11,8 @@ where
 
 /// Copy-on-write curve type.
 ///
-/// Instead of using [`std::borrow::Cow<[f64; D]>`], this is a trait, which
-/// does not require any conversion.
+/// Instead of using [`alloc::borrow::Cow`] with a slice type `[[f64; D]]`, this
+/// trait does not require any type conversion.
 pub trait Curve<const D: usize>: Sized {
     /// Move or copy curve type into the owned type [`Vec`].
     fn to_curve(self) -> Vec<[f64; D]>;
