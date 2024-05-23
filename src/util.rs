@@ -77,7 +77,8 @@ pub fn dist_err_zipped<const D: usize>(curve1: impl Curve<D>, curve2: impl Curve
 /// Return the average distance error between two curves.
 ///
 /// In this algorithm, a curve is assumed to be longer or equal to another, and
-/// the distance error is mapped to the nearest point in the shorter curve.
+/// the distance error is mapped to the nearest point in the shorter curve. The
+/// longer curve will be assumed to be cycled.
 ///
 /// Returns 0 if either curve is empty.
 ///
@@ -87,7 +88,7 @@ pub fn dist_err<const D: usize>(curve1: impl Curve<D>, curve2: impl Curve<D>) ->
     if curve1.is_empty() || curve2.is_empty() {
         return 0.;
     }
-    let (mut iter1, iter2, len) = {
+    let (iter1, iter2, len) = {
         let iter1 = curve1.as_curve().iter();
         let iter2 = curve2.as_curve().iter();
         if curve1.len() >= curve2.len() {
@@ -96,29 +97,28 @@ pub fn dist_err<const D: usize>(curve1: impl Curve<D>, curve2: impl Curve<D>) ->
             (iter2, iter1, curve1.len())
         }
     };
+    let mut iter1 = {
+        let len1 = ExactSizeIterator::len(&iter1);
+        iter1.cycle().take(len1 * 2)
+    };
     let mut total = 0.;
     let mut prev_err = None;
-    let mut last_pt1 = None; // a pointer indicating the last point of curve1
-    for pt2 in iter2 {
-        loop {
-            if let Some(pt1) = iter1.next() {
-                last_pt1 = Some(pt1);
-                let err = pt1.l2_err(pt2);
-                match prev_err {
-                    // The previous error is the nearest
-                    Some(prev_err) if err > prev_err => {
-                        total += prev_err;
-                        break;
-                    }
-                    // The previous error is not the nearest or unset
-                    _ => prev_err = Some(err),
+    'a: for pt2 in iter2 {
+        // Cycle through the longer curve
+        for pt1 in &mut iter1 {
+            let err = pt1.l2_err(pt2);
+            assert!(err.is_finite(), "invalid coordinate");
+            match prev_err {
+                // The previous error is the nearest
+                Some(prev_err) if err > prev_err => {
+                    total += prev_err;
+                    continue 'a;
                 }
-            } else {
-                // curve1 is exhausted, compare the last point
-                total += last_pt1.unwrap().l2_err(pt2);
-                break;
+                // The previous error is not the nearest or unset
+                _ => prev_err = Some(err),
             }
         }
+        unreachable!("The iterator should find the nearest point");
     }
     total / len as f64
 }
