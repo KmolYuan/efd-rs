@@ -102,13 +102,14 @@ pub fn dist_err<const D: usize>(curve1: impl Curve<D>, curve2: impl Curve<D>) ->
     };
     let mut iter1 = {
         let len1 = ExactSizeIterator::len(&iter1);
-        iter1.cycle().take(len1 * 2)
+        iter1.cycle().take(len1 * 2).peekable()
     };
     let mut total = 0.;
     let mut prev_err = None;
     'a: for pt2 in iter2 {
         // Cycle through the longer curve
-        for pt1 in &mut iter1 {
+        loop {
+            let Some(pt1) = iter1.peek() else { break };
             let err = pt1.l2_err(pt2);
             assert!(err.is_finite(), "invalid coordinate");
             match prev_err {
@@ -120,8 +121,9 @@ pub fn dist_err<const D: usize>(curve1: impl Curve<D>, curve2: impl Curve<D>) ->
                 // The previous error is not the nearest or unset
                 _ => prev_err = Some(err),
             }
+            // Move to the next point
+            iter1.next();
         }
-        unreachable!("The iterator should find the nearest point");
     }
     total / len as f64
 }
