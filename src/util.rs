@@ -91,39 +91,38 @@ pub fn dist_err<const D: usize>(curve1: impl Curve<D>, curve2: impl Curve<D>) ->
     if curve1.is_empty() || curve2.is_empty() {
         return 0.;
     }
-    let (iter1, iter2, len) = {
+    let (iter1, iter2) = {
         let iter1 = curve1.as_curve().iter();
         let iter2 = curve2.as_curve().iter();
         if curve1.len() >= curve2.len() {
-            (iter1, iter2, curve2.len())
+            (iter1, iter2)
         } else {
-            (iter2, iter1, curve1.len())
+            (iter2, iter1)
         }
     };
+    let last1 = iter1.as_slice().last().unwrap();
+    let len = iter2.as_slice().len();
     let mut iter1 = {
         let len1 = ExactSizeIterator::len(&iter1);
         iter1.cycle().take(len1 * 2).peekable()
     };
     let mut total = 0.;
-    let mut prev_err = None;
     'a: for pt2 in iter2 {
         // Cycle through the longer curve
-        loop {
-            let Some(pt1) = iter1.peek() else { break };
+        while let Some(pt1) = iter1.next() {
             let err = pt1.l2_err(pt2);
             assert!(err.is_finite(), "invalid coordinate");
-            match prev_err {
-                // The previous error is the nearest
-                Some(prev_err) if err > prev_err => {
-                    total += prev_err;
-                    continue 'a;
-                }
-                // The previous error is not the nearest or unset
-                _ => prev_err = Some(err),
+            if let Some(err) = (iter1.peek())
+                .map(|pt1| pt1.l2_err(pt2))
+                .filter(|next_err| err <= *next_err)
+            {
+                // The error is the nearest
+                total += err;
+                continue 'a;
             }
-            // Move to the next point
-            iter1.next();
         }
+        // Compared to the last point
+        total += last1.l2_err(pt2);
     }
     total / len as f64
 }
